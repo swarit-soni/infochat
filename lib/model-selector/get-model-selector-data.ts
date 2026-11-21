@@ -16,9 +16,20 @@ function modelKey(model: Model): string {
   return `${model.providerId}:${model.id}`
 }
 
-function pickFirstAvailableModel(
+function pickFallbackModel(
   modelsByProvider: Record<string, Model[]>
 ): Model | null {
+  const defaultMatch = Object.values(modelsByProvider)
+    .flat()
+    .find(
+      model =>
+        model.providerId === DEFAULT_MODEL.providerId &&
+        model.id === DEFAULT_MODEL.id
+    )
+  if (defaultMatch) {
+    return defaultMatch
+  }
+
   const providers = Object.keys(modelsByProvider).sort((a, b) =>
     a.localeCompare(b)
   )
@@ -69,7 +80,7 @@ export async function getModelSelectorData(): Promise<ModelSelectorData> {
   }
 
   const modelsByProvider = await fetchAvailableModels()
-  const fallbackModel = pickFirstAvailableModel(modelsByProvider)
+  const fallbackModel = pickFallbackModel(modelsByProvider)
   const hasAvailableModels =
     fallbackModel !== null || isProviderEnabled(DEFAULT_MODEL.providerId)
   const cookieStore = await cookies()

@@ -166,6 +166,10 @@
       "context": 1048576,
       "output": 65536
     },
+    "gemini-4-hydrogen": {
+      "context": 1048576,
+      "output": 65536
+    },
     "gemini-embedding-001": {
       "context": 2048,
       "output": 1
@@ -967,6 +971,10 @@
     },
     "google/gemini-3.8-flash": {
       "context": 1000000,
+      "output": 65536
+    },
+    "google/gemini-4-hydrogen": {
+      "context": 1048576,
       "output": 65536
     },
     "google/gemini-embedding-001": {

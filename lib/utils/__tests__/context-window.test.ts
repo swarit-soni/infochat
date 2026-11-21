@@ -70,7 +70,11 @@ describe('context-window', () => {
 
     test('uses the real ~1M window for production Gemini models', () => {
       // (1048576 - 65536) - floor(1048576 * 0.1) = 983040 - 104857 = 878183
-      for (const id of ['gemini-3-flash-preview', 'gemini-3.1-flash-lite']) {
+      for (const id of [
+        'gemini-3-flash-preview',
+        'gemini-3.1-flash-lite',
+        'gemini-4-hydrogen'
+      ]) {
         const maxTokens = getMaxAllowedTokens({
           ...mockModel,
           id,
