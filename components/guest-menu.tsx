@@ -37,7 +37,7 @@ export default function GuestMenu() {
         <DropdownMenuItem asChild>
           <Link href="/auth/login">
             <LogIn className="size-4" />
-            <span>Sign In</span>
+            <span>Sign In with Google</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />

@@ -113,4 +113,30 @@ describe('AccountSettingsDialog', () => {
       expect(signOut).not.toHaveBeenCalled()
     })
   })
+
+  it('shows the Mentor or Student badge in Profile when userType is present', () => {
+    const mentorUser: AppUser = {
+      ...user,
+      email: 'mentor@kalvium.com',
+      userType: 'mentor'
+    }
+    const { rerender } = render(
+      <AppUserProvider user={mentorUser} capabilities={capabilities}>
+        <AccountSettingsDialog open onOpenChange={vi.fn()} user={mentorUser} />
+      </AppUserProvider>
+    )
+    expect(screen.getByText('Mentor')).toBeInTheDocument()
+
+    const studentUser: AppUser = {
+      ...user,
+      email: 'student@kalvium.community',
+      userType: 'student'
+    }
+    rerender(
+      <AppUserProvider user={studentUser} capabilities={capabilities}>
+        <AccountSettingsDialog open onOpenChange={vi.fn()} user={studentUser} />
+      </AppUserProvider>
+    )
+    expect(screen.getByText('Student')).toBeInTheDocument()
+  })
 })

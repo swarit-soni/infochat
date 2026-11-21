@@ -119,6 +119,14 @@ export async function deleteAccount(): Promise<{
         )
       }
 
+      const deleteProfileResult = await dbActions.deleteUserProfile(user.id)
+      if (!deleteProfileResult.success) {
+        return cleanupFailed(
+          'profile',
+          deleteProfileResult.error ?? 'Failed to delete account data'
+        )
+      }
+
       await deleteUserObjects(user.id)
       return { success: true as const }
     }

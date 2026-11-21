@@ -1,5 +1,6 @@
 import type { NextRequest, NextResponse } from 'next/server'
 
+import type { UserType } from '@/lib/auth/domain'
 import type { db } from '@/lib/db'
 
 export type AuthProviderName = 'supabase' | 'better-auth' | 'none'
@@ -14,7 +15,9 @@ export interface AppUser {
   name?: string | null
   image?: string | null
   createdAt?: Date | string | null
-  /** Provider role when the provider has one (e.g. `admin` | `user`). */
+  /** Kalvium classification derived from verified email domain. */
+  userType?: UserType | null
+  /** Provider role when the provider has one (e.g. `admin` | `user` | `mentor` | `student`). */
   role?: string | null
 }
 
