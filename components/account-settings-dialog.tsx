@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 
 import { deleteAccount } from '@/lib/actions/account'
 import { signOut } from '@/lib/actions/auth'
+import { USER_TYPE_LABELS } from '@/lib/auth/domain'
 import type { AppUser } from '@/lib/auth/types'
 import { chatStore } from '@/lib/chat-store'
 import { useAuthCapabilities } from '@/lib/contexts/app-user-context'
@@ -28,6 +29,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -114,7 +116,14 @@ export function AccountSettingsDialog({
         <div className="grid gap-6">
           <section className="grid gap-3">
             <div className="grid gap-1">
-              <h3 className="text-sm font-medium">Profile</h3>
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-medium">Profile</h3>
+                {user.userType && (
+                  <Badge variant="secondary">
+                    {USER_TYPE_LABELS[user.userType]}
+                  </Badge>
+                )}
+              </div>
               <div className="text-sm text-muted-foreground">
                 <p className="truncate">{userName}</p>
                 <p className="truncate">{user.email}</p>

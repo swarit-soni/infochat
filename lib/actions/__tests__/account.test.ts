@@ -43,6 +43,9 @@ describe('Account Actions', () => {
     vi.mocked(dbActions.anonymizeUserFeedback).mockResolvedValue({
       success: true
     })
+    vi.mocked(dbActions.deleteUserProfile).mockResolvedValue({
+      success: true
+    })
     vi.mocked(deleteUserObjects).mockResolvedValue({
       deletedCount: 0,
       skipped: true
@@ -107,6 +110,7 @@ describe('Account Actions', () => {
     expect(dbActions.deleteUserSpaces).toHaveBeenCalledWith(user.id)
     expect(dbActions.deleteUserLibraryFiles).toHaveBeenCalledWith(user.id)
     expect(dbActions.anonymizeUserFeedback).toHaveBeenCalledWith(user.id)
+    expect(dbActions.deleteUserProfile).toHaveBeenCalledWith(user.id)
     expect(deleteUserObjects).toHaveBeenCalledWith(user.id)
     expect(deleteUser).toHaveBeenCalledWith(user.id)
     expect(trackAccountDeleted).toHaveBeenCalledTimes(1)

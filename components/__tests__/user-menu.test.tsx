@@ -125,4 +125,30 @@ describe('UserMenu', () => {
     expect(screen.getByText('Test Person')).toBeInTheDocument()
     expect(screen.getByText('person@example.com')).toBeInTheDocument()
   })
+
+  it('shows the Mentor or Student badge when userType is present', () => {
+    const mentorUser: AppUser = {
+      ...user,
+      email: 'mentor@kalvium.com',
+      userType: 'mentor'
+    }
+    const { rerender } = render(
+      <AppUserProvider user={mentorUser} capabilities={capabilities}>
+        <UserMenu user={mentorUser} />
+      </AppUserProvider>
+    )
+    expect(screen.getByText('Mentor')).toBeInTheDocument()
+
+    const studentUser: AppUser = {
+      ...user,
+      email: 'student@kalvium.community',
+      userType: 'student'
+    }
+    rerender(
+      <AppUserProvider user={studentUser} capabilities={capabilities}>
+        <UserMenu user={studentUser} />
+      </AppUserProvider>
+    )
+    expect(screen.getByText('Student')).toBeInTheDocument()
+  })
 })

@@ -26,18 +26,16 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
             <IconLogo className="size-14" />
           </div>
           <DialogTitle className="text-xl font-semibold">
-            Continue with Morphic
+            Continue with InfoChat
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            To use Morphic, sign in to your account or create a new one.
+            Sign in with your @kalvium.com (Mentor) or @kalvium.community
+            (Student) Google account.
           </DialogDescription>
         </DialogHeader>
-        <div className="mt-6 space-y-3">
+        <div className="mt-6">
           <Button asChild className="w-full" size="lg">
-            <Link href="/auth/sign-up">Sign Up</Link>
-          </Button>
-          <Button asChild variant="outline" className="w-full" size="lg">
-            <Link href="/auth/login">Sign In</Link>
+            <Link href="/auth/login">Sign In with Google</Link>
           </Button>
         </div>
       </DialogContent>

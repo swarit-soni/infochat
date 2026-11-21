@@ -13,6 +13,7 @@ import {
   sql
 } from 'drizzle-orm'
 
+import { normalizeEmail } from '@/lib/auth/domain'
 import { HL_START, HL_STOP } from '@/lib/render/highlight-markers'
 import type { UIMessage } from '@/lib/types/ai'
 import type { PersistableUIMessage } from '@/lib/types/message-persistence'
@@ -36,7 +37,9 @@ import type {
   NewNote,
   Note,
   Space,
-  SpaceColor
+  SpaceColor,
+  UserProfile,
+  UserType
 } from './schema'
 import {
   chats,
@@ -46,7 +49,8 @@ import {
   messages,
   notes,
   parts,
-  spaces
+  spaces,
+  userProfiles
 } from './schema'
 import { withOptionalRLS, withRLS } from './with-rls'
 import { db } from '.'
@@ -1199,4 +1203,72 @@ export async function createChatWithFirstMessageTransaction({
     perfTime('DB - createChatWithFirstMessageTransaction completed', dbStart)
     return { chat, message: savedMessage }
   })
+}
+
+export async function upsertUserProfile({
+  id,
+  email,
+  userType,
+  name = null,
+  avatarUrl = null
+}: {
+  id: string
+  email: string
+  userType: UserType
+  name?: string | null
+  avatarUrl?: string | null
+}): Promise<UserProfile> {
+  const normalizedEmail = normalizeEmail(email) ?? email.trim().toLowerCase()
+  return withRLS(id, async tx => {
+    const [profile] = await tx
+      .insert(userProfiles)
+      .values({
+        id,
+        email: normalizedEmail,
+        userType,
+        name,
+        avatarUrl
+      })
+      .onConflictDoUpdate({
+        target: userProfiles.id,
+        set: {
+          email: normalizedEmail,
+          userType,
+          name,
+          avatarUrl,
+          updatedAt: new Date()
+        }
+      })
+      .returning()
+
+    return profile
+  })
+}
+
+export async function getUserProfile(
+  userId: string
+): Promise<UserProfile | null> {
+  return withRLS(userId, async tx => {
+    const [profile] = await tx
+      .select()
+      .from(userProfiles)
+      .where(eq(userProfiles.id, userId))
+      .limit(1)
+
+    return profile ?? null
+  })
+}
+
+export async function deleteUserProfile(
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    return await withRLS(userId, async tx => {
+      await tx.delete(userProfiles).where(eq(userProfiles.id, userId))
+      return { success: true }
+    })
+  } catch (error) {
+    console.error('Error deleting user profile:', error)
+    return { success: false, error: 'Failed to delete user profile' }
+  }
 }

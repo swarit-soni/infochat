@@ -7,6 +7,7 @@ import {
   integer,
   json,
   jsonb,
+  pgEnum,
   pgPolicy,
   pgTable,
   text,
@@ -577,6 +578,65 @@ export const additionalUsageInterest = pgTable(
 export type AdditionalUsageInterest = InferSelectModel<
   typeof additionalUsageInterest
 >
+
+export const USER_TYPES = ['mentor', 'student'] as const
+
+export type UserType = (typeof USER_TYPES)[number]
+
+export const userTypeEnum = pgEnum('user_type', ['mentor', 'student'])
+
+// User profiles table (maps Supabase Auth users to Mentor/Student types)
+export const userProfiles = pgTable(
+  'user_profiles',
+  {
+    id: varchar('id', { length: USER_ID_LENGTH }).primaryKey(),
+    email: varchar('email', { length: 320 }).notNull().unique(),
+    userType: userTypeEnum('user_type').notNull(),
+    name: text('name'),
+    avatarUrl: text('avatar_url'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+  },
+  table => [
+    index('user_profiles_user_type_idx').on(table.userType),
+    check(
+      'user_profiles_domain_matches_type',
+      sql`((user_type = 'mentor' AND split_part(lower(email), '@', 2) = 'kalvium.com') OR (user_type = 'student' AND split_part(lower(email), '@', 2) = 'kalvium.community'))`
+    ),
+    pgPolicy('users_read_own_profile', {
+      as: 'permissive',
+      for: 'select',
+      to: 'public',
+      using: sql`id = (select current_setting('app.current_user_id', true))`
+    }),
+    pgPolicy('users_insert_own_profile', {
+      as: 'permissive',
+      for: 'insert',
+      to: 'public',
+      withCheck: sql`id = (select current_setting('app.current_user_id', true))`
+    }),
+    pgPolicy('users_update_own_profile', {
+      as: 'permissive',
+      for: 'update',
+      to: 'public',
+      using: sql`id = (select current_setting('app.current_user_id', true))`,
+      withCheck: sql`id = (select current_setting('app.current_user_id', true))`
+    }),
+    pgPolicy('users_delete_own_profile', {
+      as: 'permissive',
+      for: 'delete',
+      to: 'public',
+      using: sql`id = (select current_setting('app.current_user_id', true))`
+    })
+  ]
+).enableRLS()
+
+export type UserProfile = InferSelectModel<typeof userProfiles>
+export type NewUserProfile = typeof userProfiles.$inferInsert
 
 // Better Auth tables (user, session, account, verification, invitations)
 // are defined in lib/auth/better-auth/schema.ts and re-exported here so the

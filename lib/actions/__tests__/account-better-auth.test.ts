@@ -74,6 +74,9 @@ describe('deleteAccount with the better-auth provider', () => {
     vi.mocked(dbActions.anonymizeUserFeedback).mockResolvedValue({
       success: true
     })
+    vi.mocked(dbActions.deleteUserProfile).mockResolvedValue({
+      success: true
+    })
     vi.mocked(deleteUserObjects).mockResolvedValue({ deletedCount: 0 } as never)
     vi.mocked(trackAccountDeleted).mockResolvedValue()
   })
@@ -98,6 +101,7 @@ describe('deleteAccount with the better-auth provider', () => {
     expect(dbActions.deleteUserSpaces).toHaveBeenCalledWith('user-1')
     expect(dbActions.deleteUserLibraryFiles).toHaveBeenCalledWith('user-1')
     expect(dbActions.anonymizeUserFeedback).toHaveBeenCalledWith('user-1')
+    expect(dbActions.deleteUserProfile).toHaveBeenCalledWith('user-1')
     expect(deleteUserObjects).toHaveBeenCalledWith('user-1')
     expect(db.delete).toHaveBeenCalled()
   })
