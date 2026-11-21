@@ -30,7 +30,7 @@ const OPENAI_EXCLUDED_KEYWORDS = [
 ]
 const ANTHROPIC_ALLOWED_PATTERN =
   /^claude-(opus|sonnet|haiku|fable)-([4-9]|\d{2,})/
-const GOOGLE_ALLOWED_PREFIXES = ['gemini-2.5', 'gemini-3']
+const GOOGLE_ALLOWED_PREFIXES = ['gemini-2.5', 'gemini-3', 'gemini-4']
 const GOOGLE_EXCLUDED_KEYWORDS = ['image', 'live', 'native-audio', 'embedding']
 const OPENAI_COMPATIBLE_EXCLUDED_KEYWORDS = [
   'embed',
