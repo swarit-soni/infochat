@@ -21,10 +21,6 @@ vi.mock('../sidebar/library-menu-item', () => ({
   LibraryMenuItem: () => <div>Library</div>
 }))
 
-vi.mock('../sidebar/version-footer', () => ({
-  VersionFooter: () => <div>Version footer</div>
-}))
-
 vi.mock('@/hooks/use-mobile', () => ({
   useIsMobile: () => false
 }))
@@ -65,27 +61,17 @@ describe('AppSidebar library entry', () => {
   })
 })
 
-describe('AppSidebar version footer', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs()
-  })
-
-  test('shows the version footer by default', () => {
-    renderSidebar()
-
-    expect(screen.getByText('Version footer')).toBeInTheDocument()
-  })
-
-  test('hides the version footer on the cloud deployment', () => {
-    vi.stubEnv('SERA_CLOUD_DEPLOYMENT', 'true')
-    renderSidebar()
-
-    expect(screen.queryByText('Version footer')).not.toBeInTheDocument()
-  })
-
+describe('AppSidebar branding and footer', () => {
   test('shows the Beta badge next to Sera in the sidebar header', () => {
     renderSidebar()
 
     expect(screen.getByText('Beta')).toBeInTheDocument()
+  })
+
+  test('does not render version info or install method in the sidebar', () => {
+    renderSidebar()
+
+    expect(screen.queryByText(/v\d+\.\d+\.\d+/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/vercel|source|docker/i)).not.toBeInTheDocument()
   })
 })

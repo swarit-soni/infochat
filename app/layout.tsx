@@ -136,7 +136,7 @@ export default async function RootLayout({
                       initialUsage={initialUsage}
                       enabled={usageBudgetEnabled}
                     >
-                      {userId && <AppSidebar user={user} />}
+                      {userId && <AppSidebar />}
                       <KeyboardShortcutHandler />
                       <div className="flex flex-col flex-1 min-w-0">
                         <Header user={user} />

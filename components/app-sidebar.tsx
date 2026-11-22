@@ -1,7 +1,6 @@
 import { Suspense } from 'react'
 
 import { isAnonymousMode } from '@/lib/auth/provider'
-import type { AppUser } from '@/lib/auth/types'
 import { cn } from '@/lib/utils'
 import { isBetaVersion } from '@/lib/version/semver'
 
@@ -9,7 +8,6 @@ import { Badge } from '@/components/ui/badge'
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarRail,
@@ -23,15 +21,12 @@ import { ChatHistorySkeleton } from './sidebar/chat-history-skeleton'
 import { HomeLink } from './sidebar/home-link'
 import { LibraryMenuItem } from './sidebar/library-menu-item'
 import { NewChatMenuItem } from './sidebar/new-chat-menu-item'
-import { VersionFooter } from './sidebar/version-footer'
-import { VersionFooterSkeleton } from './sidebar/version-footer-skeleton'
 import { IconLogo } from './ui/icons'
 
-export default function AppSidebar({ user }: { user?: AppUser | null }) {
+export default function AppSidebar() {
   // Anonymous mode has no per-user library, and the server actions reject it,
   // so the entry point follows the same switch the pages use.
   const libraryAvailable = !isAnonymousMode()
-  const versionFooterEnabled = process.env.SERA_CLOUD_DEPLOYMENT !== 'true'
   const isBeta = isBetaVersion(packageJson.version)
 
   return (
@@ -62,13 +57,6 @@ export default function AppSidebar({ user }: { user?: AppUser | null }) {
           </Suspense>
         </div>
       </SidebarContent>
-      {versionFooterEnabled && (
-        <SidebarFooter>
-          <Suspense fallback={<VersionFooterSkeleton />}>
-            <VersionFooter user={user} />
-          </Suspense>
-        </SidebarFooter>
-      )}
       <SidebarRail />
     </Sidebar>
   )
