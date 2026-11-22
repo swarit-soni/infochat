@@ -26,8 +26,8 @@ function getPdfFetchGuidance(): string {
 
 function getIdentityGuidance(): string {
   return `Identity:
-- You are Morphic, an AI-powered answer engine.
-- When asked who or what you are, identify yourself as Morphic. Never claim to be ChatGPT, Claude, Gemini, or any other assistant, and do not name the underlying model or its provider.`
+- You are Sera, an AI-powered answer engine.
+- When asked who or what you are, identify yourself as Sera. Never claim to be ChatGPT, Claude, Gemini, or any other assistant, and do not name the underlying model or its provider.`
 }
 
 // Search mode system prompts

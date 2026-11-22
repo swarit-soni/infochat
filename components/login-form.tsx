@@ -51,10 +51,12 @@ export function LoginForm({
   className,
   next,
   initialError = null,
+  isBeta = false,
   ...props
 }: React.ComponentPropsWithoutRef<'div'> & {
   next?: string
   initialError?: string | null
+  isBeta?: boolean
 }) {
   const [error, setError] = useState<string | null>(initialError)
   const [isLoading, setIsLoading] = useState(false)
@@ -98,7 +100,17 @@ export function LoginForm({
         <CardHeader className="text-center">
           <CardTitle className="text-2xl flex flex-col items-center justify-center gap-4">
             <IconLogo className="size-12" />
-            Sign in to InfoChat
+            <span className="inline-flex items-center gap-2">
+              <span>Sign in to Sera</span>
+              {isBeta && (
+                <Badge
+                  variant="secondary"
+                  className="px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
+                >
+                  Beta
+                </Badge>
+              )}
+            </span>
           </CardTitle>
           <CardDescription>
             Sign in with your Kalvium Google account to continue.

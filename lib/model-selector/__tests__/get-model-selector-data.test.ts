@@ -34,7 +34,7 @@ function createCookieStore(value?: string) {
 describe('getModelSelectorData', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    delete process.env.MORPHIC_CLOUD_DEPLOYMENT
+    delete process.env.SERA_CLOUD_DEPLOYMENT
     mockIsProviderEnabled.mockReturnValue(true)
   })
 

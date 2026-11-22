@@ -3,7 +3,9 @@ import { Suspense } from 'react'
 import { isAnonymousMode } from '@/lib/auth/provider'
 import type { AppUser } from '@/lib/auth/types'
 import { cn } from '@/lib/utils'
+import { isBetaVersion } from '@/lib/version/semver'
 
+import { Badge } from '@/components/ui/badge'
 import {
   Sidebar,
   SidebarContent,
@@ -13,6 +15,8 @@ import {
   SidebarRail,
   SidebarTrigger
 } from '@/components/ui/sidebar'
+
+import packageJson from '../package.json'
 
 import { ChatHistorySection } from './sidebar/chat-history-section'
 import { ChatHistorySkeleton } from './sidebar/chat-history-skeleton'
@@ -27,14 +31,23 @@ export default function AppSidebar({ user }: { user?: AppUser | null }) {
   // Anonymous mode has no per-user library, and the server actions reject it,
   // so the entry point follows the same switch the pages use.
   const libraryAvailable = !isAnonymousMode()
-  const versionFooterEnabled = process.env.MORPHIC_CLOUD_DEPLOYMENT !== 'true'
+  const versionFooterEnabled = process.env.SERA_CLOUD_DEPLOYMENT !== 'true'
+  const isBeta = isBetaVersion(packageJson.version)
 
   return (
     <Sidebar side="left" variant="sidebar" collapsible="offcanvas">
       <SidebarHeader className="flex flex-row justify-between items-center">
         <HomeLink className="flex items-center gap-2 px-2 py-3">
           <IconLogo className={cn('size-5')} />
-          <span className="font-semibold text-sm">Morphic</span>
+          <span className="font-semibold text-sm">Sera</span>
+          {isBeta && (
+            <Badge
+              variant="secondary"
+              className="px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide"
+            >
+              Beta
+            </Badge>
+          )}
         </HomeLink>
         <SidebarTrigger />
       </SidebarHeader>

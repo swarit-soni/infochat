@@ -77,9 +77,15 @@ describe('AppSidebar version footer', () => {
   })
 
   test('hides the version footer on the cloud deployment', () => {
-    vi.stubEnv('MORPHIC_CLOUD_DEPLOYMENT', 'true')
+    vi.stubEnv('SERA_CLOUD_DEPLOYMENT', 'true')
     renderSidebar()
 
     expect(screen.queryByText('Version footer')).not.toBeInTheDocument()
+  })
+
+  test('shows the Beta badge next to Sera in the sidebar header', () => {
+    renderSidebar()
+
+    expect(screen.getByText('Beta')).toBeInTheDocument()
   })
 })

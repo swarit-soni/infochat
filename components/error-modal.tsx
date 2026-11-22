@@ -59,7 +59,7 @@ export function ErrorModal({
       case 'rate-limit':
         return 'Rate Limit Exceeded'
       case 'auth':
-        return 'Continue with InfoChat'
+        return 'Continue with Sera'
       case 'forbidden':
         return 'Access Denied'
       default:

@@ -54,11 +54,11 @@ describe('deleteAccount with the better-auth provider', () => {
   const originalEnv: Record<string, string | undefined> = {}
 
   beforeEach(() => {
-    for (const key of ['AUTH_PROVIDER', 'MORPHIC_CLOUD_DEPLOYMENT']) {
+    for (const key of ['AUTH_PROVIDER', 'SERA_CLOUD_DEPLOYMENT']) {
       originalEnv[key] = process.env[key]
     }
     process.env.AUTH_PROVIDER = 'better-auth'
-    delete process.env.MORPHIC_CLOUD_DEPLOYMENT
+    delete process.env.SERA_CLOUD_DEPLOYMENT
 
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'user-1',

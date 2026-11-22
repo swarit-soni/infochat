@@ -125,8 +125,8 @@ function SpaceSettingsView() {
           <div className="flex w-full flex-col gap-3">
             <h2 className="text-2xl font-semibold">Default</h2>
             <p className="text-sm text-muted-foreground">
-              Morphic&apos;s standard behavior. Add instructions only if you
-              want them in every chat.
+              Sera&apos;s standard behavior. Add instructions only if you want
+              them in every chat.
             </p>
             <button
               type="button"
@@ -176,7 +176,7 @@ function SpaceSettingsView() {
             </label>
             <label className="flex flex-col gap-2">
               <span className="text-sm font-medium">
-                How should Morphic write?
+                How should Sera write?
               </span>
               <Textarea
                 value={fields.style}

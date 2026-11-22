@@ -65,11 +65,9 @@ describe('HomeLink', () => {
   test('resets the active chat from the sidebar logo too', () => {
     const reset = vi.fn((event: Event) => event.preventDefault())
     window.addEventListener(SHORTCUT_EVENTS.newChat, reset, { once: true })
-    render(<HomeLink>Morphic</HomeLink>)
+    render(<HomeLink>Sera</HomeLink>)
 
-    const navigate = fireEvent.click(
-      screen.getByRole('link', { name: 'Morphic' })
-    )
+    const navigate = fireEvent.click(screen.getByRole('link', { name: 'Sera' }))
 
     expect(reset).toHaveBeenCalledOnce()
     expect(navigate).toBe(false)
