@@ -1,4 +1,4 @@
--- InfoChat Kalvium Google-only Auth & User Profiles Setup
+-- Sera Kalvium Google-only Auth & User Profiles Setup
 -- Target Supabase project: fheytswhnzhiibxrqzqo
 -- Idempotent script safe to re-run in the Supabase SQL Editor.
 

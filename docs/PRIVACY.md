@@ -1,30 +1,30 @@
 # Privacy and Telemetry
 
-This document lists everything a self-hosted Morphic instance can send outside your own server, what each destination receives, and how to turn it off.
+This document lists everything a self-hosted Sera instance can send outside your own server, what each destination receives, and how to turn it off.
 
-**Morphic never reports anything to the Morphic project or its maintainers.** There is no phone-home endpoint in the codebase. Beyond that, a self-hosted instance contacts the services you configure credentials for, the sites the agent reads, and the browser-side destinations listed below. Two cases contact a service you have not configured: the pages the agent reads (see [Reading pages](#reading-pages)) and the sidebar update check, which queries the GitHub releases API once per cache window (disable with `MORPHIC_UPDATE_CHECK_DISABLED=true`).
+**Sera never reports anything to the Sera project or its maintainers.** There is no phone-home endpoint in the codebase. Beyond that, a self-hosted instance contacts the services you configure credentials for, the sites the agent reads, and the browser-side destinations listed below. Two cases contact a service you have not configured: the pages the agent reads (see [Reading pages](#reading-pages)) and the sidebar update check, which queries the GitHub releases API once per cache window (disable with `SERA_UPDATE_CHECK_DISABLED=true`).
 
 ## Summary
 
 Requests made by your server:
 
-| Destination                                              | What it receives                                                                                                                                                                | Default when self-hosting                                            |
-| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| AI provider (OpenAI, Anthropic, Google, ...)             | Full prompt: system prompt, conversation history, search results, attachments                                                                                                   | **On.** Required to answer                                           |
-| Search provider (Tavily, SearXNG, Exa, Brave, Firecrawl) | The search query the agent generates                                                                                                                                            | **On.** Required to search                                           |
-| Web pages the agent reads                                | Your server's IP and user agent, to whichever site the agent chose                                                                                                              | On                                                                   |
-| Jina Reader or Tavily Extract                            | The URL being read                                                                                                                                                              | Only when the agent asks for API extraction                          |
-| PostgreSQL                                               | Chats, messages, attachment metadata, feedback; with `AUTH_PROVIDER=better-auth`, also the auth tables: accounts, sessions, linked identities, verification tokens, invitations | On. Local container under Docker                                     |
-| Redis                                                    | Cached search results, rate limit counters, usage counters                                                                                                                      | Local container under Docker                                         |
-| Supabase                                                 | Email, password, OAuth identity, sessions                                                                                                                                       | Off unless configured                                                |
-| SMTP server                                              | Invitation, password reset, and bootstrap emails: recipient address and a one-time link                                                                                         | Off unless configured                                                |
-| R2 / S3                                                  | Uploaded file bytes, under a key holding the user id, chat id, and filename                                                                                                     | Off unless configured                                                |
-| Favicon provider (Google by default)                     | The hostname of each cited source                                                                                                                                               | On. Configurable, and can be turned off                              |
-| GitHub releases API                                      | An anonymous request for the latest release of one repo: your server's IP and the repo name. No credentials, no user data                                                       | **On.** Once per 24 h; off with `MORPHIC_UPDATE_CHECK_DISABLED=true` |
-| Slack                                                    | Feedback text and the submitter's email                                                                                                                                         | Off unless `SLACK_WEBHOOK_URL` is set                                |
-| PostHog                                                  | Product analytics events. Not the user's query text                                                                                                                             | **Off**                                                              |
-| Langfuse                                                 | Full prompts and completions as traces                                                                                                                                          | **Off**                                                              |
-| Vercel Analytics                                         | Page views                                                                                                                                                                      | **Off**                                                              |
+| Destination                                              | What it receives                                                                                                                                                                | Default when self-hosting                                         |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| AI provider (OpenAI, Anthropic, Google, ...)             | Full prompt: system prompt, conversation history, search results, attachments                                                                                                   | **On.** Required to answer                                        |
+| Search provider (Tavily, SearXNG, Exa, Brave, Firecrawl) | The search query the agent generates                                                                                                                                            | **On.** Required to search                                        |
+| Web pages the agent reads                                | Your server's IP and user agent, to whichever site the agent chose                                                                                                              | On                                                                |
+| Jina Reader or Tavily Extract                            | The URL being read                                                                                                                                                              | Only when the agent asks for API extraction                       |
+| PostgreSQL                                               | Chats, messages, attachment metadata, feedback; with `AUTH_PROVIDER=better-auth`, also the auth tables: accounts, sessions, linked identities, verification tokens, invitations | On. Local container under Docker                                  |
+| Redis                                                    | Cached search results, rate limit counters, usage counters                                                                                                                      | Local container under Docker                                      |
+| Supabase                                                 | Email, password, OAuth identity, sessions                                                                                                                                       | Off unless configured                                             |
+| SMTP server                                              | Invitation, password reset, and bootstrap emails: recipient address and a one-time link                                                                                         | Off unless configured                                             |
+| R2 / S3                                                  | Uploaded file bytes, under a key holding the user id, chat id, and filename                                                                                                     | Off unless configured                                             |
+| Favicon provider (Google by default)                     | The hostname of each cited source                                                                                                                                               | On. Configurable, and can be turned off                           |
+| GitHub releases API                                      | An anonymous request for the latest release of one repo: your server's IP and the repo name. No credentials, no user data                                                       | **On.** Once per 24 h; off with `SERA_UPDATE_CHECK_DISABLED=true` |
+| Slack                                                    | Feedback text and the submitter's email                                                                                                                                         | Off unless `SLACK_WEBHOOK_URL` is set                             |
+| PostHog                                                  | Product analytics events. Not the user's query text                                                                                                                             | **Off**                                                           |
+| Langfuse                                                 | Full prompts and completions as traces                                                                                                                                          | **Off**                                                           |
+| Vercel Analytics                                         | Page views                                                                                                                                                                      | **Off**                                                           |
 
 Requests made by the user's browser, which env vars do not control:
 
@@ -67,7 +67,7 @@ Three details worth knowing if you point Redis at a hosted instance such as Upst
 
 ### Email (SMTP)
 
-With the Better Auth provider and SMTP configured (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`), Morphic sends invitation emails, password-reset links, and bootstrap sign-up links through your SMTP server. Each message carries the recipient address and a one-time link; no chat content is included. Without SMTP nothing is emailed: the links are shown in the admin UI instead, so the mail path stays local. Supabase-based auth sends its own auth emails through Supabase instead (covered in the Supabase row above).
+With the Better Auth provider and SMTP configured (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`), Sera sends invitation emails, password-reset links, and bootstrap sign-up links through your SMTP server. Each message carries the recipient address and a one-time link; no chat content is included. Without SMTP nothing is emailed: the links are shown in the admin UI instead, so the mail path stays local. Supabase-based auth sends its own auth emails through Supabase instead (covered in the Supabase row above).
 
 ### Source favicons
 
@@ -91,17 +91,17 @@ Both are the content the search itself returned, loaded from where it lives.
 
 ## Analytics and observability
 
-All of these are off by default. None are needed to run Morphic.
+All of these are off by default. None are needed to run Sera.
 
 ### PostHog
 
 Product analytics used by the hosted deployment.
 
-The server-side path requires **both** `MORPHIC_CLOUD_DEPLOYMENT=true` and `POSTHOG_KEY` ([lib/analytics/dispatch.ts](../lib/analytics/dispatch.ts)). The browser-side path is gated on `NEXT_PUBLIC_POSTHOG_KEY` alone and does not consult `MORPHIC_CLOUD_DEPLOYMENT`, so setting only the public key produces browser events even with cloud mode off. Neither key ships with a value, and Docker Compose pins `MORPHIC_CLOUD_DEPLOYMENT=false`.
+The server-side path requires **both** `SERA_CLOUD_DEPLOYMENT=true` and `POSTHOG_KEY` ([lib/analytics/dispatch.ts](../lib/analytics/dispatch.ts)). The browser-side path is gated on `NEXT_PUBLIC_POSTHOG_KEY` alone and does not consult `SERA_CLOUD_DEPLOYMENT`, so setting only the public key produces browser events even with cloud mode off. Neither key ships with a value, and Docker Compose pins `SERA_CLOUD_DEPLOYMENT=false`.
 
 When it is on, events are attributed to an identity: the Supabase user id for signed-in users, and for guests a distinct id that persists in browser storage across visits. Chat events also carry the user id as a property, and a `$pageview` is sent on every navigation, which for a saved chat means its URL.
 
-Beyond the identity, events carry the model and provider used, the search mode, the conversation turn number, the chat id, and a derived shape of the query: a length bucket, whether it contained a URL, and a coarse language flag. What the user typed is never sent, and no event carries uploaded filenames. The one event that contains prompt text is `example_prompt_clicked`, which records which of the built-in example prompts a visitor clicked on the home screen. That string comes from Morphic's own list, not from the user. Autocapture and session recording are both disabled in [lib/analytics/posthog-client.ts](../lib/analytics/posthog-client.ts). That does not strip the context `posthog-js` attaches to every capture on its own: the current URL and referrer, browser and OS, screen and viewport size, and session and window ids.
+Beyond the identity, events carry the model and provider used, the search mode, the conversation turn number, the chat id, and a derived shape of the query: a length bucket, whether it contained a URL, and a coarse language flag. What the user typed is never sent, and no event carries uploaded filenames. The one event that contains prompt text is `example_prompt_clicked`, which records which of the built-in example prompts a visitor clicked on the home screen. That string comes from Sera's own list, not from the user. Autocapture and session recording are both disabled in [lib/analytics/posthog-client.ts](../lib/analytics/posthog-client.ts). That does not strip the context `posthog-js` attaches to every capture on its own: the current URL and referrer, browser and OS, screen and viewport size, and session and window ids.
 
 ### Langfuse
 
@@ -115,11 +115,11 @@ One related note: OpenTelemetry itself is registered unconditionally, so standar
 
 ### Vercel Analytics
 
-Page views, for the hosted deployment. Rendered only when `MORPHIC_CLOUD_DEPLOYMENT=true`, so a self-hosted instance never loads the script.
+Page views, for the hosted deployment. Rendered only when `SERA_CLOUD_DEPLOYMENT=true`, so a self-hosted instance never loads the script.
 
 ### Next.js telemetry
 
-Next.js collects its own anonymous usage telemetry during `build` and `dev`. This is a framework behavior unrelated to Morphic, and it carries no application data. The Docker image disables it during build. If you run from a clone, disable it with:
+Next.js collects its own anonymous usage telemetry during `build` and `dev`. This is a framework behavior unrelated to Sera, and it carries no application data. The Docker image disables it during build. If you run from a clone, disable it with:
 
 ```bash
 NEXT_TELEMETRY_DISABLED=1
@@ -129,13 +129,13 @@ See [Next.js telemetry](https://nextjs.org/telemetry) for what it covers.
 
 ## Fully local setup
 
-To run Morphic with as little as possible leaving your network:
+To run Sera with as little as possible leaving your network:
 
 - `OLLAMA_BASE_URL` for the model, instead of a hosted provider key
 - `SEARCH_API=searxng` with the bundled SearXNG container, pointed at engines you accept
 - The Docker Compose PostgreSQL and Redis containers
 - No PostHog, Langfuse, Supabase, R2, or Slack credentials
 - `NEXT_TELEMETRY_DISABLED=1`
-- `MORPHIC_UPDATE_CHECK_DISABLED=true`
+- `SERA_UPDATE_CHECK_DISABLED=true`
 
 Pages the agent reads are still fetched from their origin sites, which is the point of a search engine, and the browser-side requests above still happen.

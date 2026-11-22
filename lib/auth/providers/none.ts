@@ -7,7 +7,7 @@ export const DEFAULT_ANONYMOUS_USER_ID = 'anonymous-user'
 /**
  * Anonymous mode (`ENABLE_AUTH=false`): all users share one configured user
  * ID. Preserves the previous skip-authentication behavior, including the
- * Morphic Cloud guard and the startup warning.
+ * Sera Cloud guard and the startup warning.
  */
 export const noneAuthProvider: AuthProvider = {
   name: 'none',
@@ -25,10 +25,10 @@ export const noneAuthProvider: AuthProvider = {
   },
 
   async getCurrentUserId(): Promise<string | undefined> {
-    // Guard: Prevent disabling auth in Morphic Cloud deployments
-    if (process.env.MORPHIC_CLOUD_DEPLOYMENT === 'true') {
+    // Guard: Prevent disabling auth in Sera Cloud deployments
+    if (process.env.SERA_CLOUD_DEPLOYMENT === 'true') {
       throw new Error(
-        'ENABLE_AUTH=false is not allowed in MORPHIC_CLOUD_DEPLOYMENT'
+        'ENABLE_AUTH=false is not allowed in SERA_CLOUD_DEPLOYMENT'
       )
     }
 

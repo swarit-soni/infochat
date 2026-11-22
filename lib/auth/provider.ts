@@ -24,17 +24,15 @@ function enforceCloudDeploymentGuard(
   name: AuthProviderName,
   explicitlyConfigured: boolean
 ): void {
-  if (process.env.MORPHIC_CLOUD_DEPLOYMENT !== 'true' || name === 'supabase') {
+  if (process.env.SERA_CLOUD_DEPLOYMENT !== 'true' || name === 'supabase') {
     return
   }
   if (name === 'none' && !explicitlyConfigured) {
     // Preserve the historical message for ENABLE_AUTH=false deployments
-    throw new Error(
-      'ENABLE_AUTH=false is not allowed in MORPHIC_CLOUD_DEPLOYMENT'
-    )
+    throw new Error('ENABLE_AUTH=false is not allowed in SERA_CLOUD_DEPLOYMENT')
   }
   throw new Error(
-    `AUTH_PROVIDER=${name} is not allowed in MORPHIC_CLOUD_DEPLOYMENT`
+    `AUTH_PROVIDER=${name} is not allowed in SERA_CLOUD_DEPLOYMENT`
   )
 }
 
@@ -119,7 +117,7 @@ export function getAuthProvider(): AuthProvider {
   const provider = providerRegistry[name]
   if (!provider) {
     throw new Error(
-      `AUTH_PROVIDER=${name} is not available in this version of Morphic.`
+      `AUTH_PROVIDER=${name} is not available in this version of Sera.`
     )
   }
   return provider

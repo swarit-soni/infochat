@@ -2,15 +2,9 @@
 
 ## Quick Start
 
-### Using Prebuilt Image (Recommended)
+### Building and Running with Docker Compose
 
-1. Pull the latest image:
-
-```bash
-docker pull ghcr.io/miurla/morphic:latest
-```
-
-2. Configure environment:
+1. Configure environment:
 
 ```bash
 cp .env.local.example .env.local
@@ -45,11 +39,11 @@ docker compose up -d --build
 - **PostgreSQL 17** - Database with automatic migrations
 - **Redis** - SearXNG search caching
 - **SearXNG** - Self-hosted search engine (no external search API key needed)
-- **Morphic** - The application
+- **Sera** - The application
 
 ## Model Selection
 
-In Docker mode, Morphic dynamically detects available AI providers based on your API keys and displays a model selector in the UI. No configuration files to edit — just set your API key and pick your model.
+In Docker mode, Sera dynamically detects available AI providers based on your API keys and displays a model selector in the UI. No configuration files to edit — just set your API key and pick your model.
 
 ## Built-in Defaults
 
@@ -59,7 +53,7 @@ Docker Compose automatically sets these for you:
 - `SEARCH_API=searxng`
 - `SEARXNG_API_URL=http://searxng:8080`
 - `LOCAL_REDIS_URL=redis://redis:6379`
-- `MORPHIC_CLOUD_DEPLOYMENT=false`
+- `SERA_CLOUD_DEPLOYMENT=false`
 
 Values in `docker-compose.yaml` take precedence over `.env.local`. To override a default:
 
@@ -84,9 +78,9 @@ If these are not set, upload is disabled.
 Customize database credentials in `.env.local`:
 
 ```bash
-POSTGRES_USER=morphic      # Default: morphic
-POSTGRES_PASSWORD=morphic  # Default: morphic
-POSTGRES_DB=morphic        # Default: morphic
+POSTGRES_USER=sera         # Default: sera
+POSTGRES_PASSWORD=sera     # Default: sera
+POSTGRES_DB=sera           # Default: sera
 POSTGRES_PORT=5432         # Default: 5432
 ```
 
@@ -146,8 +140,8 @@ docker compose down
 docker compose down -v
 
 # View logs
-docker compose logs -f morphic
+docker compose logs -f sera
 
 # Rebuild the image
-docker compose build morphic
+docker compose build sera
 ```

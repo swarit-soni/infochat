@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto'
 import { isValidDataPartNonce } from './data-part-nonce'
 
 /**
- * Maps Morphic's user-authored data parts into model input for
+ * Maps Sera's user-authored data parts into model input for
  * `convertToModelMessages({ convertDataPart })`. Returning `undefined` drops
  * the part from the model message.
  *
@@ -52,8 +52,7 @@ export function convertDataPart(part: {
 
   if (part.type === 'data-noteContext') {
     const data = part.data as
-      | { title?: unknown; text?: unknown; nonce?: unknown }
-      | undefined
+      { title?: unknown; text?: unknown; nonce?: unknown } | undefined
     const text = typeof data?.text === 'string' ? data.text : ''
     const title = typeof data?.title === 'string' ? data.title.trim() : ''
     if (!text) return undefined

@@ -8,88 +8,88 @@ describe('parseVersionCheckConfig', () => {
       name: 'defaults when nothing is set',
       env: {},
       expected: {
-        repo: 'miurla/morphic',
+        repo: 'swarit-soni/infochat',
         ttlSeconds: 86400,
         disabled: false
       }
     },
     {
       name: 'repo override',
-      env: { MORPHIC_UPDATE_CHECK_REPO: 'acme/morphic' },
+      env: { SERA_UPDATE_CHECK_REPO: 'acme/sera' },
       expected: {
-        repo: 'acme/morphic',
+        repo: 'acme/sera',
         ttlSeconds: 86400,
         disabled: false
       }
     },
     {
       name: 'ttl override',
-      env: { MORPHIC_UPDATE_CHECK_TTL_SECONDS: '3600' },
+      env: { SERA_UPDATE_CHECK_TTL_SECONDS: '3600' },
       expected: {
-        repo: 'miurla/morphic',
+        repo: 'swarit-soni/infochat',
         ttlSeconds: 3600,
         disabled: false
       }
     },
     {
       name: 'ttl below floor clamps to 300',
-      env: { MORPHIC_UPDATE_CHECK_TTL_SECONDS: '10' },
+      env: { SERA_UPDATE_CHECK_TTL_SECONDS: '10' },
       expected: {
-        repo: 'miurla/morphic',
+        repo: 'swarit-soni/infochat',
         ttlSeconds: 300,
         disabled: false
       }
     },
     {
       name: 'ttl at the floor stays at 300',
-      env: { MORPHIC_UPDATE_CHECK_TTL_SECONDS: '300' },
+      env: { SERA_UPDATE_CHECK_TTL_SECONDS: '300' },
       expected: {
-        repo: 'miurla/morphic',
+        repo: 'swarit-soni/infochat',
         ttlSeconds: 300,
         disabled: false
       }
     },
     {
       name: 'non-numeric ttl falls back to the default',
-      env: { MORPHIC_UPDATE_CHECK_TTL_SECONDS: 'banana' },
+      env: { SERA_UPDATE_CHECK_TTL_SECONDS: 'banana' },
       expected: {
-        repo: 'miurla/morphic',
+        repo: 'swarit-soni/infochat',
         ttlSeconds: 86400,
         disabled: false
       }
     },
     {
       name: 'empty ttl falls back to the default',
-      env: { MORPHIC_UPDATE_CHECK_TTL_SECONDS: '' },
+      env: { SERA_UPDATE_CHECK_TTL_SECONDS: '' },
       expected: {
-        repo: 'miurla/morphic',
+        repo: 'swarit-soni/infochat',
         ttlSeconds: 86400,
         disabled: false
       }
     },
     {
       name: 'fractional ttl is truncated',
-      env: { MORPHIC_UPDATE_CHECK_TTL_SECONDS: '3600.9' },
+      env: { SERA_UPDATE_CHECK_TTL_SECONDS: '3600.9' },
       expected: {
-        repo: 'miurla/morphic',
+        repo: 'swarit-soni/infochat',
         ttlSeconds: 3600,
         disabled: false
       }
     },
     {
       name: 'disabled flag',
-      env: { MORPHIC_UPDATE_CHECK_DISABLED: 'true' },
+      env: { SERA_UPDATE_CHECK_DISABLED: 'true' },
       expected: {
-        repo: 'miurla/morphic',
+        repo: 'swarit-soni/infochat',
         ttlSeconds: 86400,
         disabled: true
       }
     },
     {
       name: 'disabled only matches the literal true',
-      env: { MORPHIC_UPDATE_CHECK_DISABLED: 'yes' },
+      env: { SERA_UPDATE_CHECK_DISABLED: 'yes' },
       expected: {
-        repo: 'miurla/morphic',
+        repo: 'swarit-soni/infochat',
         ttlSeconds: 86400,
         disabled: false
       }
@@ -101,24 +101,24 @@ describe('parseVersionCheckConfig', () => {
   test('valid repo variants pass through', () => {
     expect(
       parseVersionCheckConfig({
-        MORPHIC_UPDATE_CHECK_REPO: 'acme-foundation/morphic.rs'
+        SERA_UPDATE_CHECK_REPO: 'acme-foundation/sera.rs'
       }).repo
-    ).toBe('acme-foundation/morphic.rs')
+    ).toBe('acme-foundation/sera.rs')
   })
 
   test('invalid repo values fall back to the default with a warning', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const invalid = [
-      'https://github.com/acme/morphic',
-      'acme/morphic/',
-      'acme/morphic/extra',
+      'https://github.com/acme/sera',
+      'acme/sera/',
+      'acme/sera/extra',
       'not a repo',
       'acme'
     ]
     for (const repo of invalid) {
       expect(
-        parseVersionCheckConfig({ MORPHIC_UPDATE_CHECK_REPO: repo }).repo
-      ).toBe('miurla/morphic')
+        parseVersionCheckConfig({ SERA_UPDATE_CHECK_REPO: repo }).repo
+      ).toBe('swarit-soni/infochat')
     }
     expect(warnSpy).toHaveBeenCalledTimes(invalid.length)
 

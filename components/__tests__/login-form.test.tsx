@@ -23,14 +23,15 @@ const capabilities = {
 function renderForm(
   override: Partial<typeof capabilities> = {},
   next?: string,
-  initialError?: string | null
+  initialError?: string | null,
+  isBeta?: boolean
 ) {
   return render(
     <AppUserProvider
       user={null}
       capabilities={{ ...capabilities, ...override }}
     >
-      <LoginForm next={next} initialError={initialError} />
+      <LoginForm next={next} initialError={initialError} isBeta={isBeta} />
     </AppUserProvider>
   )
 }
@@ -41,10 +42,10 @@ describe('LoginForm', () => {
     document.cookie = 'auth_next=; path=/; max-age=0; SameSite=Lax'
   })
 
-  it('renders InfoChat Google sign-in card with Kalvium domain info and no password fields', () => {
+  it('renders Sera Google sign-in card with Kalvium domain info and no password fields', () => {
     renderForm()
 
-    expect(screen.getByText('Sign in to InfoChat')).toBeInTheDocument()
+    expect(screen.getByText('Sign in to Sera')).toBeInTheDocument()
     expect(screen.getByText('@kalvium.com')).toBeInTheDocument()
     expect(screen.getByText('Mentor')).toBeInTheDocument()
     expect(screen.getByText('@kalvium.community')).toBeInTheDocument()
@@ -206,5 +207,17 @@ describe('LoginForm', () => {
     expect(
       screen.queryByRole('button', { name: 'Sign In with Google' })
     ).not.toBeInTheDocument()
+  })
+
+  it('shows the Beta badge only when isBeta is true', () => {
+    const { rerender } = renderForm()
+    expect(screen.queryByText('Beta')).not.toBeInTheDocument()
+
+    rerender(
+      <AppUserProvider user={null} capabilities={capabilities}>
+        <LoginForm isBeta />
+      </AppUserProvider>
+    )
+    expect(screen.getByText('Beta')).toBeInTheDocument()
   })
 })

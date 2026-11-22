@@ -26,7 +26,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
             <IconLogo className="size-14" />
           </div>
           <DialogTitle className="text-xl font-semibold">
-            Continue with InfoChat
+            Continue with Sera
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
             Sign in with your @kalvium.com (Mentor) or @kalvium.community

@@ -36,7 +36,7 @@ const EMPTY_FIELDS: SpaceFields = { name: '', about: '', style: '' }
 const SAVE_DELAY_MS = 600
 const EDIT_PARAM = 'space'
 const EDIT_VALUE = 'edit'
-const PEEK_SEEN_KEY = 'morphic:spaces-peek-seen'
+const PEEK_SEEN_KEY = 'sera:spaces-peek-seen'
 
 export function isEmptySpace(fields?: SpaceFields): boolean {
   return (

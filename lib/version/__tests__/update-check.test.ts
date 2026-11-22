@@ -22,7 +22,7 @@ describe('checkForUpdate', () => {
     vi.clearAllMocks()
     resetFailureBackoff()
     mockedGetConfig.mockReturnValue({
-      repo: 'miurla/morphic',
+      repo: 'swarit-soni/infochat',
       ttlSeconds: 86400,
       disabled: false
     })
@@ -42,10 +42,10 @@ describe('checkForUpdate', () => {
     expect(result).toEqual({
       hasUpdate: true,
       latestVersion: 'v1.8.0',
-      releaseUrl: 'https://github.com/miurla/morphic/releases/tag/v1.8.0'
+      releaseUrl: 'https://github.com/swarit-soni/infochat/releases/tag/v1.8.0'
     })
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://api.github.com/repos/miurla/morphic/releases/latest',
+      'https://api.github.com/repos/swarit-soni/infochat/releases/latest',
       expect.objectContaining({
         next: { revalidate: 86400 },
         headers: { accept: 'application/vnd.github+json' },
@@ -60,6 +60,18 @@ describe('checkForUpdate', () => {
     vi.stubGlobal('fetch', mockFetchSuccess({ tag_name: 'v1.7.0' }))
 
     expect(await checkForUpdate('1.7.0')).toEqual({ hasUpdate: false })
+
+    vi.unstubAllGlobals()
+  })
+
+  test('reports an update when running 1.0.0-beta and stable v1.0.0 is released', async () => {
+    vi.stubGlobal('fetch', mockFetchSuccess({ tag_name: 'v1.0.0' }))
+
+    expect(await checkForUpdate('1.0.0-beta')).toEqual({
+      hasUpdate: true,
+      latestVersion: 'v1.0.0',
+      releaseUrl: 'https://github.com/swarit-soni/infochat/releases/tag/v1.0.0'
+    })
 
     vi.unstubAllGlobals()
   })
@@ -128,7 +140,7 @@ describe('checkForUpdate', () => {
 
   test('makes no upstream request when the check is disabled', async () => {
     mockedGetConfig.mockReturnValue({
-      repo: 'miurla/morphic',
+      repo: 'swarit-soni/infochat',
       ttlSeconds: 86400,
       disabled: true
     })
@@ -164,7 +176,7 @@ describe('checkForUpdate', () => {
     expect(r1).toEqual({
       hasUpdate: true,
       latestVersion: 'v1.8.0',
-      releaseUrl: 'https://github.com/miurla/morphic/releases/tag/v1.8.0'
+      releaseUrl: 'https://github.com/swarit-soni/infochat/releases/tag/v1.8.0'
     })
     expect(r2).toEqual(r1)
 
@@ -221,7 +233,7 @@ describe('checkForUpdate', () => {
     expect(await behind).toEqual({
       hasUpdate: true,
       latestVersion: 'v1.8.0',
-      releaseUrl: 'https://github.com/miurla/morphic/releases/tag/v1.8.0'
+      releaseUrl: 'https://github.com/swarit-soni/infochat/releases/tag/v1.8.0'
     })
     expect(fetchMock).toHaveBeenCalledTimes(1)
 

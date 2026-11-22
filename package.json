@@ -1,6 +1,6 @@
 {
-  "name": "morphic",
-  "version": "1.10.0",
+  "name": "sera",
+  "version": "1.0.0-beta",
   "private": true,
   "license": "Apache-2.0",
   "scripts": {
