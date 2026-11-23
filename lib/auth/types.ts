@@ -17,7 +17,7 @@ export interface AppUser {
   createdAt?: Date | string | null
   /** Kalvium classification derived from verified email domain. */
   userType?: UserType | null
-  /** Provider role when the provider has one (e.g. `admin` | `user` | `mentor` | `student`). */
+  /** Kalvium role when the provider resolves one (`mentor` | `student`). */
   role?: string | null
 }
 
@@ -83,7 +83,10 @@ export interface AuthProvider {
     email: string
     password: string
   }): Promise<AuthActionResult>
-  signInWithOAuth?(provider: string): Promise<AuthActionResult>
+  signInWithOAuth?(
+    provider: string,
+    options?: { loginHintDomain?: string }
+  ): Promise<AuthActionResult>
   signUp?(credentials: {
     email: string
     password: string

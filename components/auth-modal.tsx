@@ -29,14 +29,23 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
             Continue with Sera
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Sign in with your @kalvium.com (Mentor) or @kalvium.community
-            (Student) Google account.
+            Sign in with your @kalvium.community student Google account to
+            continue.
           </DialogDescription>
         </DialogHeader>
-        <div className="mt-6">
+        <div className="mt-6 flex flex-col items-center gap-3">
           <Button asChild className="w-full" size="lg">
             <Link href="/auth/login">Sign In with Google</Link>
           </Button>
+          <p className="text-xs text-muted-foreground">
+            Are you a mentor?{' '}
+            <Link
+              href="/auth/mentor"
+              className="underline underline-offset-4 hover:text-foreground"
+            >
+              Mentor login
+            </Link>
+          </p>
         </div>
       </DialogContent>
     </Dialog>

@@ -151,4 +151,38 @@ describe('UserMenu', () => {
     )
     expect(screen.getByText('Student')).toBeInTheDocument()
   })
+
+  it('shows Mentor Portal link only for mentors and never shows an Admin link', () => {
+    const mentorUser: AppUser = {
+      ...user,
+      email: 'mentor@kalvium.com',
+      userType: 'mentor',
+      role: 'mentor'
+    }
+    const { rerender } = render(
+      <AppUserProvider user={mentorUser} capabilities={capabilities}>
+        <UserMenu user={mentorUser} />
+      </AppUserProvider>
+    )
+
+    const mentorLink = screen.getByRole('link', { name: 'Mentor Portal' })
+    expect(mentorLink).toHaveAttribute('href', '/mentor')
+    expect(screen.queryByText('Admin')).not.toBeInTheDocument()
+
+    const studentUser: AppUser = {
+      ...user,
+      email: 'student@kalvium.community',
+      userType: 'student',
+      role: 'admin'
+    }
+    rerender(
+      <AppUserProvider user={studentUser} capabilities={capabilities}>
+        <UserMenu user={studentUser} />
+      </AppUserProvider>
+    )
+    expect(
+      screen.queryByRole('link', { name: 'Mentor Portal' })
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText('Admin')).not.toBeInTheDocument()
+  })
 })

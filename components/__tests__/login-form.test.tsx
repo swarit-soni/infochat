@@ -24,14 +24,20 @@ function renderForm(
   override: Partial<typeof capabilities> = {},
   next?: string,
   initialError?: string | null,
-  isBeta?: boolean
+  isBeta?: boolean,
+  mode?: 'student' | 'mentor'
 ) {
   return render(
     <AppUserProvider
       user={null}
       capabilities={{ ...capabilities, ...override }}
     >
-      <LoginForm next={next} initialError={initialError} isBeta={isBeta} />
+      <LoginForm
+        mode={mode}
+        next={next}
+        initialError={initialError}
+        isBeta={isBeta}
+      />
     </AppUserProvider>
   )
 }
@@ -42,17 +48,19 @@ describe('LoginForm', () => {
     document.cookie = 'auth_next=; path=/; max-age=0; SameSite=Lax'
   })
 
-  it('renders Sera Google sign-in card with Kalvium domain info and no password fields', () => {
+  it('renders student-only Google sign-in card with a small link to mentor login', () => {
     renderForm()
 
     expect(screen.getByText('Sign in to Sera')).toBeInTheDocument()
-    expect(screen.getByText('@kalvium.com')).toBeInTheDocument()
-    expect(screen.getByText('Mentor')).toBeInTheDocument()
     expect(screen.getByText('@kalvium.community')).toBeInTheDocument()
     expect(screen.getByText('Student')).toBeInTheDocument()
+    expect(screen.queryByText('@kalvium.com')).not.toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'Sign In with Google' })
     ).toBeInTheDocument()
+
+    const mentorLink = screen.getByRole('link', { name: 'Mentor login' })
+    expect(mentorLink).toHaveAttribute('href', '/auth/mentor')
 
     expect(screen.queryByLabelText(/email/i)).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument()
@@ -62,6 +70,44 @@ describe('LoginForm', () => {
     expect(
       screen.queryByRole('link', { name: /forgot password/i })
     ).not.toBeInTheDocument()
+  })
+
+  it('renders mentor sign-in card in mentor mode with link back to student login and preserves next', () => {
+    renderForm({}, '/mentor', null, false, 'mentor')
+
+    expect(screen.getByText('Mentor sign in')).toBeInTheDocument()
+    expect(screen.getByText('@kalvium.com')).toBeInTheDocument()
+    expect(screen.getByText('Mentor')).toBeInTheDocument()
+    expect(screen.queryByText('@kalvium.community')).not.toBeInTheDocument()
+
+    const studentLink = screen.getByRole('link', { name: 'Student login' })
+    expect(studentLink).toHaveAttribute('href', '/auth/login?next=%2Fmentor')
+  })
+
+  it('calls signInWithGoogle with mentor mode when signing in from mentor login', async () => {
+    const originalLocation = window.location
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      writable: true,
+      value: { href: '' }
+    })
+    vi.mocked(signInWithGoogle).mockResolvedValue({
+      success: true,
+      redirectTo: 'https://accounts.google.com/authorize'
+    })
+    renderForm({}, '/mentor', null, false, 'mentor')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign In with Google' }))
+
+    await waitFor(() => {
+      expect(signInWithGoogle).toHaveBeenCalledWith('mentor')
+    })
+
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      writable: true,
+      value: originalLocation
+    })
   })
 
   it('renders an initial error message when provided', () => {
@@ -92,7 +138,7 @@ describe('LoginForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign In with Google' }))
 
     await waitFor(() => {
-      expect(signInWithGoogle).toHaveBeenCalled()
+      expect(signInWithGoogle).toHaveBeenCalledWith('student')
       expect(window.location.href).toBe('https://accounts.google.com/authorize')
     })
 

@@ -4,6 +4,11 @@ import { useState } from 'react'
 import Link from 'next/link'
 
 import { signInWithGoogle } from '@/lib/actions/auth'
+import {
+  DOMAIN_BY_USER_TYPE,
+  USER_TYPE_LABELS,
+  type UserType
+} from '@/lib/auth/domain'
 import { safeRedirectPath } from '@/lib/auth/redirect-target'
 import { useAuthCapabilities } from '@/lib/contexts/app-user-context'
 import { cn } from '@/lib/utils/index'
@@ -49,11 +54,13 @@ function GoogleIcon() {
 
 export function LoginForm({
   className,
+  mode = 'student',
   next,
   initialError = null,
   isBeta = false,
   ...props
 }: React.ComponentPropsWithoutRef<'div'> & {
+  mode?: UserType
   next?: string
   initialError?: string | null
   isBeta?: boolean
@@ -61,6 +68,16 @@ export function LoginForm({
   const [error, setError] = useState<string | null>(initialError)
   const [isLoading, setIsLoading] = useState(false)
   const capabilities = useAuthCapabilities()
+
+  const isMentor = mode === 'mentor'
+  const safeNext = next ? safeRedirectPath(next) : null
+  const nextQuery =
+    safeNext && safeNext !== '/' ? `?next=${encodeURIComponent(safeNext)}` : ''
+  const alternateHref = isMentor
+    ? `/auth/login${nextQuery}`
+    : `/auth/mentor${nextQuery}`
+  const expectedDomain = `@${DOMAIN_BY_USER_TYPE[mode]}`
+  const roleLabel = USER_TYPE_LABELS[mode]
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true)
@@ -78,7 +95,7 @@ export function LoginForm({
           )}; path=/; max-age=300; SameSite=Lax`
         : 'auth_next=; path=/; max-age=0; SameSite=Lax'
 
-      const result = await signInWithGoogle()
+      const result = await signInWithGoogle(mode)
       if (!result.success) {
         throw new Error(result.error ?? 'An OAuth error occurred')
       }
@@ -101,7 +118,7 @@ export function LoginForm({
           <CardTitle className="text-2xl flex flex-col items-center justify-center gap-4">
             <IconLogo className="size-12" />
             <span className="inline-flex items-center gap-2">
-              <span>Sign in to Sera</span>
+              <span>{isMentor ? 'Mentor sign in' : 'Sign in to Sera'}</span>
               {isBeta && (
                 <Badge
                   variant="secondary"
@@ -113,22 +130,17 @@ export function LoginForm({
             </span>
           </CardTitle>
           <CardDescription>
-            Sign in with your Kalvium Google account to continue.
+            {isMentor
+              ? 'Sign in with your Kalvium mentor Google account to manage campus data.'
+              : 'Sign in with your Kalvium student Google account.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4">
-            <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground space-y-2">
-              <p className="font-medium text-foreground">
-                Supported Google accounts
-              </p>
+            <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
               <div className="flex items-center justify-between gap-2">
-                <span>@kalvium.com</span>
-                <Badge variant="secondary">Mentor</Badge>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <span>@kalvium.community</span>
-                <Badge variant="secondary">Student</Badge>
+                <span>{expectedDomain}</span>
+                <Badge variant="secondary">{roleLabel}</Badge>
               </div>
             </div>
 
@@ -160,7 +172,16 @@ export function LoginForm({
           </div>
         </CardContent>
       </Card>
-      <div className="text-center text-xs text-muted-foreground">
+      <div className="flex flex-col items-center gap-2 text-center text-xs text-muted-foreground">
+        <p>
+          {isMentor ? 'Looking for student login? ' : 'Are you a mentor? '}
+          <Link
+            href={alternateHref}
+            className="underline underline-offset-4 hover:text-foreground"
+          >
+            {isMentor ? 'Student login' : 'Mentor login'}
+          </Link>
+        </p>
         <Link href="/" className="hover:underline">
           &larr; Back to Home
         </Link>

@@ -7,6 +7,11 @@ export const ALLOWED_EMAIL_DOMAINS: Readonly<Record<string, UserType>> = {
   'kalvium.community': 'student'
 }
 
+export const DOMAIN_BY_USER_TYPE: Readonly<Record<UserType, string>> = {
+  mentor: 'kalvium.com',
+  student: 'kalvium.community'
+}
+
 export const USER_TYPE_LABELS: Readonly<Record<UserType, string>> = {
   mentor: 'Mentor',
   student: 'Student'

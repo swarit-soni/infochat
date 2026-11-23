@@ -189,4 +189,17 @@ describe('updateSession', () => {
       'http://localhost:3000/auth/login?error=unauthorized_domain'
     )
   })
+
+  it('redirects unauthenticated requests for /mentor to /auth/mentor', async () => {
+    getUser.mockResolvedValue({ data: { user: null } })
+
+    const response = await updateSession(
+      new NextRequest('http://localhost:3000/mentor')
+    )
+
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe(
+      'http://localhost:3000/auth/mentor?next=%2Fmentor'
+    )
+  })
 })
