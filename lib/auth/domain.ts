@@ -68,11 +68,90 @@ export function extractEmailDomain(
 }
 
 /**
- * Resolve the Kalvium user type from an email's exact domain, or null if disallowed.
+ * Return true only in non-production runtime stages (Vercel Preview/Development
+ * or local non-production Node environments).
+ */
+export function isNonProductionStage(
+  env: Record<string, string | undefined> = process.env
+): boolean {
+  if (env.VERCEL_ENV) {
+    return env.VERCEL_ENV !== 'production'
+  }
+  return env.NODE_ENV !== 'production'
+}
+
+/**
+ * Parse comma-separated `SERA_MENTOR_EMAILS` strictly in non-production stages.
+ * Returns an empty set in production.
+ */
+export function getNonProdMentorEmails(
+  env: Record<string, string | undefined> = process.env
+): ReadonlySet<string> {
+  if (!isNonProductionStage(env) || !env.SERA_MENTOR_EMAILS) {
+    return new Set()
+  }
+
+  const emails = new Set<string>()
+  for (const rawEntry of env.SERA_MENTOR_EMAILS.split(',')) {
+    const normalized = normalizeEmail(rawEntry)
+    if (normalized) {
+      emails.add(normalized)
+    }
+  }
+  return emails
+}
+
+/**
+ * Return true if the email matches a strictly non-production mentor test override.
+ */
+export function isNonProdMentorEmail(
+  email: string | null | undefined,
+  env: Record<string, string | undefined> = process.env
+): boolean {
+  const normalized = normalizeEmail(email)
+  if (!normalized) {
+    return false
+  }
+  return getNonProdMentorEmails(env).has(normalized)
+}
+
+/**
+ * Return true only when the email belongs to an official Kalvium domain
+ * (`kalvium.com` or `kalvium.community`).
+ */
+export function isKalviumDomainEmail(
+  email: string | null | undefined
+): boolean {
+  const domain = extractEmailDomain(email)
+  return Boolean(domain && Object.hasOwn(ALLOWED_EMAIL_DOMAINS, domain))
+}
+
+/**
+ * Return true when non-production `SERA_MENTOR_EMAILS` includes a non-`@kalvium.com`
+ * test mentor email, so OAuth skips Google's `hd=kalvium.com` account picker filter.
+ */
+export function hasNonKalviumMentorOverride(
+  env: Record<string, string | undefined> = process.env
+): boolean {
+  for (const email of getNonProdMentorEmails(env)) {
+    if (extractEmailDomain(email) !== DOMAIN_BY_USER_TYPE.mentor) {
+      return true
+    }
+  }
+  return false
+}
+
+/**
+ * Resolve the Kalvium user type from an email's exact domain (or strictly
+ * non-production `SERA_MENTOR_EMAILS` override), or null if disallowed.
  */
 export function getUserTypeFromEmail(
-  email: string | null | undefined
+  email: string | null | undefined,
+  env: Record<string, string | undefined> = process.env
 ): UserType | null {
+  if (isNonProdMentorEmail(email, env)) {
+    return 'mentor'
+  }
   const domain = extractEmailDomain(email)
   if (!domain || !Object.hasOwn(ALLOWED_EMAIL_DOMAINS, domain)) {
     return null
@@ -81,10 +160,14 @@ export function getUserTypeFromEmail(
 }
 
 /**
- * Return true only for allowed @kalvium.com and @kalvium.community email addresses.
+ * Return true only for allowed @kalvium.com, @kalvium.community, or strictly
+ * non-production allowlisted mentor email addresses.
  */
-export function isAllowedEmail(email: string | null | undefined): boolean {
-  return getUserTypeFromEmail(email) !== null
+export function isAllowedEmail(
+  email: string | null | undefined,
+  env: Record<string, string | undefined> = process.env
+): boolean {
+  return getUserTypeFromEmail(email, env) !== null
 }
 
 /**

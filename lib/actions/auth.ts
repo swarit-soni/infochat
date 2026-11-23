@@ -1,6 +1,10 @@
 'use server'
 
-import { DOMAIN_BY_USER_TYPE, type UserType } from '@/lib/auth/domain'
+import {
+  DOMAIN_BY_USER_TYPE,
+  hasNonKalviumMentorOverride,
+  type UserType
+} from '@/lib/auth/domain'
 import { getAuthProvider } from '@/lib/auth/provider'
 import type { AuthActionResult } from '@/lib/auth/types'
 
@@ -15,7 +19,12 @@ export async function signInWithGoogle(
   if (!provider.signInWithOAuth) {
     return unavailable()
   }
-  const loginHintDomain = userType ? DOMAIN_BY_USER_TYPE[userType] : undefined
+
+  const skipDomainHint =
+    userType === 'mentor' && hasNonKalviumMentorOverride()
+  const loginHintDomain =
+    userType && !skipDomainHint ? DOMAIN_BY_USER_TYPE[userType] : undefined
+
   return provider.signInWithOAuth(
     'google',
     loginHintDomain ? { loginHintDomain } : undefined

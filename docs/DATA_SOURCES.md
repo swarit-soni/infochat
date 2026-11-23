@@ -13,6 +13,7 @@ This specification defines how **SERA (Student Enquiry and Research Assistant)**
 - **Authentication & Roles (Student + Mentor Only):** Google-only OAuth via Supabase (`AUTH_PROVIDER=supabase`) strictly limits access to **two roles** with **no `admin` role**:
   - **Student** (`@kalvium.community`) — standard chatbot users; main sign-in at `/auth/login` displays student login with a small link to `/auth/mentor`.
   - **Mentor** (`@kalvium.com`) — campus data providers/curators who upload circulars, review urgent updates, manage Eventum entries, and monitor unanswered queries via the **Mentor Data Portal** (`/mentor`, gated on `user.userType === 'mentor'`).
+  - **Non-Production Testing Override:** In strictly non-production stages (`VERCEL_ENV !== 'production'` / `NODE_ENV !== 'production'`), `SERA_MENTOR_EMAILS` may list comma-separated test mentor emails; production ignores this variable completely.
 - **Zero Authenticated Scraping:** SERA never automates logins, stores session cookies, or asks students for ERP/Kalvium credentials.
 - **Strict PII Boundary:** Shared cohort information lives in the searchable Knowledge Base; personal per-student information (attendance, grades, fee balances, personal learning progress) is never indexed or cached in shared storage.
 

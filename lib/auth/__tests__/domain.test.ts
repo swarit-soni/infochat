@@ -3,9 +3,13 @@ import { describe, expect, it } from 'vitest'
 import {
   ALLOWED_EMAIL_DOMAINS,
   extractEmailDomain,
+  getNonProdMentorEmails,
   getUserTypeFromEmail,
+  hasNonKalviumMentorOverride,
   isAllowedEmail,
   isGoogleAuthUser,
+  isKalviumDomainEmail,
+  isNonProductionStage,
   normalizeEmail,
   UNAUTHORIZED_DOMAIN_ERROR,
   USER_TYPES
@@ -133,6 +137,52 @@ describe('auth domain rules', () => {
 
       expect(isGoogleAuthUser(null)).toBe(false)
       expect(isGoogleAuthUser({})).toBe(false)
+    })
+  })
+
+  describe('non-production SERA_MENTOR_EMAILS override', () => {
+    it('classifies allowlisted test emails as mentor in preview/development stages', () => {
+      const previewEnv = {
+        VERCEL_ENV: 'preview',
+        NODE_ENV: 'production',
+        SERA_MENTOR_EMAILS: ' Tester@Gmail.com , second@example.com '
+      }
+
+      expect(isNonProductionStage(previewEnv)).toBe(true)
+      expect(Array.from(getNonProdMentorEmails(previewEnv))).toEqual([
+        'tester@gmail.com',
+        'second@example.com'
+      ])
+      expect(getUserTypeFromEmail('tester@gmail.com', previewEnv)).toBe(
+        'mentor'
+      )
+      expect(isAllowedEmail('tester@gmail.com', previewEnv)).toBe(true)
+      expect(isKalviumDomainEmail('tester@gmail.com')).toBe(false)
+      expect(hasNonKalviumMentorOverride(previewEnv)).toBe(true)
+      expect(getUserTypeFromEmail('other@gmail.com', previewEnv)).toBeNull()
+    })
+
+    it('strictly ignores SERA_MENTOR_EMAILS in production stages', () => {
+      const vercelProdEnv = {
+        VERCEL_ENV: 'production',
+        NODE_ENV: 'production',
+        SERA_MENTOR_EMAILS: 'tester@gmail.com'
+      }
+      const selfHostedProdEnv = {
+        NODE_ENV: 'production',
+        SERA_MENTOR_EMAILS: 'tester@gmail.com'
+      }
+
+      for (const prodEnv of [vercelProdEnv, selfHostedProdEnv]) {
+        expect(isNonProductionStage(prodEnv)).toBe(false)
+        expect(getNonProdMentorEmails(prodEnv).size).toBe(0)
+        expect(hasNonKalviumMentorOverride(prodEnv)).toBe(false)
+        expect(getUserTypeFromEmail('tester@gmail.com', prodEnv)).toBeNull()
+        expect(isAllowedEmail('tester@gmail.com', prodEnv)).toBe(false)
+        expect(getUserTypeFromEmail('mentor@kalvium.com', prodEnv)).toBe(
+          'mentor'
+        )
+      }
     })
   })
 })
