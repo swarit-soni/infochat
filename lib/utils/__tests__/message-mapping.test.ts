@@ -50,3 +50,41 @@ describe('editDraft tool parts', () => {
     expect(restored).toMatchObject(uiPart)
   })
 })
+
+describe('campus RAG tool parts', () => {
+  it.each([
+    'tool-searchCampusKnowledge',
+    'tool-queryEvents',
+    'tool-getOfficialPortalLinks',
+    'tool-searchOfficialWeb',
+    'tool-logUnansweredQuery'
+  ])('round-trips %s through the dynamic tool columns', partType => {
+    const uiPart = {
+      type: partType,
+      toolCallId: 'call-rag-1',
+      state: 'output-available',
+      input: { query: 'JECRC fee schedule' },
+      output: {
+        state: 'complete',
+        results: [
+          {
+            title: 'Fee Circular',
+            url: 'https://jecrcuniversity.edu.in/#sera-kb-1',
+            content: 'Annual tuition INR 2,50,000',
+            label: 'S1'
+          }
+        ]
+      }
+    }
+    const [dbPart] = mapUIMessagePartsToDBParts([uiPart] as never, 'msg-1')
+
+    expect(dbPart.type).toBe('tool-dynamic')
+    expect(dbPart.tool_dynamic_type).toBe('rag')
+    expect(dbPart.tool_dynamic_name).toBe(partType.slice(5))
+
+    const restored = mapDBPartToUIMessagePart(
+      persistedPart(dbPart as Partial<DBMessagePartSelect>)
+    )
+    expect(restored).toMatchObject(uiPart)
+  })
+})

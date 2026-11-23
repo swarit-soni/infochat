@@ -6,6 +6,7 @@ import type {
   UIToolInvocation
 } from 'ai'
 
+import type { createCampusRagTools } from '../tools/campus-rag'
 import type { createDraftTools } from '../tools/draft'
 import type { fetchTool } from '../tools/fetch'
 import type { createQuestionTool } from '../tools/question'
@@ -19,7 +20,8 @@ export type ResearcherTools = {
   search: ReturnType<typeof createSearchTool>
   fetch: typeof fetchTool
   askQuestion: ReturnType<typeof createQuestionTool>
-} & ReturnType<typeof createTodoTools> &
+} & ReturnType<typeof createCampusRagTools> &
+  ReturnType<typeof createTodoTools> &
   ReturnType<typeof createDraftTools>
 
 // Runtime context carried through the generation lifecycle. Included in

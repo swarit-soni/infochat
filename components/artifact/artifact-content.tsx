@@ -18,6 +18,10 @@ export function ArtifactContent({ part }: { part: Part | null }) {
 
   switch (part.type) {
     case 'tool-search':
+    case 'tool-searchCampusKnowledge':
+    case 'tool-queryEvents':
+    case 'tool-getOfficialPortalLinks':
+    case 'tool-searchOfficialWeb':
     case 'tool-fetch':
     case 'tool-askQuestion':
       return <ToolInvocationContent part={part} />

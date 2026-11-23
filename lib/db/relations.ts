@@ -1,6 +1,15 @@
 import { relations } from 'drizzle-orm'
 
-import { chats, libraryFiles, messages, notes, parts } from './schema'
+import {
+  chats,
+  knowledgeChunks,
+  knowledgeDocuments,
+  libraryFiles,
+  messages,
+  notes,
+  parts,
+  unansweredQueries
+} from './schema'
 
 export const chatsRelations = relations(chats, ({ many }) => ({
   messages: many(messages),
@@ -36,3 +45,31 @@ export const libraryFilesRelations = relations(libraryFiles, ({ one }) => ({
     references: [chats.id]
   })
 }))
+
+export const knowledgeDocumentsRelations = relations(
+  knowledgeDocuments,
+  ({ many }) => ({
+    chunks: many(knowledgeChunks),
+    flaggedQueries: many(unansweredQueries)
+  })
+)
+
+export const knowledgeChunksRelations = relations(
+  knowledgeChunks,
+  ({ one }) => ({
+    document: one(knowledgeDocuments, {
+      fields: [knowledgeChunks.documentId],
+      references: [knowledgeDocuments.id]
+    })
+  })
+)
+
+export const unansweredQueriesRelations = relations(
+  unansweredQueries,
+  ({ one }) => ({
+    flaggedDocument: one(knowledgeDocuments, {
+      fields: [unansweredQueries.flaggedDocumentId],
+      references: [knowledgeDocuments.id]
+    })
+  })
+)

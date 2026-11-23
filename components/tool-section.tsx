@@ -70,6 +70,10 @@ export function ToolSection({
 
   switch (tool.type) {
     case 'tool-search':
+    case 'tool-searchCampusKnowledge':
+    case 'tool-queryEvents':
+    case 'tool-getOfficialPortalLinks':
+    case 'tool-searchOfficialWeb':
       return (
         <SearchSection
           tool={tool as ToolPart<'search'>}

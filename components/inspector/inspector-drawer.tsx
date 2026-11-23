@@ -26,6 +26,14 @@ export function InspectorDrawer() {
     switch (part.type) {
       case 'tool-search':
         return 'search'
+      case 'tool-searchCampusKnowledge':
+        return 'Campus Knowledge'
+      case 'tool-queryEvents':
+        return 'Campus Events'
+      case 'tool-getOfficialPortalLinks':
+        return 'Official Portals'
+      case 'tool-searchOfficialWeb':
+        return 'Official Web'
       case 'tool-fetch':
         return 'fetch'
       case 'tool-askQuestion':
