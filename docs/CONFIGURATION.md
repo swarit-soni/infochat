@@ -32,6 +32,8 @@ DATABASE_URL=postgresql://user:password@localhost:5432/sera
 
 Any PostgreSQL provider works: [Neon](https://neon.tech/), [Supabase](https://supabase.com/), or a local PostgreSQL instance.
 
+**Vercel + Supabase integration**: the integration sets `POSTGRES_URL` (and `POSTGRES_URL_NON_POOLING`) instead of `DATABASE_URL`. The app falls back to `POSTGRES_URL` at runtime and `bun migrate` falls back to `POSTGRES_URL_NON_POOLING`. The integration only sets these for the Production environment, so add `DATABASE_URL` to Preview yourself if previews need chat history.
+
 **Docker**: Database is automatically configured — no need to set this.
 
 ### Running Migrations

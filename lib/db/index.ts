@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 
+import { buildConnectionConfig, resolveDatabaseUrl } from './connection-config'
 import * as relations from './relations'
 import * as schema from './schema'
 
@@ -11,19 +12,21 @@ const isDevelopment = process.env.NODE_ENV === 'development'
 const isTest = process.env.NODE_ENV === 'test'
 
 // Connection with connection pooling for server environments
-// Prefer restricted user for application runtime
+// Prefer restricted user for application runtime, then DATABASE_URL, then the
+// POSTGRES_URL injected by the Vercel Supabase integration.
+const resolvedDatabaseUrl = resolveDatabaseUrl()
 const restrictedDatabaseUrl =
-  process.env.DATABASE_RESTRICTED_URL?.trim() || undefined
-const databaseUrl = process.env.DATABASE_URL?.trim() || undefined
+  resolvedDatabaseUrl?.source === 'DATABASE_RESTRICTED_URL'
+    ? resolvedDatabaseUrl.url
+    : undefined
 const connectionString =
-  restrictedDatabaseUrl ?? // Prefer restricted user
-  databaseUrl ??
+  resolvedDatabaseUrl?.url ??
   (isTest ? 'postgres://user:pass@localhost:5432/testdb' : undefined)
 
 const databaseErrorMessage =
-  'DATABASE_URL or DATABASE_RESTRICTED_URL environment variable is not set'
+  'DATABASE_URL, DATABASE_RESTRICTED_URL, or POSTGRES_URL environment variable is not set'
 
-const createDatabase = (url: string) => {
+const createDatabase = (rawUrl: string) => {
   // Log which connection is being used (for debugging)
   if (isDevelopment) {
     console.log(
@@ -34,16 +37,13 @@ const createDatabase = (url: string) => {
     )
   }
 
-  // SSL configuration: Use environment variable to control SSL
-  // DATABASE_SSL_DISABLED=true disables SSL completely (for local/Docker PostgreSQL)
-  // Default is to enable SSL with certificate verification (for cloud databases like Neon, Supabase)
-  const sslConfig =
-    process.env.DATABASE_SSL_DISABLED === 'true'
-      ? false // Disable SSL entirely for local PostgreSQL
-      : { rejectUnauthorized: true } // Enable SSL with verification for cloud DBs
+  // SSL: DATABASE_SSL_DISABLED=true turns it off (local/Docker PostgreSQL);
+  // sslmode=require in the URL encrypts without verifying (Supabase pooler);
+  // otherwise the server certificate is verified.
+  const { url, ssl } = buildConnectionConfig(rawUrl)
 
   const client = postgres(url, {
-    ssl: sslConfig,
+    ssl,
     prepare: false,
     max: 20 // Max 20 connections
   })
