@@ -20,7 +20,8 @@ export async function signInWithGoogle(
     return unavailable()
   }
 
-  const skipDomainHint = hasNonKalviumMentorOverride()
+  const skipDomainHint =
+    userType === 'mentor' && hasNonKalviumMentorOverride()
   const loginHintDomain =
     userType && !skipDomainHint ? DOMAIN_BY_USER_TYPE[userType] : undefined
 

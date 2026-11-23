@@ -51,45 +51,47 @@ const MENTOR_WORKFLOWS = [
 export default async function MentorPortalPage() {
   const user = await getCurrentUser()
   if (!user) {
-    redirect('/auth/login?role=mentor&next=%2Fmentor')
+    redirect('/auth/mentor?next=%2Fmentor')
   }
   if (user.userType !== 'mentor') {
     redirect('/')
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold">Mentor Data Portal</h1>
-            <Badge variant="secondary">Mentor</Badge>
+    <div className="h-full w-full overflow-y-auto">
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 pb-8 pt-16">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-semibold">Mentor Data Portal</h1>
+              <Badge variant="secondary">Mentor</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Signed in as {user.email}. Mentors curate and verify official
+              Kalvium X JECRC knowledge sources for Sera.
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Signed in as {user.email}. Mentors curate and verify official
-            Kalvium X JECRC knowledge sources for Sera.
-          </p>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/">Back to Sera Chat</Link>
+          </Button>
         </div>
-        <Button asChild variant="outline" size="sm">
-          <Link href="/">Back to Sera Chat</Link>
-        </Button>
-      </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {MENTOR_WORKFLOWS.map(workflow => (
-          <Card key={workflow.title}>
-            <CardHeader>
-              <div className="flex items-start justify-between gap-2">
-                <CardTitle className="text-base">{workflow.title}</CardTitle>
-                <Badge variant="outline" className="shrink-0">
-                  {workflow.status}
-                </Badge>
-              </div>
-              <CardDescription>{workflow.description}</CardDescription>
-            </CardHeader>
-            <CardContent />
-          </Card>
-        ))}
+        <div className="grid gap-4 md:grid-cols-2">
+          {MENTOR_WORKFLOWS.map(workflow => (
+            <Card key={workflow.title}>
+              <CardHeader>
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-base">{workflow.title}</CardTitle>
+                  <Badge variant="outline" className="shrink-0">
+                    {workflow.status}
+                  </Badge>
+                </div>
+                <CardDescription>{workflow.description}</CardDescription>
+              </CardHeader>
+              <CardContent />
+            </Card>
+          ))}
+        </div>
       </div>
     </div>
   )
