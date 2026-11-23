@@ -24,14 +24,20 @@ function renderForm(
   override: Partial<typeof capabilities> = {},
   next?: string,
   initialError?: string | null,
-  isBeta?: boolean
+  isBeta?: boolean,
+  mode?: 'student' | 'mentor'
 ) {
   return render(
     <AppUserProvider
       user={null}
       capabilities={{ ...capabilities, ...override }}
     >
-      <LoginForm next={next} initialError={initialError} isBeta={isBeta} />
+      <LoginForm
+        mode={mode}
+        next={next}
+        initialError={initialError}
+        isBeta={isBeta}
+      />
     </AppUserProvider>
   )
 }
@@ -42,17 +48,23 @@ describe('LoginForm', () => {
     document.cookie = 'auth_next=; path=/; max-age=0; SameSite=Lax'
   })
 
-  it('renders Sera Google sign-in card with Kalvium domain info and no password fields', () => {
+  it('renders student-only Google sign-in card with a small toggle to mentor login', () => {
     renderForm()
 
     expect(screen.getByText('Sign in to Sera')).toBeInTheDocument()
-    expect(screen.getByText('@kalvium.com')).toBeInTheDocument()
-    expect(screen.getByText('Mentor')).toBeInTheDocument()
     expect(screen.getByText('@kalvium.community')).toBeInTheDocument()
     expect(screen.getByText('Student')).toBeInTheDocument()
+    expect(screen.queryByText('@kalvium.com')).not.toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'Sign In with Google' })
     ).toBeInTheDocument()
+
+    expect(
+      screen.getByRole('button', { name: 'Mentor login' })
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: 'Mentor login' })
+    ).not.toBeInTheDocument()
 
     expect(screen.queryByLabelText(/email/i)).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument()
@@ -62,6 +74,76 @@ describe('LoginForm', () => {
     expect(
       screen.queryByRole('link', { name: /forgot password/i })
     ).not.toBeInTheDocument()
+  })
+
+  it('toggles in-place between student and mentor views without leaving the page and clears errors', () => {
+    renderForm(
+      {},
+      undefined,
+      'Only @kalvium.com (Mentor) and @kalvium.community (Student) Google accounts are allowed.'
+    )
+
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mentor login' }))
+
+    expect(screen.getByText('Mentor sign in')).toBeInTheDocument()
+    expect(screen.getByText('@kalvium.com')).toBeInTheDocument()
+    expect(screen.getByText('Mentor')).toBeInTheDocument()
+    expect(screen.queryByText('@kalvium.community')).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Student login' })
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Student login' }))
+
+    expect(screen.getByText('Sign in to Sera')).toBeInTheDocument()
+    expect(screen.getByText('@kalvium.community')).toBeInTheDocument()
+    expect(screen.getByText('Student')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Mentor login' })
+    ).toBeInTheDocument()
+  })
+
+  it('renders mentor sign-in card in mentor mode with toggle back to student login', () => {
+    renderForm({}, '/mentor', null, false, 'mentor')
+
+    expect(screen.getByText('Mentor sign in')).toBeInTheDocument()
+    expect(screen.getByText('@kalvium.com')).toBeInTheDocument()
+    expect(screen.getByText('Mentor')).toBeInTheDocument()
+    expect(screen.queryByText('@kalvium.community')).not.toBeInTheDocument()
+
+    expect(
+      screen.getByRole('button', { name: 'Student login' })
+    ).toBeInTheDocument()
+  })
+
+  it('calls signInWithGoogle with mentor mode and defaults redirect to /mentor', async () => {
+    const originalLocation = window.location
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      writable: true,
+      value: { href: '' }
+    })
+    vi.mocked(signInWithGoogle).mockResolvedValue({
+      success: true,
+      redirectTo: 'https://accounts.google.com/authorize'
+    })
+    renderForm({}, undefined, null, false, 'mentor')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign In with Google' }))
+
+    await waitFor(() => {
+      expect(signInWithGoogle).toHaveBeenCalledWith('mentor')
+    })
+    expect(document.cookie).toContain('auth_next=%2Fmentor')
+
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      writable: true,
+      value: originalLocation
+    })
   })
 
   it('renders an initial error message when provided', () => {
@@ -92,7 +174,7 @@ describe('LoginForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign In with Google' }))
 
     await waitFor(() => {
-      expect(signInWithGoogle).toHaveBeenCalled()
+      expect(signInWithGoogle).toHaveBeenCalledWith('student')
       expect(window.location.href).toBe('https://accounts.google.com/authorize')
     })
 

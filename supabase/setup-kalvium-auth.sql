@@ -100,7 +100,30 @@ CREATE POLICY "users_delete_own_profile"
   TO public
   USING (id = (select current_setting('app.current_user_id', true)));
 
--- 2. Supabase Auth "Before User Created" Hook
+-- 2. Non-exposed allowlist for strictly non-production mentor test accounts
+CREATE SCHEMA IF NOT EXISTS private;
+REVOKE ALL ON SCHEMA private FROM PUBLIC, anon, authenticated;
+
+CREATE TABLE IF NOT EXISTS private.nonprod_mentor_allowlist (
+  email text PRIMARY KEY CHECK (email = lower(trim(email))),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+REVOKE ALL ON TABLE private.nonprod_mentor_allowlist FROM PUBLIC, anon, authenticated;
+ALTER TABLE private.nonprod_mentor_allowlist ENABLE ROW LEVEL SECURITY;
+
+GRANT USAGE ON SCHEMA private TO supabase_auth_admin;
+GRANT SELECT ON TABLE private.nonprod_mentor_allowlist TO supabase_auth_admin;
+
+DROP POLICY IF EXISTS "supabase_auth_admin_read_nonprod_mentor_allowlist" ON private.nonprod_mentor_allowlist;
+CREATE POLICY "supabase_auth_admin_read_nonprod_mentor_allowlist"
+  ON private.nonprod_mentor_allowlist
+  AS PERMISSIVE
+  FOR SELECT
+  TO supabase_auth_admin
+  USING (true);
+
+-- 3. Supabase Auth "Before User Created" Hook
 -- Configure in Supabase Dashboard -> Authentication -> Hooks -> Before User Created:
 --   Postgres Function: public.hook_restrict_kalvium_signup
 CREATE OR REPLACE FUNCTION public.hook_restrict_kalvium_signup(event jsonb)
@@ -113,6 +136,7 @@ DECLARE
   user_email text;
   email_local text;
   email_domain text;
+  is_nonprod_allowlisted boolean;
 BEGIN
   auth_provider := lower(coalesce(event->'user'->'app_metadata'->>'provider', ''));
   IF auth_provider <> 'google' THEN
@@ -130,8 +154,25 @@ BEGIN
   email_domain := split_part(user_email, '@', 2);
 
   IF email_local = ''
-     OR (length(user_email) - length(replace(user_email, '@', ''))) <> 1
-     OR email_domain NOT IN ('kalvium.com', 'kalvium.community') THEN
+     OR (length(user_email) - length(replace(user_email, '@', ''))) <> 1 THEN
+    RETURN jsonb_build_object(
+      'error',
+      jsonb_build_object(
+        'http_code', 403,
+        'message', 'Only @kalvium.com and @kalvium.community Google accounts are allowed.'
+      )
+    );
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1
+    FROM private.nonprod_mentor_allowlist
+    WHERE email = user_email
+  )
+  INTO is_nonprod_allowlisted;
+
+  IF email_domain NOT IN ('kalvium.com', 'kalvium.community')
+     AND NOT coalesce(is_nonprod_allowlisted, false) THEN
     RETURN jsonb_build_object(
       'error',
       jsonb_build_object(
@@ -149,7 +190,7 @@ GRANT USAGE ON SCHEMA public TO supabase_auth_admin;
 GRANT EXECUTE ON FUNCTION public.hook_restrict_kalvium_signup(jsonb) TO supabase_auth_admin;
 REVOKE EXECUTE ON FUNCTION public.hook_restrict_kalvium_signup(jsonb) FROM authenticated, anon, public;
 
--- 3. Non-exposed private schema & auth.users sync trigger
+-- 4. Non-exposed private schema & auth.users sync trigger
 CREATE SCHEMA IF NOT EXISTS private;
 REVOKE ALL ON SCHEMA private FROM PUBLIC, anon, authenticated;
 

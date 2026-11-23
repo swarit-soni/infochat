@@ -57,10 +57,6 @@ vi.mock('../message-navigation-dots', () => ({
   MessageNavigationDots: () => null
 }))
 
-vi.mock('../model-selector-client', () => ({
-  ModelSelectorClient: () => null
-}))
-
 vi.mock('../uploaded-file-list', () => ({
   UploadedFileList: () => null
 }))

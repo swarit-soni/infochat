@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   getUserTypeFromEmail,
   isGoogleAuthUser,
+  isKalviumDomainEmail,
   normalizeEmail
 } from '@/lib/auth/domain'
 import { safeRedirectPath } from '@/lib/auth/redirect-target'
@@ -117,7 +118,7 @@ export async function GET(request: NextRequest) {
   }
 
   const normalizedEmail = normalizeEmail(user.email)
-  if (normalizedEmail) {
+  if (normalizedEmail && isKalviumDomainEmail(normalizedEmail)) {
     const metadata = (user.user_metadata ?? {}) as Record<string, unknown>
     try {
       await upsertUserProfile({

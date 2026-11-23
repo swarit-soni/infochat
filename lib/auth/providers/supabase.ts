@@ -74,7 +74,10 @@ export const supabaseAuthProvider: AuthProvider = {
     return updateSession(request)
   },
 
-  async signInWithOAuth(provider: string): Promise<AuthActionResult> {
+  async signInWithOAuth(
+    provider: string,
+    options?: { loginHintDomain?: string }
+  ): Promise<AuthActionResult> {
     if (provider !== 'google') {
       return {
         success: false,
@@ -93,7 +96,8 @@ export const supabaseAuthProvider: AuthProvider = {
         // carries the destination in a short-lived cookie instead.
         redirectTo: `${origin}/auth/oauth`,
         queryParams: {
-          prompt: 'select_account'
+          prompt: 'select_account',
+          ...(options?.loginHintDomain ? { hd: options.loginHintDomain } : {})
         }
       }
     })

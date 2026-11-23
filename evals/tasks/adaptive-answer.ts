@@ -1,6 +1,7 @@
 import cloudConfig from '@/config/models/cloud.json'
 
 import { getAdaptiveModePrompt } from '@/lib/agents/prompts/search-mode-prompts'
+import type { Model } from '@/lib/types/models'
 
 import {
   type AnswerOutput,
@@ -8,10 +9,12 @@ import {
   runAnswerTask
 } from './run-answer-task'
 
-const ADAPTIVE = cloudConfig.models.adaptive
+const ADAPTIVE: Model = cloudConfig.models.adaptive
 
 export const DEFAULT_MODEL = `${ADAPTIVE.providerId}:${ADAPTIVE.id}`
-export const DEFAULT_PROVIDER_OPTIONS = ADAPTIVE.providerOptions
+export const DEFAULT_PROVIDER_OPTIONS = ADAPTIVE.providerOptions as
+  | ProviderOptions
+  | undefined
 
 // Production allows 50 steps in adaptive mode. The fixture search returns the
 // same results every time, so a healthy run converges in a handful of steps;

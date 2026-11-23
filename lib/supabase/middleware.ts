@@ -91,6 +91,9 @@ export async function updateSession(request: NextRequest) {
     const loginUrl = request.nextUrl.clone()
     loginUrl.pathname = '/auth/login'
     loginUrl.search = ''
+    if (matchesPathPrefix(pathname, '/mentor')) {
+      loginUrl.searchParams.set('role', 'mentor')
+    }
     if (pathname !== '/') {
       loginUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
     }

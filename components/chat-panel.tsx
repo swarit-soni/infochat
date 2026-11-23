@@ -33,7 +33,6 @@ import {
 } from '@/lib/search-mode-availability'
 import { NoteContext, UploadedFile } from '@/lib/types'
 import type { UIDataTypes, UIMessage, UITools } from '@/lib/types/ai'
-import type { ModelSelectorData } from '@/lib/types/model-selector'
 import type { SearchMode } from '@/lib/types/search'
 import { cn } from '@/lib/utils'
 import {
@@ -69,7 +68,6 @@ import {
 } from './ui/tooltip'
 import { ActionButtons } from './action-buttons'
 import { MessageNavigationDots } from './message-navigation-dots'
-import { ModelSelectorClient } from './model-selector-client'
 import { SearchModeSelector } from './search-mode-selector'
 import { UploadedFileList } from './uploaded-file-list'
 
@@ -119,7 +117,7 @@ interface ChatPanelProps {
   /** Whether the deployment is cloud mode */
   isCloudDeployment?: boolean
   onAdaptiveModeAuthRequired?: () => void
-  modelSelectorData?: ModelSelectorData
+  hasAvailableModels?: boolean
   /** Chat sections for message navigation dots */
   sections?: { id: string; userMessage: UIMessage }[]
 }
@@ -149,7 +147,7 @@ export function ChatPanel({
   isGuest = false,
   isCloudDeployment = false,
   onAdaptiveModeAuthRequired,
-  modelSelectorData,
+  hasAvailableModels = true,
   sections = []
 }: ChatPanelProps) {
   const router = useRouter()
@@ -183,8 +181,6 @@ export function ChatPanel({
     noteContexts.length > 0 ||
     urlCards.length > 0 ||
     uploadedFiles.some(file => file.status === 'uploaded')
-  const hasAvailableModels =
-    isCloudDeployment || modelSelectorData?.hasAvailableModels !== false
   const searchMode = useSyncExternalStore(
     subscribeToCookieChange,
     getSearchModeSnapshot,
@@ -926,9 +922,6 @@ export function ChatPanel({
               />
             </div>
             <div className="flex items-center gap-2">
-              {!isCloudDeployment && modelSelectorData && (
-                <ModelSelectorClient data={modelSelectorData} />
-              )}
               {messages.length > 0 && (
                 <Button
                   variant="outline"

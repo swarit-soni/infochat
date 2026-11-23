@@ -2,8 +2,9 @@ import { redirect } from 'next/navigation'
 
 import { getCurrentUserId } from '@/lib/auth/get-current-user'
 import { isAnonymousMode } from '@/lib/auth/provider'
-import { getModelSelectorData } from '@/lib/model-selector/get-model-selector-data'
+import { FIXED_MODEL } from '@/lib/config/default-model'
 import { generateUUID } from '@/lib/utils'
+import { isProviderEnabled } from '@/lib/utils/registry'
 
 import { Chat } from '@/components/chat'
 
@@ -21,7 +22,7 @@ export default async function SearchPage(props: {
   const userId = await getCurrentUserId()
   const isCloudDeployment = process.env.SERA_CLOUD_DEPLOYMENT === 'true'
   const libraryAvailable = !isAnonymousMode()
-  const modelSelectorData = await getModelSelectorData()
+  const hasAvailableModels = isProviderEnabled(FIXED_MODEL.providerId)
 
   return (
     <Chat
@@ -30,7 +31,7 @@ export default async function SearchPage(props: {
       isGuest={!userId}
       isCloudDeployment={isCloudDeployment}
       libraryAvailable={libraryAvailable}
-      modelSelectorData={modelSelectorData}
+      hasAvailableModels={hasAvailableModels}
     />
   )
 }

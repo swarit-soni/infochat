@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { upsertUserProfile } from '@/lib/db/actions'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -42,6 +42,10 @@ describe('GET /auth/oauth', () => {
     vi.mocked(createAdminClient).mockReturnValue({
       auth: { admin: { deleteUser } }
     } as never)
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
   })
 
   it('redirects to unauthorized_domain when Supabase returns a domain/hook error', async () => {
@@ -261,5 +265,62 @@ describe('GET /auth/oauth', () => {
 
     expect(response.status).toBe(307)
     expect(response.headers.get('location')).toBe('http://localhost:3000/')
+  })
+
+  it('allows non-production SERA_MENTOR_EMAILS login in preview without calling upsertUserProfile', async () => {
+    vi.stubEnv('VERCEL_ENV', 'preview')
+    vi.stubEnv('SERA_MENTOR_EMAILS', 'tester@gmail.com')
+    getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: 'test-mentor-1',
+          email: 'Tester@Gmail.com',
+          app_metadata: { provider: 'google', providers: ['google'] },
+          user_metadata: { full_name: 'Test Mentor' }
+        }
+      },
+      error: null
+    })
+
+    const response = await GET(
+      new NextRequest('http://localhost:3000/auth/oauth?code=good-code', {
+        headers: {
+          cookie: 'auth_next=%2Fmentor'
+        }
+      })
+    )
+
+    expect(signOut).not.toHaveBeenCalled()
+    expect(deleteUser).not.toHaveBeenCalled()
+    expect(upsertUserProfile).not.toHaveBeenCalled()
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe('http://localhost:3000/mentor')
+  })
+
+  it('rejects SERA_MENTOR_EMAILS external account in production stage', async () => {
+    vi.stubEnv('VERCEL_ENV', 'production')
+    vi.stubEnv('SERA_MENTOR_EMAILS', 'tester@gmail.com')
+    getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: 'test-mentor-1',
+          email: 'tester@gmail.com',
+          app_metadata: { provider: 'google', providers: ['google'] }
+        }
+      },
+      error: null
+    })
+
+    const response = await GET(
+      new NextRequest('http://localhost:3000/auth/oauth?code=good-code')
+    )
+
+    expect(signOut).toHaveBeenCalledTimes(1)
+    expect(deleteUser).toHaveBeenCalledWith('test-mentor-1')
+    expect(upsertUserProfile).not.toHaveBeenCalled()
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe(
+      'http://localhost:3000/auth/login?error=unauthorized_domain'
+    )
   })
 })

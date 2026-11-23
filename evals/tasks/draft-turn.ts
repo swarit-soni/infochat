@@ -21,6 +21,7 @@ import { stripSpecFromMessages } from '@/lib/streaming/helpers/strip-spec-from-m
 import { createDraftTools } from '@/lib/tools/draft'
 import { createSearchTool } from '@/lib/tools/search'
 import { createTodoTools } from '@/lib/tools/todo'
+import type { Model } from '@/lib/types/models'
 import { getModel } from '@/lib/utils/registry'
 
 import {
@@ -35,7 +36,14 @@ import {
 } from './fixture-tools'
 import { type ProviderOptions } from './run-answer-task'
 
-const MODES = {
+const MODES: Record<
+  DraftEditsMode,
+  {
+    config: Model
+    getPrompt: () => string
+    includeTodoWrite: boolean
+  }
+> = {
   quick: {
     config: cloudConfig.models.quick,
     getPrompt: getQuickModePrompt,
@@ -46,7 +54,7 @@ const MODES = {
     getPrompt: getAdaptiveModePrompt,
     includeTodoWrite: true
   }
-} as const
+}
 
 // Both deployed modes run the same model today; each item replays its own
 // mode's prompt, tools, and providerOptions.
@@ -134,7 +142,9 @@ export function createDraftTurnTask({
       instructions: `${mode.getPrompt()}\nCurrent date: ${new Date().toLocaleDateString()}`,
       tools,
       stopWhen: isStepCount(MAX_STEPS),
-      providerOptions: mode.config.providerOptions as ProviderOptions,
+      ...(mode.config.providerOptions && {
+        providerOptions: mode.config.providerOptions as ProviderOptions
+      }),
       messages: await convertToModelMessages(prepared.messages, {
         convertDataPart
       }),

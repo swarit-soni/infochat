@@ -159,6 +159,28 @@ describe('supabase provider', () => {
       })
     })
 
+    it('passes the hd login hint domain when provided', async () => {
+      signInWithOAuth.mockResolvedValue({
+        data: { url: 'https://accounts.google.com/o/oauth2/auth' },
+        error: null
+      })
+
+      await supabaseAuthProvider.signInWithOAuth!('google', {
+        loginHintDomain: 'kalvium.community'
+      })
+
+      expect(signInWithOAuth).toHaveBeenCalledWith({
+        provider: 'google',
+        options: {
+          redirectTo: 'http://localhost:3000/auth/oauth',
+          queryParams: {
+            prompt: 'select_account',
+            hd: 'kalvium.community'
+          }
+        }
+      })
+    })
+
     it('rejects non-Google OAuth providers', async () => {
       const result = await supabaseAuthProvider.signInWithOAuth!('github')
 

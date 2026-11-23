@@ -143,11 +143,11 @@ export default function UserMenu({ user }: UserMenuProps) {
             <UserRound className="size-4" />
             <span>Account</span>
           </DropdownMenuItem>
-          {user.role === 'admin' && (
+          {user.userType === 'mentor' && (
             <DropdownMenuItem asChild>
-              <Link href="/auth/admin">
+              <Link href="/mentor">
                 <IconShield className="size-4" />
-                <span>Admin</span>
+                <span>Mentor Portal</span>
               </Link>
             </DropdownMenuItem>
           )}

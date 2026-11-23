@@ -1,6 +1,7 @@
 import cloudConfig from '@/config/models/cloud.json'
 
 import { getQuickModePrompt } from '@/lib/agents/prompts/search-mode-prompts'
+import type { Model } from '@/lib/types/models'
 
 import {
   type AnswerOutput,
@@ -8,10 +9,12 @@ import {
   runAnswerTask
 } from './run-answer-task'
 
-const QUICK = cloudConfig.models.quick
+const QUICK: Model = cloudConfig.models.quick
 
 export const DEFAULT_MODEL = `${QUICK.providerId}:${QUICK.id}`
-export const DEFAULT_PROVIDER_OPTIONS = QUICK.providerOptions
+export const DEFAULT_PROVIDER_OPTIONS = QUICK.providerOptions as
+  | ProviderOptions
+  | undefined
 
 // Production allows 20 steps in quick mode. The fixture search returns the
 // same results every time, so a healthy run converges in a handful of steps;

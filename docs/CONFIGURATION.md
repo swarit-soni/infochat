@@ -46,27 +46,11 @@ This command applies all migrations from the `drizzle/` directory. Docker runs m
 
 ## AI Providers
 
-### Model Selection
+### Fixed Universal Model
 
-Sera dynamically detects available AI providers based on your API keys and displays a model selector in the UI. Set at least one provider API key to get started.
+Sera enforces **Google Gemini 3.1 Flash-Lite** (`google:gemini-3.1-flash-lite`) as the fixed, universal model for all users across all environments (`local`, `docker`, and `cloud`) and search modes (`quick` and `adaptive`). Model selection is removed from both the user interface and runtime configuration.
 
-In **Local/Docker** mode, the selected model is persisted in a cookie and used for all chat interactions including related question generation.
-
-In **Cloud** mode (`SERA_CLOUD_DEPLOYMENT=true`), models are fixed by `config/models/cloud.json` and the model selector is not shown.
-
-### Supported Providers
-
-#### OpenAI
-
-```bash
-OPENAI_API_KEY=[YOUR_API_KEY]
-```
-
-#### Anthropic
-
-```bash
-ANTHROPIC_API_KEY=[YOUR_API_KEY]
-```
+### Required Provider Key
 
 #### Google Gemini
 
@@ -74,68 +58,8 @@ ANTHROPIC_API_KEY=[YOUR_API_KEY]
 GOOGLE_GENERATIVE_AI_API_KEY=[YOUR_API_KEY]
 ```
 
-#### Vercel AI Gateway
-
-[Vercel AI Gateway](https://vercel.com/docs/ai-gateway) provides access to 200+ models through a single API.
-
-```bash
-AI_GATEWAY_API_KEY=[YOUR_AI_GATEWAY_API_KEY]
-```
-
-#### Ollama
-
-[Ollama](https://ollama.com/) enables you to run large language models locally on your own hardware.
-
-```bash
-OLLAMA_BASE_URL=http://localhost:11434
-```
-
-When configured, Ollama models are discovered dynamically and appear in the model selector.
-
-#### OpenAI-Compatible Providers
-
-Use OpenAI-compatible endpoints for providers such as DeepSeek, Moonshot, Zhipu, Together, or a self-hosted gateway that exposes the OpenAI chat completions API.
-
-```bash
-OPENAI_COMPATIBLE_API_KEY=[YOUR_API_KEY]
-OPENAI_COMPATIBLE_API_BASE_URL=https://api.deepseek.com
-```
-
-Sera sends chat requests to `/v1/chat/completions`. You can provide either a base URL with or without `/v1`; both of these resolve to the same endpoint:
-
-```bash
-OPENAI_COMPATIBLE_API_BASE_URL=https://api.deepseek.com
-OPENAI_COMPATIBLE_API_BASE_URL=https://api.deepseek.com/v1
-```
-
-The model selector tries to load models from `/v1/models`. If your provider does not expose that endpoint, or you want to restrict the choices shown in the UI, set a comma-separated model list:
-
-```bash
-OPENAI_COMPATIBLE_MODELS=deepseek-chat,deepseek-reasoner
-```
-
-You can also customize the provider label shown in the model selector:
-
-```bash
-OPENAI_COMPATIBLE_PROVIDER_NAME=DeepSeek
-```
-
-This value is only a UI display name. The internal provider id remains `openai-compatible`.
-
-**Example: OrcaRouter**
-
-[OrcaRouter](https://www.orcarouter.ai) is an OpenAI-compatible endpoint that fronts 160+ models from OpenAI, Anthropic, Google, DeepSeek, xAI and others behind one API key. To use it with Sera:
-
-```bash
-OPENAI_COMPATIBLE_API_KEY=sk-orca-...
-OPENAI_COMPATIBLE_API_BASE_URL=https://api.orcarouter.ai/v1
-OPENAI_COMPATIBLE_PROVIDER_NAME=OrcaRouter
-# Pin a few tool-capable models so Sera's research agents work out of the box.
-# Browse the full catalog at https://www.orcarouter.ai/models
-OPENAI_COMPATIBLE_MODELS=orcarouter/openai/gpt-5.5,orcarouter/anthropic/claude-opus-4.7,orcarouter/google/gemini-3-flash-preview
-```
-
-Sera's research agents rely on tool calling, so make sure any model you select supports it. Restricting `OPENAI_COMPATIBLE_MODELS` to known tool-capable models (as above) is the simplest way to keep the selector clean and avoid hitting non-tool-capable upstreams.
+> [!NOTE]
+> `config/models/cloud.json`, `lib/config/default-model.ts`, and `lib/utils/model-selection.ts` all pin `google:gemini-3.1-flash-lite` so user cookies or alternative provider keys cannot override the model.
 
 ## Search Providers
 

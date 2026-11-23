@@ -26,7 +26,7 @@ export type AnswerOutput = {
 
 export type AnswerTaskOptions = {
   model: string
-  providerOptions: ProviderOptions
+  providerOptions?: ProviderOptions
   tracingEnabled: boolean
   retries: number
   maxSteps: number
@@ -95,7 +95,7 @@ export function runAnswerTask({
       instructions: getPrompt(),
       tools,
       stopWhen: isStepCount(maxSteps),
-      providerOptions,
+      ...(providerOptions && { providerOptions }),
       ...(buildMessages
         ? { messages: buildMessages(input.query) }
         : { prompt: input.query }),

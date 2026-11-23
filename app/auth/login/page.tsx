@@ -1,4 +1,5 @@
-import { UNAUTHORIZED_DOMAIN_ERROR } from '@/lib/auth/domain'
+import type { UserType } from '@/lib/auth/domain'
+import { getAuthErrorMessage } from '@/lib/auth/error-messages'
 import { isBetaVersion } from '@/lib/version/semver'
 
 import { LoginForm } from '@/components/login-form'
@@ -9,30 +10,18 @@ import packageJson from '../../../package.json'
 // a prerendered login page would bake in build-time values in prebuilt images.
 export const dynamic = 'force-dynamic'
 
-function getAuthErrorMessage(error: string | undefined): string | null {
-  if (!error) {
-    return null
-  }
-  switch (error) {
-    case 'unauthorized_domain':
-      return UNAUTHORIZED_DOMAIN_ERROR
-    case 'oauth_failed':
-      return 'Google sign-in failed. Please try again.'
-    default:
-      return 'Unable to sign in. Please try again.'
-  }
-}
-
 export default async function Page(props: {
-  searchParams: Promise<{ next?: string; error?: string }>
+  searchParams: Promise<{ next?: string; error?: string; role?: string }>
 }) {
-  const { next, error } = await props.searchParams
+  const { next, error, role } = await props.searchParams
   const initialError = getAuthErrorMessage(error)
+  const initialMode: UserType = role === 'mentor' ? 'mentor' : 'student'
 
   return (
     <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
       <div className="w-full max-w-sm">
         <LoginForm
+          mode={initialMode}
           next={next}
           initialError={initialError}
           isBeta={isBetaVersion(packageJson.version)}
