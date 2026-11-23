@@ -16,6 +16,7 @@ import cloudConfig from '@/config/models/cloud.json'
 
 import { getAdaptiveModePrompt } from '@/lib/agents/prompts/search-mode-prompts'
 import { createSearchTool } from '@/lib/tools/search'
+import type { Model } from '@/lib/types/models'
 import { assignCitationLabels } from '@/lib/utils/citation'
 import { getModel } from '@/lib/utils/registry'
 
@@ -26,7 +27,7 @@ const RUN = process.env.RUN_LLM_E2E === '1'
 // Mirror the deployed adaptive configuration. Emission is sensitive to the
 // provider options (notably reasoning effort), so a run without them does not
 // exercise what production does.
-const ADAPTIVE = cloudConfig.models.adaptive
+const ADAPTIVE: Model = cloudConfig.models.adaptive
 const MODEL =
   process.env.LLM_E2E_MODEL || `${ADAPTIVE.providerId}:${ADAPTIVE.id}`
 const PROVIDER_OPTIONS = ADAPTIVE.providerOptions
@@ -108,7 +109,7 @@ async function generateAnswer(prompt: string): Promise<string> {
       search: createMockSearchTool()
     },
     stopWhen: isStepCount(6),
-    providerOptions: PROVIDER_OPTIONS,
+    ...(PROVIDER_OPTIONS && { providerOptions: PROVIDER_OPTIONS }),
     prompt
   })
 
