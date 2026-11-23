@@ -11,7 +11,7 @@ This specification defines how **SERA (Student Enquiry and Research Assistant)**
 
 - **Fixed Universal LLM:** **Google Gemini 3.1 Flash-Lite** (`google:gemini-3.1-flash-lite`) is enforced universally across all users, search modes (`quick` and `adaptive`), title generation, and multimodal notice parsing. Model selection is disabled in both the UI and runtime configuration (requiring only `GOOGLE_GENERATIVE_AI_API_KEY`).
 - **Authentication & Roles (Student + Mentor Only):** Google-only OAuth via Supabase (`AUTH_PROVIDER=supabase`) strictly limits access to **two roles** with **no `admin` role**:
-  - **Student** (`@kalvium.community`) — standard chatbot users; main sign-in at `/auth/login` displays student login with a small link to `/auth/mentor`.
+  - **Student** (`@kalvium.community`) — standard chatbot users; the single sign-in page at `/auth/login` defaults to student login with an in-page Mentor login toggle (and `?role=mentor` query support).
   - **Mentor** (`@kalvium.com`) — campus data providers/curators who upload circulars, review urgent updates, manage Eventum entries, and monitor unanswered queries via the **Mentor Data Portal** (`/mentor`, gated on `user.userType === 'mentor'`).
   - **Non-Production Testing Override:** In strictly non-production stages (`VERCEL_ENV !== 'production'` / `NODE_ENV !== 'production'`), `SERA_MENTOR_EMAILS` may list comma-separated test mentor emails; production ignores this variable completely.
 - **Zero Authenticated Scraping:** SERA never automates logins, stores session cookies, or asks students for ERP/Kalvium credentials.
@@ -268,7 +268,7 @@ When sources conflict, SERA resolves priority in strict descending order:
 
 - **Documentation:** [PROBLEM_TREE.md](./PROBLEM_TREE.md), [CONFIGURATION.md](./CONFIGURATION.md), and this specification (`DATA_SOURCES.md`) are in place.
 - **Model Configuration & UI Lock-In:** User model selection is removed from the UI and configuration; `google:gemini-3.1-flash-lite` is enforced universally across `config/models/cloud.json`, `lib/config/default-model.ts`, `lib/utils/model-selection.ts`, `app/` pages, and `.env.local.example`.
-- **Auth & Roles Alignment:** Google-only Kalvium OAuth enforces strictly `student` (`@kalvium.community`) and `mentor` (`@kalvium.com`) roles with no `admin` role; `/auth/login` displays student login with a small link to `/auth/mentor`, and `/mentor` hosts the Mentor Data Portal shell.
+- **Auth & Roles Alignment:** Google-only Kalvium OAuth enforces strictly `student` (`@kalvium.community`) and `mentor` (`@kalvium.com`) roles with no `admin` role; the single `/auth/login` page displays student login by default with an in-page Mentor login toggle (and `?role=mentor` query support), and `/mentor` hosts the Mentor Data Portal shell.
 - **Existing Foundation Ready to Reuse:** Streaming `ToolLoopAgent` + inline citations (`lib/agents/`), Drizzle + Postgres RLS + `tsvector` (`lib/db/schema.ts`), R2/S3 file uploads (`app/api/upload/route.ts`), feedback persistence, and Vitest/`evals/` harnesses.
 - **Not Yet Implemented (Next Engineering Sprint):** SERA Postgres KB/event/portal/urgent-queue tables + `pgvector` migration, interactive upload/curation forms inside `/mentor`, GChat webhook endpoint, `searchCampusKnowledge` / `queryEvents` / `getOfficialPortalLinks` tools, student cohort selector, and Kalvium X JECRC eval dataset.
 

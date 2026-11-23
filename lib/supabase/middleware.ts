@@ -89,10 +89,11 @@ export async function updateSession(request: NextRequest) {
   // Redirect to login if the user is not authenticated and the path is not public.
   if (!user && !isPublicPath(pathname)) {
     const loginUrl = request.nextUrl.clone()
-    loginUrl.pathname = matchesPathPrefix(pathname, '/mentor')
-      ? '/auth/mentor'
-      : '/auth/login'
+    loginUrl.pathname = '/auth/login'
     loginUrl.search = ''
+    if (matchesPathPrefix(pathname, '/mentor')) {
+      loginUrl.searchParams.set('role', 'mentor')
+    }
     if (pathname !== '/') {
       loginUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
     }
