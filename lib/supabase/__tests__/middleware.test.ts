@@ -190,7 +190,7 @@ describe('updateSession', () => {
     )
   })
 
-  it('redirects unauthenticated requests for /mentor to /auth/login?role=mentor&next=%2Fmentor', async () => {
+  it('redirects unauthenticated requests for /mentor to /auth/mentor', async () => {
     getUser.mockResolvedValue({ data: { user: null } })
 
     const response = await updateSession(
@@ -199,7 +199,7 @@ describe('updateSession', () => {
 
     expect(response.status).toBe(307)
     expect(response.headers.get('location')).toBe(
-      'http://localhost:3000/auth/login?role=mentor&next=%2Fmentor'
+      'http://localhost:3000/auth/mentor?next=%2Fmentor'
     )
   })
 })

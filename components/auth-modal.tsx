@@ -40,7 +40,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
           <p className="text-xs text-muted-foreground">
             Are you a mentor?{' '}
             <Link
-              href="/auth/login?role=mentor"
+              href="/auth/mentor"
               className="underline underline-offset-4 hover:text-foreground"
             >
               Mentor login

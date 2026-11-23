@@ -128,8 +128,7 @@ export function isKalviumDomainEmail(
 
 /**
  * Return true when non-production `SERA_MENTOR_EMAILS` includes a non-`@kalvium.com`
- * test mentor email, so OAuth skips Google's `hd` account picker filter in
- * non-production stages.
+ * test mentor email, so OAuth skips Google's `hd=kalvium.com` account picker filter.
  */
 export function hasNonKalviumMentorOverride(
   env: Record<string, string | undefined> = process.env

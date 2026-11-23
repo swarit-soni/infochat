@@ -51,7 +51,7 @@ const MENTOR_WORKFLOWS = [
 export default async function MentorPortalPage() {
   const user = await getCurrentUser()
   if (!user) {
-    redirect('/auth/login?role=mentor&next=%2Fmentor')
+    redirect('/auth/mentor?next=%2Fmentor')
   }
   if (user.userType !== 'mentor') {
     redirect('/')

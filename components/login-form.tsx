@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 
 import { signInWithGoogle } from '@/lib/actions/auth'
@@ -65,23 +65,19 @@ export function LoginForm({
   initialError?: string | null
   isBeta?: boolean
 }) {
-  const [activeMode, setActiveMode] = useState<UserType>(mode)
   const [error, setError] = useState<string | null>(initialError)
   const [isLoading, setIsLoading] = useState(false)
   const capabilities = useAuthCapabilities()
 
-  useEffect(() => {
-    setActiveMode(mode)
-  }, [mode])
-
-  const isMentor = activeMode === 'mentor'
-  const expectedDomain = `@${DOMAIN_BY_USER_TYPE[activeMode]}`
-  const roleLabel = USER_TYPE_LABELS[activeMode]
-
-  const handleToggleMode = () => {
-    setActiveMode(prev => (prev === 'mentor' ? 'student' : 'mentor'))
-    setError(null)
-  }
+  const isMentor = mode === 'mentor'
+  const safeNext = next ? safeRedirectPath(next) : null
+  const nextQuery =
+    safeNext && safeNext !== '/' ? `?next=${encodeURIComponent(safeNext)}` : ''
+  const alternateHref = isMentor
+    ? `/auth/login${nextQuery}`
+    : `/auth/mentor${nextQuery}`
+  const expectedDomain = `@${DOMAIN_BY_USER_TYPE[mode]}`
+  const roleLabel = USER_TYPE_LABELS[mode]
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true)
@@ -100,7 +96,7 @@ export function LoginForm({
           )}; path=/; max-age=300; SameSite=Lax`
         : 'auth_next=; path=/; max-age=0; SameSite=Lax'
 
-      const result = await signInWithGoogle(activeMode)
+      const result = await signInWithGoogle(mode)
       if (!result.success) {
         throw new Error(result.error ?? 'An OAuth error occurred')
       }
@@ -180,14 +176,12 @@ export function LoginForm({
       <div className="flex flex-col items-center gap-2 text-center text-xs text-muted-foreground">
         <p>
           {isMentor ? 'Looking for student login? ' : 'Are you a mentor? '}
-          <button
-            type="button"
-            onClick={handleToggleMode}
-            disabled={isLoading}
-            className="cursor-pointer underline underline-offset-4 hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+          <Link
+            href={alternateHref}
+            className="underline underline-offset-4 hover:text-foreground"
           >
             {isMentor ? 'Student login' : 'Mentor login'}
-          </button>
+          </Link>
         </p>
         <Link href="/" className="hover:underline">
           &larr; Back to Home

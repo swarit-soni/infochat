@@ -48,7 +48,7 @@ describe('LoginForm', () => {
     document.cookie = 'auth_next=; path=/; max-age=0; SameSite=Lax'
   })
 
-  it('renders student-only Google sign-in card with a small toggle to mentor login', () => {
+  it('renders student-only Google sign-in card with a small link to mentor login', () => {
     renderForm()
 
     expect(screen.getByText('Sign in to Sera')).toBeInTheDocument()
@@ -59,12 +59,8 @@ describe('LoginForm', () => {
       screen.getByRole('button', { name: 'Sign In with Google' })
     ).toBeInTheDocument()
 
-    expect(
-      screen.getByRole('button', { name: 'Mentor login' })
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByRole('link', { name: 'Mentor login' })
-    ).not.toBeInTheDocument()
+    const mentorLink = screen.getByRole('link', { name: 'Mentor login' })
+    expect(mentorLink).toHaveAttribute('href', '/auth/mentor')
 
     expect(screen.queryByLabelText(/email/i)).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument()
@@ -76,37 +72,7 @@ describe('LoginForm', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('toggles in-place between student and mentor views without leaving the page and clears errors', () => {
-    renderForm(
-      {},
-      undefined,
-      'Only @kalvium.com (Mentor) and @kalvium.community (Student) Google accounts are allowed.'
-    )
-
-    expect(screen.getByRole('alert')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Mentor login' }))
-
-    expect(screen.getByText('Mentor sign in')).toBeInTheDocument()
-    expect(screen.getByText('@kalvium.com')).toBeInTheDocument()
-    expect(screen.getByText('Mentor')).toBeInTheDocument()
-    expect(screen.queryByText('@kalvium.community')).not.toBeInTheDocument()
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: 'Student login' })
-    ).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Student login' }))
-
-    expect(screen.getByText('Sign in to Sera')).toBeInTheDocument()
-    expect(screen.getByText('@kalvium.community')).toBeInTheDocument()
-    expect(screen.getByText('Student')).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: 'Mentor login' })
-    ).toBeInTheDocument()
-  })
-
-  it('renders mentor sign-in card in mentor mode with toggle back to student login', () => {
+  it('renders mentor sign-in card in mentor mode with link back to student login and preserves next', () => {
     renderForm({}, '/mentor', null, false, 'mentor')
 
     expect(screen.getByText('Mentor sign in')).toBeInTheDocument()
@@ -114,9 +80,8 @@ describe('LoginForm', () => {
     expect(screen.getByText('Mentor')).toBeInTheDocument()
     expect(screen.queryByText('@kalvium.community')).not.toBeInTheDocument()
 
-    expect(
-      screen.getByRole('button', { name: 'Student login' })
-    ).toBeInTheDocument()
+    const studentLink = screen.getByRole('link', { name: 'Student login' })
+    expect(studentLink).toHaveAttribute('href', '/auth/login?next=%2Fmentor')
   })
 
   it('calls signInWithGoogle with mentor mode and defaults redirect to /mentor', async () => {
