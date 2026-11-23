@@ -1,0 +1,173 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { createCitationLabelAllocator } from '@/lib/utils/citation'
+
+const mocks = vi.hoisted(() => ({
+  retrieveCampusKnowledge: vi.fn(),
+  retrieveCampusEvents: vi.fn(),
+  retrieveOfficialPortals: vi.fn(),
+  recordUnansweredQuery: vi.fn(),
+  officialSearchExecute: vi.fn()
+}))
+
+vi.mock('@/lib/rag/retrieval', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/lib/rag/retrieval')>()
+  return {
+    ...actual,
+    retrieveCampusKnowledge: mocks.retrieveCampusKnowledge,
+    retrieveCampusEvents: mocks.retrieveCampusEvents,
+    retrieveOfficialPortals: mocks.retrieveOfficialPortals
+  }
+})
+
+vi.mock('@/lib/rag/ingestion', () => ({
+  recordUnansweredQuery: mocks.recordUnansweredQuery
+}))
+
+vi.mock('../search', () => ({
+  createSearchTool: vi.fn(() => ({
+    execute: mocks.officialSearchExecute
+  }))
+}))
+
+import { createCampusRagTools, filterOfficialDomains } from '../campus-rag'
+
+async function collectGeneratorResult<T = any>(
+  value: AsyncIterable<T> | Promise<T>
+): Promise<T> {
+  if (value && typeof value === 'object' && Symbol.asyncIterator in value) {
+    let last: T | undefined
+    for await (const chunk of value) {
+      last = chunk
+    }
+    return last as T
+  }
+  return value
+}
+
+describe('filterOfficialDomains', () => {
+  it('strips non-official domains and falls back to official allowlist', () => {
+    expect(filterOfficialDomains(['collegedunia.com', 'shiksha.com'])).toEqual([
+      'jecrcuniversity.edu.in',
+      'kalvium.com'
+    ])
+
+    expect(
+      filterOfficialDomains(['admissions.jecrcuniversity.edu.in', 'reddit.com'])
+    ).toEqual(['admissions.jecrcuniversity.edu.in'])
+  })
+})
+
+describe('createCampusRagTools', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('assigns shared citation labels sequentially across campus RAG tools', async () => {
+    mocks.retrieveCampusKnowledge.mockResolvedValue([
+      {
+        chunkId: 'c1',
+        documentId: 'doc-1',
+        formattedTitle: 'Exam Circular (JECRC University)',
+        citationUrl: 'https://jecrcuniversity.edu.in/#sera-kb-doc-1',
+        formattedContent: 'Exam form due Nov 30.'
+      }
+    ])
+    mocks.retrieveOfficialPortals.mockResolvedValue([
+      {
+        id: 'portal_jecrc_erp',
+        portalKey: 'jecrc_erp',
+        name: 'JECRC ERP Portal',
+        authority: 'jecrc',
+        url: 'https://jecrcuniversity.edu.in/erp',
+        requiresLogin: 1,
+        capabilities: 'Attendance and fee receipts',
+        navigationSteps: 'Sign in with enrollment ID',
+        supportContact: 'Registrar',
+        lastVerifiedAt: new Date()
+      }
+    ])
+
+    const allocator = createCitationLabelAllocator(1)
+    const tools = createCampusRagTools({ labelAllocator: allocator })
+
+    const kbOut = await collectGeneratorResult<any>(
+      tools.searchCampusKnowledge.execute!(
+        { query: 'exam form deadline', max_results: 6 },
+        { toolCallId: 'tc-1', messages: [], context: {} }
+      ) as any
+    )
+    expect(kbOut.results[0].label).toBe('S1')
+
+    const portalOut = await collectGeneratorResult<any>(
+      tools.getOfficialPortalLinks.execute!(
+        { query: 'attendance' },
+        { toolCallId: 'tc-2', messages: [], context: {} }
+      ) as any
+    )
+    expect(portalOut.results[0].label).toBe('S2')
+  })
+
+  it('enforces official domain allowlist in searchOfficialWeb fallback', async () => {
+    mocks.officialSearchExecute.mockImplementation(async function* (params) {
+      yield {
+        state: 'complete',
+        query: params.query,
+        results: [
+          {
+            title: 'JECRC Admissions',
+            url: 'https://jecrcuniversity.edu.in/admissions',
+            content: 'Eligibility details',
+            label: 'S1'
+          }
+        ],
+        images: [],
+        number_of_results: 1
+      }
+    })
+
+    const tools = createCampusRagTools()
+    const webOut = await collectGeneratorResult<any>(
+      tools.searchOfficialWeb.execute!(
+        {
+          query: 'JECRC B.Tech eligibility',
+          max_results: 5,
+          include_domains: ['quora.com', 'kalvium.com']
+        },
+        { toolCallId: 'tc-web', messages: [], context: {} }
+      ) as any
+    )
+
+    expect(mocks.officialSearchExecute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include_domains: ['kalvium.com']
+      }),
+      expect.anything()
+    )
+    expect(webOut.results[0].title).toBe(
+      '[Official Web Fallback] JECRC Admissions'
+    )
+  })
+
+  it('logs abstention gaps via logUnansweredQuery', async () => {
+    mocks.recordUnansweredQuery.mockResolvedValue({ id: 'uq-1' })
+    const tools = createCampusRagTools()
+    const result = await tools.logUnansweredQuery.execute!(
+      {
+        query: 'When is Squad 99 industrial visit?',
+        domain: 'activities',
+        reason: 'No circular found in KB'
+      },
+      { toolCallId: 'tc-log', messages: [], context: {} }
+    )
+
+    expect(result).toMatchObject({ logged: true, id: 'uq-1' })
+    expect(mocks.recordUnansweredQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: 'When is Squad 99 industrial visit?',
+        domain: 'activities',
+        kind: 'abstention'
+      })
+    )
+  })
+})

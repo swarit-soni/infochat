@@ -20,6 +20,18 @@ export function isCitationLabel(label: string): boolean {
 
 const DERIVED_LABEL_PATTERN = /^S\d+$/
 
+const CITATION_SEARCH_TOOL_TYPES = new Set([
+  'tool-search',
+  'tool-searchCampusKnowledge',
+  'tool-queryEvents',
+  'tool-getOfficialPortalLinks',
+  'tool-searchOfficialWeb'
+])
+
+function isCitationToolType(partType: string): boolean {
+  return CITATION_SEARCH_TOOL_TYPES.has(partType) || partType === 'tool-fetch'
+}
+
 export type CitationLabelAllocator = {
   reserve(count: number): number
 }
@@ -87,8 +99,10 @@ export function nextCitationLabelNumber(messages: UIMessage[]): number {
   for (const message of messages) {
     for (const part of message.parts ?? []) {
       if (
-        (part.type !== 'tool-search' && part.type !== 'tool-fetch') ||
+        !isCitationToolType(part.type) ||
+        !('state' in part) ||
         part.state !== 'output-available' ||
+        !('output' in part) ||
         !part.output
       ) {
         continue
@@ -121,7 +135,7 @@ export function extractCitationMaps(
   if (!message.parts) return citationMaps
 
   message.parts.forEach((part: any) => {
-    const isSearchOutput = part.type === 'tool-search'
+    const isSearchOutput = CITATION_SEARCH_TOOL_TYPES.has(part.type)
     const isFetchOutput = part.type === 'tool-fetch'
     if (
       (isSearchOutput || isFetchOutput) &&

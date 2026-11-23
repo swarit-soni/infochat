@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { createCampusRagTools } from '@/lib/tools/campus-rag'
 import { createFetchTool } from '@/lib/tools/fetch'
 import { createSearchTool } from '@/lib/tools/search'
 import type { Model } from '@/lib/types/models'
@@ -34,6 +35,16 @@ vi.mock('@/lib/tools/search', () => ({
 
 vi.mock('@/lib/tools/todo', () => ({
   createTodoTools: vi.fn(() => ({ todoWrite: {} }))
+}))
+
+vi.mock('@/lib/tools/campus-rag', () => ({
+  createCampusRagTools: vi.fn(() => ({
+    searchCampusKnowledge: {},
+    queryEvents: {},
+    getOfficialPortalLinks: {},
+    searchOfficialWeb: {},
+    logUnansweredQuery: {}
+  }))
 }))
 
 vi.mock('@/lib/utils/registry', () => ({
@@ -117,7 +128,7 @@ describe('createResearcher', () => {
     })
   })
 
-  it('shares a seeded citation label allocator between search and fetch', () => {
+  it('shares a seeded citation label allocator across search, fetch, and campus RAG tools', () => {
     createResearcher({
       model: 'openai:model-id',
       citationLabelSeed: 9
@@ -125,8 +136,10 @@ describe('createResearcher', () => {
 
     const searchOptions = vi.mocked(createSearchTool).mock.calls[0][1]
     const fetchOptions = vi.mocked(createFetchTool).mock.calls[0][0]
+    const ragOptions = vi.mocked(createCampusRagTools).mock.calls[0][0]
 
     expect(searchOptions?.labelAllocator).toBe(fetchOptions?.labelAllocator)
+    expect(ragOptions?.labelAllocator).toBe(searchOptions?.labelAllocator)
     expect(searchOptions?.labelAllocator?.reserve(1)).toBe(9)
   })
   it('places space instructions between the system prompt and the date', () => {

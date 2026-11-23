@@ -74,6 +74,14 @@ type UIMessagePart =
   | ToolResultPart
   | DataPart
 
+const RAG_TOOL_NAMES = new Set([
+  'searchCampusKnowledge',
+  'queryEvents',
+  'getOfficialPortalLinks',
+  'searchOfficialWeb',
+  'logUnansweredQuery'
+])
+
 // Type guards
 function isToolCallPart(part: any): part is ToolCallPart {
   return (
@@ -208,9 +216,11 @@ export function mapUIMessagePartsToDBParts(
         // Store additional metadata for dynamic tools
         if (toolName === 'dynamic') {
           result.tool_dynamic_name = part.toolName
-          result.tool_dynamic_type = part.toolName.startsWith('mcp__')
-            ? 'mcp'
-            : 'dynamic'
+          result.tool_dynamic_type = RAG_TOOL_NAMES.has(part.toolName)
+            ? 'rag'
+            : part.toolName.startsWith('mcp__')
+              ? 'mcp'
+              : 'dynamic'
         }
 
         return result
@@ -242,11 +252,13 @@ export function mapUIMessagePartsToDBParts(
 
           if (toolCallPart) {
             toolResult.tool_dynamic_name = toolCallPart.toolName
-            toolResult.tool_dynamic_type = toolCallPart.toolName.startsWith(
-              'mcp__'
+            toolResult.tool_dynamic_type = RAG_TOOL_NAMES.has(
+              toolCallPart.toolName
             )
-              ? 'mcp'
-              : 'dynamic'
+              ? 'rag'
+              : toolCallPart.toolName.startsWith('mcp__')
+                ? 'mcp'
+                : 'dynamic'
           }
         }
 
@@ -322,8 +334,8 @@ export function mapUIMessagePartsToDBParts(
         }
         return createToolPartMapping(basePart, part, 'todoRead')
 
-      // Stored in the dynamic tool columns, so drafts need no schema change.
-      // Read back as tool-editDraft by the 'draft' dynamic type.
+      // Stored in the dynamic tool columns, so drafts and RAG tools need no
+      // schema change. Read back as tool-<name> by the 'draft' / 'rag' dynamic type.
       case 'tool-editDraft':
         if (!isExtendedToolPart(part)) {
           console.error('Invalid extended tool part:', part)
@@ -340,6 +352,28 @@ export function mapUIMessagePartsToDBParts(
           tool_dynamic_output: part.output,
           tool_errorText: part.errorText
         }
+
+      case 'tool-searchCampusKnowledge':
+      case 'tool-queryEvents':
+      case 'tool-getOfficialPortalLinks':
+      case 'tool-searchOfficialWeb':
+      case 'tool-logUnansweredQuery': {
+        if (!isExtendedToolPart(part)) {
+          console.error('Invalid extended tool part:', part)
+          return null
+        }
+        return {
+          ...basePart,
+          type: 'tool-dynamic',
+          tool_toolCallId: part.toolCallId || generateId(),
+          tool_state: part.state || ('input-available' as ToolState),
+          tool_dynamic_name: part.type.substring(5),
+          tool_dynamic_type: 'rag',
+          tool_dynamic_input: part.input,
+          tool_dynamic_output: part.output,
+          tool_errorText: part.errorText
+        }
+      }
 
       // Data parts
       default:
@@ -426,7 +460,11 @@ export function mapDBPartToUIMessagePart(
           `tool_${toolName}_output` as keyof DBMessagePartWithoutVectors
 
         // Special handling for dynamic tools
-        if (toolName === 'dynamic' && part.tool_dynamic_type === 'draft') {
+        if (
+          toolName === 'dynamic' &&
+          (part.tool_dynamic_type === 'draft' ||
+            part.tool_dynamic_type === 'rag')
+        ) {
           return {
             type: `tool-${part.tool_dynamic_name}`,
             toolCallId: part.tool_toolCallId || '',
@@ -740,8 +778,12 @@ function getToolNameFromType(toolName: string): string {
     todoRead: 'todoRead'
   }
 
-  // For dynamic tools (MCP and others)
-  if (toolName.startsWith('mcp__') || toolName.startsWith('dynamic__')) {
+  // For dynamic tools (MCP, RAG, and others)
+  if (
+    toolName.startsWith('mcp__') ||
+    toolName.startsWith('dynamic__') ||
+    RAG_TOOL_NAMES.has(toolName)
+  ) {
     return 'dynamic'
   }
 

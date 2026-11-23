@@ -26,6 +26,10 @@ export function InspectorPanel() {
     switch (part.type) {
       case 'tool-search':
       case 'tool-askQuestion':
+      case 'tool-searchCampusKnowledge':
+      case 'tool-queryEvents':
+      case 'tool-getOfficialPortalLinks':
+      case 'tool-searchOfficialWeb':
         const toolName = part.type.replace('tool-', '')
         return {
           icon: <Search size={18} />,

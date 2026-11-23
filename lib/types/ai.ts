@@ -1,6 +1,13 @@
 import type { ReasoningPart, TextPart } from '@ai-sdk/provider-utils'
 import type { InferUITool, UIMessage as AIMessage } from 'ai'
 
+import type {
+  getOfficialPortalLinksTool,
+  logUnansweredQueryTool,
+  queryEventsTool,
+  searchCampusKnowledgeTool,
+  searchOfficialWebTool
+} from '@/lib/tools/campus-rag'
 import type { fetchTool } from '@/lib/tools/fetch'
 import type { askQuestionTool } from '@/lib/tools/question'
 import type { searchTool } from '@/lib/tools/search'
@@ -44,6 +51,11 @@ export type UITools = {
   fetch: InferUITool<typeof fetchTool>
   askQuestion: InferUITool<typeof askQuestionTool>
   todoWrite: InferUITool<typeof todoTools.todoWrite>
+  searchCampusKnowledge: InferUITool<typeof searchCampusKnowledgeTool>
+  queryEvents: InferUITool<typeof queryEventsTool>
+  getOfficialPortalLinks: InferUITool<typeof getOfficialPortalLinksTool>
+  searchOfficialWeb: InferUITool<typeof searchOfficialWebTool>
+  logUnansweredQuery: InferUITool<typeof logUnansweredQueryTool>
   // Dynamic tools will be added at runtime
   [key: string]: any
 }
@@ -54,10 +66,7 @@ export type ToolPart<T extends keyof UITools = keyof UITools> = {
   input: UITools[T]['input']
   output?: UITools[T]['output']
   state:
-    | 'input-streaming'
-    | 'input-available'
-    | 'output-available'
-    | 'output-error'
+    'input-streaming' | 'input-available' | 'output-available' | 'output-error'
   errorText?: string
 }
 

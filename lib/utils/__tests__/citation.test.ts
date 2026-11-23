@@ -608,6 +608,40 @@ describe('processCitations', () => {
       expect(isDerivedLabel('S')).toBe(false)
       expect(isDerivedLabel('S1x')).toBe(false)
     })
+
+    it('extracts and increments labels from campus RAG tool outputs', () => {
+      const ragMessage = {
+        id: 'rag-turn',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-searchCampusKnowledge',
+            state: 'output-available',
+            toolCallId: 'call_rag_1',
+            input: { query: 'JECRC exam form' },
+            output: {
+              results: [
+                {
+                  title: 'Exam Circular',
+                  url: 'https://jecrcuniversity.edu.in/e-notice',
+                  content: 'Submit before Nov 30',
+                  label: 'S4'
+                }
+              ]
+            }
+          },
+          { type: 'text', text: 'Submit exam form before Nov 30. [1](#S4)' }
+        ]
+      } as unknown as UIMessage
+
+      const maps = extractCitationMapsFromMessages([ragMessage])
+      expect(
+        processCitations('Submit exam form before Nov 30. [1](#S4)', maps)
+      ).toBe(
+        'Submit exam form before Nov 30. [jecrcuniversity](https://jecrcuniversity.edu.in/e-notice)'
+      )
+      expect(nextCitationLabelNumber([ragMessage])).toBe(5)
+    })
   })
 
   describe('isCitationLabel', () => {

@@ -13,7 +13,8 @@ import {
   text,
   timestamp,
   uniqueIndex,
-  varchar
+  varchar,
+  vector
 } from 'drizzle-orm/pg-core'
 
 // Constants
@@ -637,6 +638,442 @@ export const userProfiles = pgTable(
 
 export type UserProfile = InferSelectModel<typeof userProfiles>
 export type NewUserProfile = typeof userProfiles.$inferInsert
+
+// ---------------------------------------------------------------------------
+// SERA RAG & Campus Knowledge Base Tables
+// ---------------------------------------------------------------------------
+
+export const KNOWLEDGE_DOMAINS = [
+  'admissions',
+  'fees',
+  'examinations',
+  'timetables',
+  'activities',
+  'academics',
+  'general'
+] as const
+export type KnowledgeDomain = (typeof KNOWLEDGE_DOMAINS)[number]
+
+export const KNOWLEDGE_SOURCE_SYSTEMS = [
+  'jecrc_web',
+  'jecrc_enotice',
+  'jecrc_portal_guide',
+  'kalvium_web',
+  'kalvium_guide',
+  'whatsapp_forward',
+  'gchat_space',
+  'eventum'
+] as const
+export type KnowledgeSourceSystem = (typeof KNOWLEDGE_SOURCE_SYSTEMS)[number]
+
+export const KNOWLEDGE_AUTHORITIES = ['kalvium', 'jecrc', 'joint'] as const
+export type KnowledgeAuthority = (typeof KNOWLEDGE_AUTHORITIES)[number]
+
+export const KNOWLEDGE_PRIORITIES = ['standard', 'urgent'] as const
+export type KnowledgePriority = (typeof KNOWLEDGE_PRIORITIES)[number]
+
+export const KNOWLEDGE_STATUSES = [
+  'active',
+  'pending_review',
+  'superseded',
+  'archived'
+] as const
+export type KnowledgeStatus = (typeof KNOWLEDGE_STATUSES)[number]
+
+export const KNOWLEDGE_CHANNELS = [
+  'mentor_upload',
+  'gchat',
+  'whatsapp_forward',
+  'web_crawl'
+] as const
+export type KnowledgeChannel = (typeof KNOWLEDGE_CHANNELS)[number]
+
+export const KNOWLEDGE_SENDER_ROLES = [
+  'mentor',
+  'student_cr',
+  'official_space',
+  'system'
+] as const
+export type KnowledgeSenderRole = (typeof KNOWLEDGE_SENDER_ROLES)[number]
+
+export const CAMPUS_EVENT_STATUSES = [
+  'upcoming',
+  'ongoing',
+  'completed',
+  'cancelled'
+] as const
+export type CampusEventStatus = (typeof CAMPUS_EVENT_STATUSES)[number]
+
+export const UNANSWERED_QUERY_KINDS = ['abstention', 'citation_flag'] as const
+export type UnansweredQueryKind = (typeof UNANSWERED_QUERY_KINDS)[number]
+
+export const UNANSWERED_QUERY_STATUSES = [
+  'open',
+  'resolved',
+  'dismissed'
+] as const
+export type UnansweredQueryStatus = (typeof UNANSWERED_QUERY_STATUSES)[number]
+
+export const EMBEDDING_DIMENSIONS = 768
+
+const mentorOrSystemWriteCondition = sql`(select current_setting('app.rag_system_write', true)) = 'true' OR EXISTS (
+  SELECT 1 FROM ${userProfiles}
+  WHERE ${userProfiles}.id = (select current_setting('app.current_user_id', true))
+  AND ${userProfiles}.user_type = 'mentor'
+)`
+
+// Knowledge documents (official notices, guides, web crawls, and urgent updates)
+export const knowledgeDocuments = pgTable(
+  'knowledge_documents',
+  {
+    id: varchar('id', { length: ID_LENGTH })
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    title: text('title').notNull(),
+    domain: varchar('domain', {
+      length: 64,
+      enum: KNOWLEDGE_DOMAINS
+    })
+      .notNull()
+      .default('general'),
+    sourceSystem: varchar('source_system', {
+      length: 64,
+      enum: KNOWLEDGE_SOURCE_SYSTEMS
+    }).notNull(),
+    authority: varchar('authority', {
+      length: 32,
+      enum: KNOWLEDGE_AUTHORITIES
+    })
+      .notNull()
+      .default('joint'),
+    program: varchar('program', { length: 128 }),
+    semester: varchar('semester', { length: 64 }),
+    squad: varchar('squad', { length: 128 }),
+    residency: varchar('residency', { length: 64 }),
+    priority: varchar('priority', {
+      length: 32,
+      enum: KNOWLEDGE_PRIORITIES
+    })
+      .notNull()
+      .default('standard'),
+    status: varchar('status', {
+      length: 32,
+      enum: KNOWLEDGE_STATUSES
+    })
+      .notNull()
+      .default('active'),
+    effectiveDate: timestamp('effective_date', { withTimezone: true }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    supersedesId: varchar('supersedes_id', { length: ID_LENGTH }),
+    supersedesTopic: text('supersedes_topic'),
+    actionRequired: text('action_required'),
+    sourceUrl: text('source_url'),
+    content: text('content').notNull(),
+    contentHash: varchar('content_hash', { length: 128 }).notNull(),
+    channel: varchar('channel', {
+      length: 64,
+      enum: KNOWLEDGE_CHANNELS
+    })
+      .notNull()
+      .default('mentor_upload'),
+    senderRole: varchar('sender_role', {
+      length: 64,
+      enum: KNOWLEDGE_SENDER_ROLES
+    })
+      .notNull()
+      .default('mentor'),
+    uploadedBy: varchar('uploaded_by', { length: USER_ID_LENGTH }),
+    capturedAt: timestamp('captured_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+  },
+  table => [
+    index('knowledge_documents_status_priority_expires_idx').on(
+      table.status,
+      table.priority,
+      table.expiresAt
+    ),
+    index('knowledge_documents_domain_authority_status_idx').on(
+      table.domain,
+      table.authority,
+      table.status
+    ),
+    index('knowledge_documents_content_hash_idx').on(table.contentHash),
+    index('knowledge_documents_supersedes_id_idx').on(table.supersedesId),
+    index('knowledge_documents_effective_date_idx').on(table.effectiveDate),
+    pgPolicy('knowledge_documents_public_select', {
+      as: 'permissive',
+      for: 'select',
+      to: 'public',
+      using: sql`true`
+    }),
+    pgPolicy('knowledge_documents_mentor_manage', {
+      as: 'permissive',
+      for: 'all',
+      to: 'public',
+      using: mentorOrSystemWriteCondition,
+      withCheck: mentorOrSystemWriteCondition
+    })
+  ]
+).enableRLS()
+
+export type KnowledgeDocument = InferSelectModel<typeof knowledgeDocuments>
+export type NewKnowledgeDocument = typeof knowledgeDocuments.$inferInsert
+
+// Knowledge chunks (hybrid pgvector + tsvector retrieval units)
+export const knowledgeChunks = pgTable(
+  'knowledge_chunks',
+  {
+    id: varchar('id', { length: ID_LENGTH })
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    documentId: varchar('document_id', { length: ID_LENGTH })
+      .notNull()
+      .references(() => knowledgeDocuments.id, { onDelete: 'cascade' }),
+    chunkIndex: integer('chunk_index').notNull(),
+    heading: text('heading'),
+    content: text('content').notNull(),
+    containsTable: integer('contains_table').notNull().default(0),
+    tokenCount: integer('token_count').notNull().default(0),
+    embedding: vector('embedding', { dimensions: EMBEDDING_DIMENSIONS }),
+    searchVector: tsvector('search_vector').generatedAlwaysAs(
+      sql`to_tsvector('english', left(coalesce(heading, '') || ' ' || coalesce(content, ''), 100000))`
+    ),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+  },
+  table => [
+    index('knowledge_chunks_document_id_idx').on(table.documentId),
+    index('knowledge_chunks_document_chunk_idx').on(
+      table.documentId,
+      table.chunkIndex
+    ),
+    index('knowledge_chunks_search_vector_idx').using(
+      'gin',
+      table.searchVector
+    ),
+    pgPolicy('knowledge_chunks_public_select', {
+      as: 'permissive',
+      for: 'select',
+      to: 'public',
+      using: sql`true`
+    }),
+    pgPolicy('knowledge_chunks_mentor_manage', {
+      as: 'permissive',
+      for: 'all',
+      to: 'public',
+      using: mentorOrSystemWriteCondition,
+      withCheck: mentorOrSystemWriteCondition
+    })
+  ]
+).enableRLS()
+
+export type KnowledgeChunk = InferSelectModel<typeof knowledgeChunks>
+export type NewKnowledgeChunk = typeof knowledgeChunks.$inferInsert
+
+// Structured Eventum campus events
+export const campusEvents = pgTable(
+  'campus_events',
+  {
+    id: varchar('id', { length: ID_LENGTH })
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    title: text('title').notNull(),
+    organizer: text('organizer').notNull(),
+    authority: varchar('authority', {
+      length: 32,
+      enum: KNOWLEDGE_AUTHORITIES
+    })
+      .notNull()
+      .default('joint'),
+    category: varchar('category', { length: 64 }),
+    startAt: timestamp('start_at', { withTimezone: true }).notNull(),
+    endAt: timestamp('end_at', { withTimezone: true }),
+    venue: text('venue'),
+    campusLocation: text('campus_location'),
+    onlineUrl: text('online_url'),
+    registrationUrl: text('registration_url'),
+    registrationDeadline: timestamp('registration_deadline', {
+      withTimezone: true
+    }),
+    eligibility: text('eligibility'),
+    guidelines: text('guidelines'),
+    resultsSummary: text('results_summary'),
+    resultsUrl: text('results_url'),
+    sourceUrl: text('source_url'),
+    status: varchar('status', {
+      length: 32,
+      enum: CAMPUS_EVENT_STATUSES
+    })
+      .notNull()
+      .default('upcoming'),
+    uploadedBy: varchar('uploaded_by', { length: USER_ID_LENGTH }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+  },
+  table => [
+    index('campus_events_status_start_idx').on(table.status, table.startAt),
+    index('campus_events_registration_deadline_idx').on(
+      table.registrationDeadline
+    ),
+    pgPolicy('campus_events_public_select', {
+      as: 'permissive',
+      for: 'select',
+      to: 'public',
+      using: sql`true`
+    }),
+    pgPolicy('campus_events_mentor_manage', {
+      as: 'permissive',
+      for: 'all',
+      to: 'public',
+      using: mentorOrSystemWriteCondition,
+      withCheck: mentorOrSystemWriteCondition
+    })
+  ]
+).enableRLS()
+
+export type CampusEvent = InferSelectModel<typeof campusEvents>
+export type NewCampusEvent = typeof campusEvents.$inferInsert
+
+// Deterministic verified official portal deep-link registry (Tier 3 handoffs)
+export const officialPortals = pgTable(
+  'official_portals',
+  {
+    id: varchar('id', { length: ID_LENGTH })
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    portalKey: varchar('portal_key', { length: 64 }).notNull().unique(),
+    name: text('name').notNull(),
+    authority: varchar('authority', {
+      length: 32,
+      enum: KNOWLEDGE_AUTHORITIES
+    }).notNull(),
+    url: text('url').notNull(),
+    requiresLogin: integer('requires_login').notNull().default(1),
+    capabilities: text('capabilities').notNull(),
+    navigationSteps: text('navigation_steps').notNull(),
+    supportContact: text('support_contact'),
+    lastVerifiedAt: timestamp('last_verified_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedBy: varchar('updated_by', { length: USER_ID_LENGTH }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+  },
+  table => [
+    index('official_portals_authority_idx').on(table.authority),
+    pgPolicy('official_portals_public_select', {
+      as: 'permissive',
+      for: 'select',
+      to: 'public',
+      using: sql`true`
+    }),
+    pgPolicy('official_portals_mentor_manage', {
+      as: 'permissive',
+      for: 'all',
+      to: 'public',
+      using: mentorOrSystemWriteCondition,
+      withCheck: mentorOrSystemWriteCondition
+    })
+  ]
+).enableRLS()
+
+export type OfficialPortal = InferSelectModel<typeof officialPortals>
+export type NewOfficialPortal = typeof officialPortals.$inferInsert
+
+// Abstention gap logging & outdated citation flags for weekly mentor review
+export const unansweredQueries = pgTable(
+  'unanswered_queries',
+  {
+    id: varchar('id', { length: ID_LENGTH })
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    userId: varchar('user_id', { length: USER_ID_LENGTH }),
+    chatId: varchar('chat_id', { length: ID_LENGTH }),
+    query: text('query').notNull(),
+    domain: varchar('domain', {
+      length: 64,
+      enum: KNOWLEDGE_DOMAINS
+    })
+      .notNull()
+      .default('general'),
+    cohort: text('cohort'),
+    reason: text('reason').notNull(),
+    flaggedDocumentId: varchar('flagged_document_id', {
+      length: ID_LENGTH
+    }).references(() => knowledgeDocuments.id, { onDelete: 'set null' }),
+    kind: varchar('kind', {
+      length: 32,
+      enum: UNANSWERED_QUERY_KINDS
+    })
+      .notNull()
+      .default('abstention'),
+    status: varchar('status', {
+      length: 32,
+      enum: UNANSWERED_QUERY_STATUSES
+    })
+      .notNull()
+      .default('open'),
+    resolvedBy: varchar('resolved_by', { length: USER_ID_LENGTH }),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+  },
+  table => [
+    index('unanswered_queries_status_created_idx').on(
+      table.status,
+      table.createdAt
+    ),
+    index('unanswered_queries_domain_idx').on(table.domain),
+    index('unanswered_queries_flagged_document_idx').on(
+      table.flaggedDocumentId
+    ),
+    pgPolicy('unanswered_queries_public_select', {
+      as: 'permissive',
+      for: 'select',
+      to: 'public',
+      using: sql`true`
+    }),
+    pgPolicy('unanswered_queries_public_insert', {
+      as: 'permissive',
+      for: 'insert',
+      to: 'public',
+      withCheck: sql`true`
+    }),
+    pgPolicy('unanswered_queries_mentor_manage', {
+      as: 'permissive',
+      for: 'update',
+      to: 'public',
+      using: mentorOrSystemWriteCondition,
+      withCheck: mentorOrSystemWriteCondition
+    }),
+    pgPolicy('unanswered_queries_mentor_delete', {
+      as: 'permissive',
+      for: 'delete',
+      to: 'public',
+      using: mentorOrSystemWriteCondition
+    })
+  ]
+).enableRLS()
+
+export type UnansweredQuery = InferSelectModel<typeof unansweredQueries>
+export type NewUnansweredQuery = typeof unansweredQueries.$inferInsert
 
 // Better Auth tables (user, session, account, verification, invitations)
 // are defined in lib/auth/better-auth/schema.ts and re-exported here so the

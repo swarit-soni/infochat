@@ -7,6 +7,7 @@ import type {
 } from '@/lib/types/agent'
 import { type Model } from '@/lib/types/models'
 
+import { createCampusRagTools } from '../tools/campus-rag'
 import { createDraftTools } from '../tools/draft'
 import { createFetchTool } from '../tools/fetch'
 import { createQuestionTool } from '../tools/question'
@@ -59,13 +60,15 @@ function wrapSearchToolForQuickMode<
       } else {
         // Fallback for non-streaming (shouldn't happen with new implementation)
         const finalResult = await result
-        yield finalResult || {
-          state: 'complete' as const,
-          results: [],
-          images: [],
-          query: params.query,
-          number_of_results: 0
-        }
+        yield (
+          finalResult || {
+            state: 'complete' as const,
+            results: [],
+            images: [],
+            query: params.query,
+            number_of_results: 0
+          }
+        )
       }
     }
   }) as T
@@ -106,6 +109,7 @@ export function createResearcher({
     const askQuestionTool = createQuestionTool(model)
     const todoTools = createTodoTools()
     const draftTools = createDraftTools(currentDraft, alternativesOnly)
+    const campusRagTools = createCampusRagTools({ labelAllocator, model })
 
     let systemPrompt: string
     let activeToolsList: (keyof ResearcherTools)[] = []
@@ -116,10 +120,19 @@ export function createResearcher({
     switch (searchMode) {
       case 'quick':
         console.log(
-          '[Researcher] Quick mode: maxSteps=20, tools=[search, fetch, editDraft]'
+          '[Researcher] Quick mode: maxSteps=20, tools=[searchCampusKnowledge, queryEvents, getOfficialPortalLinks, searchOfficialWeb, logUnansweredQuery, search, fetch, editDraft]'
         )
         systemPrompt = QUICK_MODE_PROMPT
-        activeToolsList = ['search', 'fetch', 'editDraft']
+        activeToolsList = [
+          'searchCampusKnowledge',
+          'queryEvents',
+          'getOfficialPortalLinks',
+          'searchOfficialWeb',
+          'logUnansweredQuery',
+          'search',
+          'fetch',
+          'editDraft'
+        ]
         maxSteps = 20
         searchTool = wrapSearchToolForQuickMode(originalSearchTool)
         break
@@ -127,7 +140,17 @@ export function createResearcher({
       case 'adaptive':
       default:
         systemPrompt = getAdaptiveModePrompt()
-        activeToolsList = ['search', 'fetch', 'todoWrite', 'editDraft']
+        activeToolsList = [
+          'searchCampusKnowledge',
+          'queryEvents',
+          'getOfficialPortalLinks',
+          'searchOfficialWeb',
+          'logUnansweredQuery',
+          'search',
+          'fetch',
+          'todoWrite',
+          'editDraft'
+        ]
         console.log(
           `[Researcher] Adaptive mode: maxSteps=50, tools=[${activeToolsList.join(', ')}]`
         )
@@ -141,6 +164,7 @@ export function createResearcher({
       search: searchTool,
       fetch: fetchTool,
       askQuestion: askQuestionTool,
+      ...campusRagTools,
       ...todoTools,
       ...draftTools
     } as ResearcherTools

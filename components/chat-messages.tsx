@@ -73,7 +73,15 @@ export function ChatMessages({
   )
 
   // Tool types definition - moved outside function for performance
-  const toolTypes = ['tool-search', 'tool-fetch', 'tool-askQuestion']
+  const toolTypes = [
+    'tool-search',
+    'tool-fetch',
+    'tool-askQuestion',
+    'tool-searchCampusKnowledge',
+    'tool-queryEvents',
+    'tool-getOfficialPortalLinks',
+    'tool-searchOfficialWeb'
+  ]
 
   useEffect(() => {
     const container = scrollContainerRef.current
