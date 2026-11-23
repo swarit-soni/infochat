@@ -14,5 +14,5 @@ export function createQuestionTool(fullModel: string) {
   })
 }
 
-// Default export for backward compatibility, using a default model
-export const askQuestionTool = createQuestionTool('openai:gpt-4o-mini')
+// Default export for backward compatibility, using the fixed universal model
+export const askQuestionTool = createQuestionTool('google:gemini-3.1-flash-lite')

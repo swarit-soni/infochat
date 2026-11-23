@@ -1,8 +1,10 @@
 import { Model } from '@/lib/types/models'
 
-export const DEFAULT_MODEL: Model = {
-  id: 'gpt-5.4-mini',
-  name: 'GPT-5.4 mini',
-  provider: 'OpenAI',
-  providerId: 'openai'
+export const FIXED_MODEL: Model = {
+  id: 'gemini-3.1-flash-lite',
+  name: 'Gemini 3.1 Flash-Lite',
+  provider: 'Google',
+  providerId: 'google'
 }
+
+export const DEFAULT_MODEL: Model = FIXED_MODEL

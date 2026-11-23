@@ -16,8 +16,8 @@ vi.mock('@/lib/actions/chat', () => ({
 }))
 vi.mock('@/lib/auth/get-current-user', () => ({ getCurrentUserId: vi.fn() }))
 vi.mock('@/lib/auth/provider', () => ({ isAnonymousMode: () => false }))
-vi.mock('@/lib/model-selector/get-model-selector-data', () => ({
-  getModelSelectorData: vi.fn(async () => undefined)
+vi.mock('@/lib/utils/registry', () => ({
+  isProviderEnabled: vi.fn(() => true)
 }))
 vi.mock('@/components/chat', () => ({ Chat: () => null }))
 vi.mock('next/navigation', () => ({

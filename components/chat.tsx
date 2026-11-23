@@ -39,7 +39,6 @@ import {
   isToolCallPart,
   isToolTypePart
 } from '@/lib/types/dynamic-tools'
-import type { ModelSelectorData } from '@/lib/types/model-selector'
 import { cn } from '@/lib/utils'
 import { getCookie } from '@/lib/utils/cookies'
 import { getTextFromParts } from '@/lib/utils/message-utils'
@@ -73,7 +72,7 @@ export function Chat({
   isGuest = false,
   isCloudDeployment = false,
   libraryAvailable = true,
-  modelSelectorData
+  hasAvailableModels = true
 }: {
   id?: string
   savedMessages?: UIMessage[]
@@ -81,7 +80,7 @@ export function Chat({
   isGuest?: boolean
   isCloudDeployment?: boolean
   libraryAvailable?: boolean
-  modelSelectorData?: ModelSelectorData
+  hasAvailableModels?: boolean
 }) {
   const router = useRouter()
   const {
@@ -874,7 +873,7 @@ export function Chat({
           isGuest={isGuest}
           isCloudDeployment={isCloudDeployment}
           onAdaptiveModeAuthRequired={showAdaptiveModeAuthModal}
-          modelSelectorData={modelSelectorData}
+          hasAvailableModels={hasAvailableModels}
           sections={sections}
         />
         <DragOverlay visible={dragHandlers.isDragging} />
