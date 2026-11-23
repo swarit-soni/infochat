@@ -59,7 +59,7 @@ export function ErrorModal({
       case 'rate-limit':
         return 'Rate Limit Exceeded'
       case 'auth':
-        return 'Continue with Morphic'
+        return 'Continue with Sera'
       case 'forbidden':
         return 'Access Denied'
       default:
@@ -77,7 +77,7 @@ export function ErrorModal({
       case 'auth':
         return (
           error.message ||
-          'To use Morphic, sign in to your account or create a new one.'
+          'Sign in with your @kalvium.com (Mentor) or @kalvium.community (Student) Google account.'
         )
       case 'forbidden':
         return 'You do not have permission to access this resource.'
@@ -125,14 +125,9 @@ export function ErrorModal({
         </DialogHeader>
         <DialogFooter className="flex-col gap-2">
           {error.type === 'auth' ? (
-            <>
-              <Button asChild className="w-full">
-                <Link href="/auth/sign-up">Sign Up</Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full">
-                <Link href="/auth/login">Sign In</Link>
-              </Button>
-            </>
+            <Button asChild className="w-full">
+              <Link href="/auth/login">Sign In with Google</Link>
+            </Button>
           ) : (
             <>
               {onRetry && error.type !== 'rate-limit' && (

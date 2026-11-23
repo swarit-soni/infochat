@@ -1,9 +1,12 @@
+import Link from 'next/link'
+
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default async function Page({
   searchParams
 }: {
-  searchParams: Promise<{ error: string }>
+  searchParams: Promise<{ error?: string }>
 }) {
   const params = await searchParams
 
@@ -17,7 +20,7 @@ export default async function Page({
                 Sorry, something went wrong.
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex flex-col gap-4">
               {params?.error ? (
                 <p className="text-sm text-muted-foreground">
                   Code error: {params.error}
@@ -27,6 +30,9 @@ export default async function Page({
                   An unspecified error occurred.
                 </p>
               )}
+              <Button asChild className="w-full">
+                <Link href="/auth/login">Back to Sign In</Link>
+              </Button>
             </CardContent>
           </Card>
         </div>

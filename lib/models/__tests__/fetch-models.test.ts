@@ -216,6 +216,11 @@ describe('fetch-models', () => {
             name: 'models/gemini-2.0-flash',
             displayName: 'Gemini 2.0 Flash',
             supportedGenerationMethods: ['generateContent']
+          },
+          {
+            name: 'models/gemini-4-hydrogen',
+            displayName: 'Gemini 4 Hydrogen',
+            supportedGenerationMethods: ['generateContent']
           }
         ]
       })
@@ -223,7 +228,10 @@ describe('fetch-models', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     const models = await fetchModels.fetchGoogleModels()
-    expect(models.map(model => model.id)).toEqual(['gemini-2.5-pro'])
+    expect(models.map(model => model.id)).toEqual([
+      'gemini-2.5-pro',
+      'gemini-4-hydrogen'
+    ])
   })
 
   it('adds think provider options for ollama thinking models', async () => {

@@ -9,7 +9,7 @@ export function VersionFooterSkeleton() {
   return (
     <div className="text-xs text-center space-y-0.5">
       <div className="flex justify-center">
-        <Skeleton className="h-4 w-14" />
+        <Skeleton className="h-4 w-20" />
       </div>
       <div className="flex justify-center">
         <Skeleton className="h-4 w-10" />

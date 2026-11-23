@@ -12,13 +12,13 @@ describe('none auth provider (anonymous mode)', () => {
     for (const key of [
       'ENABLE_AUTH',
       'ANONYMOUS_USER_ID',
-      'MORPHIC_CLOUD_DEPLOYMENT',
+      'SERA_CLOUD_DEPLOYMENT',
       'NODE_ENV'
     ]) {
       original[key] = process.env[key]
     }
     delete process.env.ANONYMOUS_USER_ID
-    delete process.env.MORPHIC_CLOUD_DEPLOYMENT
+    delete process.env.SERA_CLOUD_DEPLOYMENT
   })
 
   afterEach(() => {
@@ -69,11 +69,11 @@ describe('none auth provider (anonymous mode)', () => {
     vi.unstubAllEnvs()
   })
 
-  it('refuses to resolve the anonymous identity in Morphic Cloud deployments', async () => {
-    process.env.MORPHIC_CLOUD_DEPLOYMENT = 'true'
+  it('refuses to resolve the anonymous identity in Sera Cloud deployments', async () => {
+    process.env.SERA_CLOUD_DEPLOYMENT = 'true'
 
     await expect(noneAuthProvider.getCurrentUserId?.()).rejects.toThrow(
-      'ENABLE_AUTH=false is not allowed in MORPHIC_CLOUD_DEPLOYMENT'
+      'ENABLE_AUTH=false is not allowed in SERA_CLOUD_DEPLOYMENT'
     )
   })
 

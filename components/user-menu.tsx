@@ -13,10 +13,12 @@ import {
 } from '@tabler/icons-react'
 
 import { signOut } from '@/lib/actions/auth'
+import { USER_TYPE_LABELS } from '@/lib/auth/domain'
 import type { AppUser } from '@/lib/auth/types'
 import { chatStore } from '@/lib/chat-store'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -116,9 +118,16 @@ export default function UserMenu({ user }: UserMenuProps) {
         <DropdownMenuContent className="w-60" align="end" forceMount>
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none truncate">
-                {userName}
-              </p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-medium leading-none truncate">
+                  {userName}
+                </p>
+                {user.userType && (
+                  <Badge variant="secondary" className="shrink-0">
+                    {USER_TYPE_LABELS[user.userType]}
+                  </Badge>
+                )}
+              </div>
               <p className="text-xs leading-none text-muted-foreground truncate">
                 {user.email}
               </p>

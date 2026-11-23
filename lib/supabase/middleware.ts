@@ -1,8 +1,29 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
-import { createServerClient } from '@supabase/ssr'
+import { type CookieOptions, createServerClient } from '@supabase/ssr'
+
+import { isAllowedEmail, isGoogleAuthUser } from '@/lib/auth/domain'
 
 import { getSupabasePublishableKey } from './keys'
+
+function matchesPathPrefix(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`)
+}
+
+function isPublicPath(pathname: string): boolean {
+  if (
+    matchesPathPrefix(pathname, '/auth') ||
+    matchesPathPrefix(pathname, '/api')
+  ) {
+    return true
+  }
+
+  if (process.env.ENABLE_GUEST_CHAT === 'true') {
+    return pathname === '/' || matchesPathPrefix(pathname, '/share')
+  }
+
+  return false
+}
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -18,7 +39,13 @@ export async function updateSession(request: NextRequest) {
         getAll() {
           return request.cookies.getAll()
         },
-        setAll(cookiesToSet) {
+        setAll(
+          cookiesToSet: Array<{
+            name: string
+            value: string
+            options?: CookieOptions
+          }>
+        ) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           )
@@ -43,23 +70,31 @@ export async function updateSession(request: NextRequest) {
     data: { user }
   } = await supabase.auth.getUser()
 
-  // Define public paths that don't require authentication
-  const publicPaths = [
-    '/', // Root path
-    '/auth', // Auth-related pages
-    '/share', // Share pages
-    '/api' // API routes
-    // Add other public paths here if needed
-  ]
-
   const pathname = request.nextUrl.pathname
 
-  // Redirect to login if the user is not authenticated and the path is not public
-  if (!user && !publicPaths.some(path => pathname.startsWith(path))) {
-    // no user, potentially respond by redirecting the user to the login page
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth/login'
-    return NextResponse.redirect(url)
+  // Reject and sign out sessions from disallowed domains or non-Google providers.
+  if (user && (!isAllowedEmail(user.email) || !isGoogleAuthUser(user))) {
+    await supabase.auth.signOut()
+    const loginUrl = request.nextUrl.clone()
+    loginUrl.pathname = '/auth/login'
+    loginUrl.search = ''
+    loginUrl.searchParams.set('error', 'unauthorized_domain')
+    const redirectResponse = NextResponse.redirect(loginUrl)
+    for (const cookie of supabaseResponse.cookies.getAll()) {
+      redirectResponse.cookies.set(cookie)
+    }
+    return redirectResponse
+  }
+
+  // Redirect to login if the user is not authenticated and the path is not public.
+  if (!user && !isPublicPath(pathname)) {
+    const loginUrl = request.nextUrl.clone()
+    loginUrl.pathname = '/auth/login'
+    loginUrl.search = ''
+    if (pathname !== '/') {
+      loginUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
+    }
+    return NextResponse.redirect(loginUrl)
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
@@ -74,45 +109,6 @@ export async function updateSession(request: NextRequest) {
   //    return myNewResponse
   // If this is not done, you may be causing the browser and server to go out
   // of sync and terminate the user's session prematurely!
-
-  return supabaseResponse
-}
-
-// Exchanges the PKCE code from an emailed link for session cookies.
-export async function exchangeAuthCode(
-  request: NextRequest,
-  code: string,
-  failureSearch = ''
-): Promise<NextResponse> {
-  const url = request.nextUrl.clone()
-  url.search = ''
-  let supabaseResponse = NextResponse.redirect(url)
-  const supabaseKey = getSupabasePublishableKey()
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    supabaseKey!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        }
-      }
-    }
-  )
-
-  const { error } = await supabase.auth.exchangeCodeForSession(code)
-  if (error) {
-    const loginUrl = request.nextUrl.clone()
-    loginUrl.pathname = '/auth/login'
-    loginUrl.search = failureSearch
-    return NextResponse.redirect(loginUrl)
-  }
 
   return supabaseResponse
 }

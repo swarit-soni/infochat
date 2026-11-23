@@ -7,7 +7,7 @@ import { Chat } from '@/components/chat'
 
 export default async function Page() {
   const userId = await getCurrentUserId()
-  const isCloudDeployment = process.env.MORPHIC_CLOUD_DEPLOYMENT === 'true'
+  const isCloudDeployment = process.env.SERA_CLOUD_DEPLOYMENT === 'true'
   const libraryAvailable = !isAnonymousMode()
   const hasAvailableModels = isProviderEnabled(FIXED_MODEL.providerId)
 

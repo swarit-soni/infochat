@@ -22,7 +22,7 @@ const mockedCheckForUpdate = vi.mocked(checkForUpdate)
 const UPDATE_RESULT = {
   hasUpdate: true,
   latestVersion: 'v1.9.0',
-  releaseUrl: 'https://github.com/miurla/morphic/releases/tag/v1.9.0'
+  releaseUrl: 'https://github.com/swarit-soni/infochat/releases/tag/v1.9.0'
 }
 
 function appUser(role?: string): AppUser {
@@ -40,7 +40,7 @@ async function renderFooter(user?: AppUser | null) {
 describe('VersionFooter', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.stubEnv('MORPHIC_INSTALL_METHOD', 'docker')
+    vi.stubEnv('SERA_INSTALL_METHOD', 'docker')
     mockedIsAnonymousMode.mockReturnValue(false)
     mockedCheckForUpdate.mockResolvedValue({ hasUpdate: false })
   })
@@ -57,7 +57,7 @@ describe('VersionFooter', () => {
     })
     expect(versionLink).toHaveAttribute(
       'href',
-      'https://github.com/miurla/morphic/releases'
+      'https://github.com/swarit-soni/infochat/releases'
     )
     expect(versionLink).toHaveAttribute('target', '_blank')
     expect(versionLink).toHaveAttribute('rel', 'noopener')
@@ -73,7 +73,7 @@ describe('VersionFooter', () => {
     const updateLink = screen.getByRole('link', { name: 'Update: v1.9.0' })
     expect(updateLink).toHaveAttribute(
       'href',
-      'https://github.com/miurla/morphic/releases/tag/v1.9.0'
+      'https://github.com/swarit-soni/infochat/releases/tag/v1.9.0'
     )
     expect(updateLink).toHaveAttribute('target', '_blank')
     expect(updateLink).toHaveAttribute('rel', 'noopener')
@@ -99,7 +99,7 @@ describe('VersionFooter', () => {
   })
 
   test('shows the update link to an allowlisted email without a role', async () => {
-    vi.stubEnv('MORPHIC_ADMIN_EMAILS', 'user@example.com')
+    vi.stubEnv('SERA_ADMIN_EMAILS', 'user@example.com')
     mockedCheckForUpdate.mockResolvedValue(UPDATE_RESULT)
 
     await renderFooter(appUser())
@@ -110,7 +110,7 @@ describe('VersionFooter', () => {
   })
 
   test('matches allowlisted emails case-insensitively', async () => {
-    vi.stubEnv('MORPHIC_ADMIN_EMAILS', 'other@example.com, USER@Example.COM')
+    vi.stubEnv('SERA_ADMIN_EMAILS', 'other@example.com, USER@Example.COM')
     mockedCheckForUpdate.mockResolvedValue(UPDATE_RESULT)
 
     await renderFooter(appUser())
@@ -121,7 +121,7 @@ describe('VersionFooter', () => {
   })
 
   test('hides the update link for an email outside the allowlist', async () => {
-    vi.stubEnv('MORPHIC_ADMIN_EMAILS', 'someone-else@example.com')
+    vi.stubEnv('SERA_ADMIN_EMAILS', 'someone-else@example.com')
     mockedCheckForUpdate.mockResolvedValue(UPDATE_RESULT)
 
     await renderFooter(appUser())

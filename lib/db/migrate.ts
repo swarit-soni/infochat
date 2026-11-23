@@ -1,8 +1,14 @@
+import * as dotenv from 'dotenv'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import postgres from 'postgres'
 
 import 'dotenv/config'
+
+// Load from .env.local if DATABASE_URL is not set
+if (!process.env.DATABASE_URL) {
+  dotenv.config({ path: '.env.local' })
+}
 
 // This script is used to run migrations on the database
 // Run it with: bun run lib/db/migrate.ts
@@ -15,18 +21,13 @@ const runMigrations = async () => {
 
   const connectionString = process.env.DATABASE_URL
 
-  // Respect DATABASE_SSL_DISABLED flag (used in Docker)
-  // For cloud databases (Supabase, Neon, etc.), use SSL with rejectUnauthorized: false
-  // For local databases (Docker, localhost), disable SSL
+  // Respect DATABASE_SSL_DISABLED flag (used in local Docker Postgres).
+  // Use SSL with rejectUnauthorized: false by default so Supabase Postgres
+  // migrations work from local dev as well as production.
   const sslDisabled = process.env.DATABASE_SSL_DISABLED === 'true'
-  const isProduction = process.env.NODE_ENV === 'production'
 
   const sql = postgres(connectionString, {
-    ssl: sslDisabled
-      ? false
-      : isProduction
-        ? { rejectUnauthorized: false }
-        : false,
+    ssl: sslDisabled ? false : { rejectUnauthorized: false },
     prepare: false
   })
 

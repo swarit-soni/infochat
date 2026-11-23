@@ -37,12 +37,12 @@ const fontSans = FontSans({
   variable: '--font-sans'
 })
 
-const title = 'Morphic'
+const title = 'Sera'
 const description =
-  'A fully open-source AI-powered answer engine with a generative UI.'
+  'Sera — AI-powered campus assistant for Kalvium students and mentors.'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://morphic.sh'),
+  metadataBase: new URL('https://sera-info.vercel.app'),
   title,
   description,
   openGraph: {
@@ -52,8 +52,7 @@ export const metadata: Metadata = {
   twitter: {
     title,
     description,
-    card: 'summary_large_image',
-    creator: '@miiura'
+    card: 'summary_large_image'
   }
 }
 
@@ -81,13 +80,13 @@ export default async function RootLayout({
   )
 
   const userId = user?.id ?? (await getCurrentUserId())
-  const isCloudDeployment = process.env.MORPHIC_CLOUD_DEPLOYMENT === 'true'
+  const isCloudDeployment = process.env.SERA_CLOUD_DEPLOYMENT === 'true'
   const usageBudgetEnabled = Boolean(
     user &&
-      isCloudDeployment &&
-      isUsageBudgetAvailable() &&
-      ENFORCEMENT === 'on' &&
-      UI_ENABLED
+    isCloudDeployment &&
+    isUsageBudgetAvailable() &&
+    ENFORCEMENT === 'on' &&
+    UI_ENABLED
   )
   const usageSnapshot =
     usageBudgetEnabled && user
@@ -137,7 +136,7 @@ export default async function RootLayout({
                       initialUsage={initialUsage}
                       enabled={usageBudgetEnabled}
                     >
-                      {userId && <AppSidebar user={user} />}
+                      {userId && <AppSidebar />}
                       <KeyboardShortcutHandler />
                       <div className="flex flex-col flex-1 min-w-0">
                         <Header user={user} />

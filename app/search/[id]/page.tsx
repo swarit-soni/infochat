@@ -55,7 +55,7 @@ export default async function SearchPage(props: {
     redirect(`/auth/login?next=${encodeURIComponent(`/search/${id}`)}`)
   }
 
-  const isCloudDeployment = process.env.MORPHIC_CLOUD_DEPLOYMENT === 'true'
+  const isCloudDeployment = process.env.SERA_CLOUD_DEPLOYMENT === 'true'
   const libraryAvailable = !isAnonymousMode()
   const hasAvailableModels = isProviderEnabled(FIXED_MODEL.providerId)
 

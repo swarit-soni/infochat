@@ -19,9 +19,8 @@ export function InviteRequired() {
             Invitation required
           </CardTitle>
           <CardDescription>
-            Sign-up on this Morphic instance is invite-only. Ask an
-            administrator for an invitation link and open it to create your
-            account.
+            Sign-up on this Sera instance is invite-only. Ask an administrator
+            for an invitation link and open it to create your account.
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -38,26 +38,12 @@ export function SaveNoteAuthDialog({
             Save notes to your library
           </DialogTitle>
           <DialogDescription className="text-center text-muted-foreground">
-            Sign in or create an account to save answers and selected text to
-            your Library.
+            Sign in with your @kalvium.com or @kalvium.community Google account
+            to save answers and selected text to your Library.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex-col gap-2">
           <Button asChild className="w-full">
-            <Link
-              href="/auth/sign-up"
-              onClick={() =>
-                captureClient('library_auth_prompt_cta_clicked', {
-                  source,
-                  target: 'sign_up',
-                  chatId
-                })
-              }
-            >
-              Sign Up
-            </Link>
-          </Button>
-          <Button asChild variant="outline" className="w-full">
             <Link
               href="/auth/login"
               onClick={() =>
@@ -68,7 +54,7 @@ export function SaveNoteAuthDialog({
                 })
               }
             >
-              Sign In
+              Sign In with Google
             </Link>
           </Button>
         </DialogFooter>

@@ -54,11 +54,11 @@ describe('deleteAccount with the better-auth provider', () => {
   const originalEnv: Record<string, string | undefined> = {}
 
   beforeEach(() => {
-    for (const key of ['AUTH_PROVIDER', 'MORPHIC_CLOUD_DEPLOYMENT']) {
+    for (const key of ['AUTH_PROVIDER', 'SERA_CLOUD_DEPLOYMENT']) {
       originalEnv[key] = process.env[key]
     }
     process.env.AUTH_PROVIDER = 'better-auth'
-    delete process.env.MORPHIC_CLOUD_DEPLOYMENT
+    delete process.env.SERA_CLOUD_DEPLOYMENT
 
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'user-1',
@@ -72,6 +72,9 @@ describe('deleteAccount with the better-auth provider', () => {
       success: true
     })
     vi.mocked(dbActions.anonymizeUserFeedback).mockResolvedValue({
+      success: true
+    })
+    vi.mocked(dbActions.deleteUserProfile).mockResolvedValue({
       success: true
     })
     vi.mocked(deleteUserObjects).mockResolvedValue({ deletedCount: 0 } as never)
@@ -98,6 +101,7 @@ describe('deleteAccount with the better-auth provider', () => {
     expect(dbActions.deleteUserSpaces).toHaveBeenCalledWith('user-1')
     expect(dbActions.deleteUserLibraryFiles).toHaveBeenCalledWith('user-1')
     expect(dbActions.anonymizeUserFeedback).toHaveBeenCalledWith('user-1')
+    expect(dbActions.deleteUserProfile).toHaveBeenCalledWith('user-1')
     expect(deleteUserObjects).toHaveBeenCalledWith('user-1')
     expect(db.delete).toHaveBeenCalled()
   })

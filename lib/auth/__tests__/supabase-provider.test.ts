@@ -2,16 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { supabaseAuthProvider } from '@/lib/auth/providers/supabase'
-import { createAuthActionClient } from '@/lib/supabase/server'
+import { supabaseAuthProvider, toAppUser } from '@/lib/auth/providers/supabase'
+import { createClient } from '@/lib/supabase/server'
 
 vi.mock('@/lib/supabase/server', () => ({
-  createClient: vi.fn(),
-  createAuthActionClient: vi.fn()
+  createClient: vi.fn()
 }))
 vi.mock('@/lib/supabase/middleware', () => ({
-  updateSession: vi.fn(),
-  exchangeAuthCode: vi.fn()
+  updateSession: vi.fn()
 }))
 vi.mock('@/lib/supabase/keys', () => ({
   hasSupabasePublicConfig: vi.fn(() => true)
@@ -20,91 +18,179 @@ vi.mock('next/headers', () => ({ headers: vi.fn() }))
 
 import { headers } from 'next/headers'
 
-import { exchangeAuthCode, updateSession } from '@/lib/supabase/middleware'
-
-function request(url: string) {
-  return new NextRequest(url)
-}
+import { hasSupabasePublicConfig } from '@/lib/supabase/keys'
+import { updateSession } from '@/lib/supabase/middleware'
 
 describe('supabase provider', () => {
-  const resetPasswordForEmail = vi.fn()
+  const getUser = vi.fn()
+  const signInWithOAuth = vi.fn()
+  const signOut = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(createAuthActionClient).mockResolvedValue({
-      auth: { resetPasswordForEmail }
+    vi.mocked(hasSupabasePublicConfig).mockReturnValue(true)
+    vi.mocked(createClient).mockResolvedValue({
+      auth: {
+        getUser,
+        signInWithOAuth,
+        signOut
+      }
     } as never)
     vi.mocked(headers).mockResolvedValue(
       new Headers({ origin: 'http://localhost:3000' }) as never
     )
   })
 
-  describe('requestPasswordReset', () => {
-    it('keeps the legacy allowlisted recovery destination', async () => {
-      resetPasswordForEmail.mockResolvedValue({ error: null })
+  it('exposes Google-only capabilities and omits password methods', () => {
+    expect(supabaseAuthProvider.capabilities).toEqual({
+      signUp: false,
+      passwordReset: false,
+      deleteUser: true,
+      oauth: true,
+      emailVerification: false,
+      share: true
+    })
+    expect(supabaseAuthProvider.signIn).toBeUndefined()
+    expect(supabaseAuthProvider.signUp).toBeUndefined()
+    expect(supabaseAuthProvider.requestPasswordReset).toBeUndefined()
+    expect(supabaseAuthProvider.updatePassword).toBeUndefined()
+  })
 
-      const result =
-        await supabaseAuthProvider.requestPasswordReset!('user@example.com')
-
-      expect(result).toEqual({ success: true })
-      expect(resetPasswordForEmail).toHaveBeenCalledWith('user@example.com', {
-        redirectTo: 'http://localhost:3000/auth/update-password'
+  describe('toAppUser & getCurrentUser', () => {
+    it('maps @kalvium.com Google users as mentor', async () => {
+      getUser.mockResolvedValue({
+        data: {
+          user: {
+            id: 'u-1',
+            email: 'Mentor@Kalvium.COM',
+            created_at: '2026-01-01T00:00:00Z',
+            app_metadata: { provider: 'google', providers: ['google'] },
+            user_metadata: {
+              full_name: 'Mentor Name',
+              avatar_url: 'https://img.example/1.png'
+            }
+          }
+        }
       })
+
+      const user = await supabaseAuthProvider.getCurrentUser()
+
+      expect(user).toEqual({
+        id: 'u-1',
+        email: 'mentor@kalvium.com',
+        name: 'Mentor Name',
+        image: 'https://img.example/1.png',
+        createdAt: '2026-01-01T00:00:00Z',
+        userType: 'mentor',
+        role: 'mentor'
+      })
+    })
+
+    it('maps @kalvium.community Google users as student', () => {
+      const user = toAppUser({
+        id: 'u-2',
+        email: 'student@kalvium.community',
+        app_metadata: { providers: ['google'] },
+        user_metadata: {
+          name: 'Student Name',
+          picture: 'https://img.example/2.png'
+        }
+      } as never)
+
+      expect(user).toEqual({
+        id: 'u-2',
+        email: 'student@kalvium.community',
+        name: 'Student Name',
+        image: 'https://img.example/2.png',
+        createdAt: null,
+        userType: 'student',
+        role: 'student'
+      })
+    })
+
+    it('returns null for disallowed email domains or non-Google providers', async () => {
+      getUser.mockResolvedValueOnce({
+        data: {
+          user: {
+            id: 'u-3',
+            email: 'user@gmail.com',
+            app_metadata: { provider: 'google' },
+            user_metadata: {}
+          }
+        }
+      })
+      await expect(supabaseAuthProvider.getCurrentUser()).resolves.toBeNull()
+
+      getUser.mockResolvedValueOnce({
+        data: {
+          user: {
+            id: 'u-4',
+            email: 'mentor@kalvium.com',
+            app_metadata: { provider: 'email', providers: ['email'] },
+            user_metadata: { provider: 'google' }
+          }
+        }
+      })
+      await expect(supabaseAuthProvider.getCurrentUser()).resolves.toBeNull()
+    })
+  })
+
+  describe('signInWithOAuth', () => {
+    it('configures Google OAuth with /auth/oauth callback and select_account prompt', async () => {
+      signInWithOAuth.mockResolvedValue({
+        data: { url: 'https://accounts.google.com/o/oauth2/auth' },
+        error: null
+      })
+
+      const result = await supabaseAuthProvider.signInWithOAuth!('google')
+
+      expect(signInWithOAuth).toHaveBeenCalledWith({
+        provider: 'google',
+        options: {
+          redirectTo: 'http://localhost:3000/auth/oauth',
+          queryParams: {
+            prompt: 'select_account'
+          }
+        }
+      })
+      expect(result).toEqual({
+        success: true,
+        redirectTo: 'https://accounts.google.com/o/oauth2/auth'
+      })
+    })
+
+    it('rejects non-Google OAuth providers', async () => {
+      const result = await supabaseAuthProvider.signInWithOAuth!('github')
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Only Google sign-in is supported.'
+      })
+      expect(signInWithOAuth).not.toHaveBeenCalled()
     })
   })
 
   describe('handleSession', () => {
-    it('exchanges a recovery code arriving at update-password', async () => {
-      const exchanged = NextResponse.redirect(
-        'http://localhost:3000/auth/update-password'
-      )
-      vi.mocked(exchangeAuthCode).mockResolvedValue(exchanged)
-      const req = request(
-        'http://localhost:3000/auth/update-password?code=abc&state=xyz'
-      )
-
-      const response = await supabaseAuthProvider.handleSession!(req)
-
-      expect(exchangeAuthCode).toHaveBeenCalledWith(req, 'abc')
-      expect(updateSession).not.toHaveBeenCalled()
-      expect(response).toBe(exchanged)
-    })
-
-    it('runs normal session handling without a code', async () => {
+    it('delegates directly to updateSession even when ?code= is present', async () => {
       const next = NextResponse.next()
       vi.mocked(updateSession).mockResolvedValue(next)
+      const req = new NextRequest('http://localhost:3000/?code=abc')
 
-      const response = await supabaseAuthProvider.handleSession!(
-        request('http://localhost:3000/auth/update-password')
-      )
+      const response = await supabaseAuthProvider.handleSession(req)
 
-      expect(updateSession).toHaveBeenCalledOnce()
-      expect(exchangeAuthCode).not.toHaveBeenCalled()
+      expect(updateSession).toHaveBeenCalledTimes(1)
+      expect(updateSession).toHaveBeenCalledWith(req)
       expect(response).toBe(next)
     })
 
-    it('exchanges a sign-up confirmation code arriving at the root', async () => {
-      const exchanged = NextResponse.redirect('http://localhost:3000/')
-      vi.mocked(exchangeAuthCode).mockResolvedValue(exchanged)
-      const req = request('http://localhost:3000/?code=abc')
+    it('passes through when Supabase is not configured', async () => {
+      vi.mocked(hasSupabasePublicConfig).mockReturnValue(false)
+      const req = new NextRequest('http://localhost:3000/')
 
-      const response = await supabaseAuthProvider.handleSession!(req)
+      const response = await supabaseAuthProvider.handleSession(req)
 
-      expect(exchangeAuthCode).toHaveBeenCalledWith(req, 'abc', '?confirmed=1')
       expect(updateSession).not.toHaveBeenCalled()
-      expect(response).toBe(exchanged)
-    })
-
-    it('ignores code params on other paths', async () => {
-      const next = NextResponse.next()
-      vi.mocked(updateSession).mockResolvedValue(next)
-
-      await supabaseAuthProvider.handleSession!(
-        request('http://localhost:3000/auth/login?code=abc')
-      )
-
-      expect(updateSession).toHaveBeenCalledOnce()
-      expect(exchangeAuthCode).not.toHaveBeenCalled()
+      expect(response.status).toBe(200)
     })
   })
 })
