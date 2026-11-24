@@ -609,6 +609,10 @@ export function ChatPanel({
           </div>
         )}
 
+        {messages.length === 0 && (
+          <div aria-hidden="true" className="empty-chat-cloud" />
+        )}
+
         <div
           className={cn(
             'relative flex w-full flex-col gap-2 rounded-3xl border border-input bg-muted transition-[box-shadow] duration-[140ms] ease-[var(--motion-ease-out)]',
