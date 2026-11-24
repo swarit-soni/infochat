@@ -67,7 +67,16 @@ function trimModelOutput({ output }: { output: unknown }) {
     })
   }
 
-  return { type: 'json' as const, value: modelView as JSONValue }
+  return { type: 'json' as const, value: toJsonValue(modelView) }
+}
+
+// Tool outputs carry raw DB rows (official_portals, campus_events) whose Date
+// fields are not JSON values. The AI SDK validates tool results against its
+// JSON schema before the next model step, so a Date fails the whole request
+// with AI_InvalidPromptError. A JSON round trip turns Dates into ISO strings
+// and drops undefined fields.
+function toJsonValue(value: unknown): JSONValue {
+  return JSON.parse(JSON.stringify(value)) as JSONValue
 }
 
 export function filterOfficialDomains(
