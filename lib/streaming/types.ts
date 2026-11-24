@@ -1,5 +1,6 @@
 import { UIMessage } from '@ai-sdk/react'
 
+import type { SeraAudienceRole } from '../agents/prompts/search-mode-prompts'
 import type { CollegeSlug } from '../colleges/registry'
 import { Model } from '../types/models'
 import { SearchMode } from '../types/search'
@@ -20,5 +21,7 @@ export interface BaseStreamConfig {
    * not enrolled anywhere, so every college's records are visible.
    */
   college?: CollegeSlug | null
+  /** Who is asking (mentor, student or guest); tailors the system prompt. */
+  audienceRole?: SeraAudienceRole
   onZeroPartError?: () => Promise<void>
 }

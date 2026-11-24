@@ -24,7 +24,7 @@ import { isTracingEnabled } from '../utils/telemetry'
 import {
   getAdaptiveModePrompt,
   getQuickModePrompt,
-  QUICK_MODE_PROMPT
+  type SeraAudienceRole
 } from './prompts/search-mode-prompts'
 
 // Enhanced wrapper function with better type safety and streaming support
@@ -107,7 +107,8 @@ export function createResearcher({
   alternativesOnly = false,
   spaceInstructions = '',
   college = null,
-  userId = null
+  userId = null,
+  audienceRole = 'student'
 }: {
   model: string
   modelConfig?: Model
@@ -123,11 +124,21 @@ export function createResearcher({
    */
   college?: CollegeSlug | null
   userId?: string | null
+  /** Who is asking: tailors the system prompt (mentor, student or guest). */
+  audienceRole?: SeraAudienceRole
 }) {
   try {
     // Date only: a second-precision timestamp sits at the head of the prompt
     // prefix and changes on every request, which alone voids the prompt cache.
-    const currentDate = new Date().toLocaleDateString()
+    // Written out in India Standard Time (e.g. "Wednesday, 25 November 2026")
+    // so it can't be misread as day/month vs month/day.
+    const currentDate = new Intl.DateTimeFormat('en-IN', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'Asia/Kolkata'
+    }).format(new Date())
 
     // Create model-specific tools with proper typing
     const labelAllocator = createCitationLabelAllocator(citationLabelSeed)
@@ -157,7 +168,7 @@ export function createResearcher({
         console.log(
           '[Researcher] Quick mode: maxSteps=20, tools=[searchCampusKnowledge, queryEvents, getOfficialPortalLinks, searchOfficialWeb, logUnansweredQuery, search, fetch, editDraft]'
         )
-        systemPrompt = college ? getQuickModePrompt(college) : QUICK_MODE_PROMPT
+        systemPrompt = getQuickModePrompt(college, audienceRole)
         activeToolsList = [
           'searchCampusKnowledge',
           'queryEvents',
@@ -174,7 +185,7 @@ export function createResearcher({
 
       case 'adaptive':
       default:
-        systemPrompt = getAdaptiveModePrompt(college)
+        systemPrompt = getAdaptiveModePrompt(college, audienceRole)
         activeToolsList = [
           'searchCampusKnowledge',
           'queryEvents',

@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { after } from 'next/server'
 
+import type { SeraAudienceRole } from '@/lib/agents/prompts/search-mode-prompts'
 import {
   calculateConversationTurn,
   calculateConversationTurnFromIds,
@@ -126,6 +127,11 @@ export async function POST(req: Request) {
     // The user's college scopes campus knowledge. Null (guests, students
     // not enrolled anywhere) means every college, for admission seekers.
     const college: CollegeSlug | null = currentUser?.college ?? null
+    const audienceRole: SeraAudienceRole = !currentUser
+      ? 'guest'
+      : currentUser.userType === 'mentor'
+        ? 'mentor'
+        : 'student'
 
     if (exceedsAttachmentLimit({ isGuest, trigger, message, messages })) {
       return new Response(
@@ -449,7 +455,8 @@ export async function POST(req: Request) {
         abortSignal,
         searchMode,
         chatId,
-        college
+        college,
+        audienceRole
       })
     } else {
       try {
@@ -465,6 +472,7 @@ export async function POST(req: Request) {
           searchMode,
           spaceColor,
           college,
+          audienceRole,
           onZeroPartError: refundUsageOnce
         })
       } catch (error) {
