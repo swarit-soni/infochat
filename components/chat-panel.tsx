@@ -46,6 +46,7 @@ import {
 } from '@/lib/utils/cookies'
 import { faviconUrl } from '@/lib/utils/favicon'
 import { stripMarkdownText } from '@/lib/utils/markdown'
+import { readUploadError } from '@/lib/utils/upload-error'
 
 import { useArtifact } from './artifact/artifact-context'
 import { useLibrary } from './library/library-context'
@@ -338,7 +339,7 @@ export function ChatPanel({
             })
 
             if (!res.ok) {
-              throw new Error('Upload failed')
+              throw new Error(await readUploadError(res))
             }
 
             const { file: uploaded } = await res.json()
@@ -361,7 +362,9 @@ export function ChatPanel({
               )
             )
           } catch (e) {
-            toast.error(`Failed to upload ${uf.file.name}`)
+            toast.error(`Failed to upload ${uf.file.name}`, {
+              description: e instanceof Error ? e.message : undefined
+            })
             setUploadedFiles(prev =>
               prev.map(f =>
                 f.file === uf.file ? { ...f, status: 'error' } : f

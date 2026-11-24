@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 
 import { UploadedFile } from '@/lib/types'
 import { MAX_ATTACHMENTS_PER_MESSAGE } from '@/lib/utils/attachment-limits'
+import { readUploadError } from '@/lib/utils/upload-error'
 
 type UseFileDropzoneProps = {
   uploadedFiles: UploadedFile[]
@@ -75,7 +76,7 @@ export function useFileDropzone({
               body: formData
             })
 
-            if (!res.ok) throw new Error('Upload failed')
+            if (!res.ok) throw new Error(await readUploadError(res))
 
             const { file: uploaded } = await res.json()
 
@@ -95,7 +96,9 @@ export function useFileDropzone({
               )
             )
           } catch (err) {
-            toast.error(`Failed to upload ${uf.file?.name ?? 'file'}`)
+            toast.error(`Failed to upload ${uf.file?.name ?? 'file'}`, {
+              description: err instanceof Error ? err.message : undefined
+            })
             setUploadedFiles(prev =>
               prev.map(f =>
                 f.file === uf.file ? { ...f, status: 'error' } : f

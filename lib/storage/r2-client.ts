@@ -77,7 +77,9 @@ export function getR2Client(): S3Client {
   }
 
   _r2Client = new S3Client({
-    region: 'auto',
+    // R2 and Supabase Storage accept 'auto'; stores that check the region in
+    // the SigV4 signature (AWS S3, some MinIO setups) need the real one.
+    region: process.env.S3_REGION?.trim() || 'auto',
     endpoint: s3Endpoint || `https://${accountId}.r2.cloudflarestorage.com`,
     forcePathStyle: !!s3Endpoint,
     credentials: {
