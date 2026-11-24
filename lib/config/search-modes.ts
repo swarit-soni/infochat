@@ -19,14 +19,14 @@ export const SEARCH_MODE_CONFIGS: SearchModeConfig[] = [
     label: 'Quick',
     description: 'Streamlined search for fast, concise responses',
     icon: Search,
-    color: 'text-amber-500'
+    color: 'text-chart-1'
   },
   {
     value: 'adaptive',
     label: 'Adaptive',
     description: 'Adaptive agentic search with intelligent query understanding',
     icon: IconLogoOutline,
-    color: 'text-violet-500'
+    color: 'text-chart-2'
   }
 ]
 
