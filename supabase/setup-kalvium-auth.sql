@@ -24,18 +24,14 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
   avatar_url text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT user_profiles_email_unique UNIQUE (email),
-  CONSTRAINT user_profiles_domain_matches_type CHECK (
-    (
-      user_type = 'mentor'
-      AND split_part(lower(email), '@', 2) = 'kalvium.com'
-    )
-    OR (
-      user_type = 'student'
-      AND split_part(lower(email), '@', 2) = 'kalvium.community'
-    )
-  )
+  CONSTRAINT user_profiles_email_unique UNIQUE (email)
 );
+
+-- College membership (drizzle/0024_add_college_tenancy.sql). Any Google
+-- account may sign in, so the old Kalvium-only domain check is dropped.
+ALTER TABLE public.user_profiles ADD COLUMN IF NOT EXISTS college varchar(32);
+ALTER TABLE public.user_profiles ADD COLUMN IF NOT EXISTS onboarded_at timestamp with time zone;
+ALTER TABLE public.user_profiles DROP CONSTRAINT IF EXISTS user_profiles_domain_matches_type;
 
 CREATE INDEX IF NOT EXISTS user_profiles_user_type_idx
   ON public.user_profiles USING btree (user_type);
@@ -214,10 +210,15 @@ BEGIN
     nullif(trim(new.raw_user_meta_data->>'picture'), '')
   );
 
+  -- Kalvium accounts are verified Kalvium members (see lib/colleges). Other
+  -- colleges' profiles, and every other Google account's, are created by the
+  -- app's OAuth callback, which also asks students their enrolled college.
   INSERT INTO public.user_profiles (
     id,
     email,
     user_type,
+    college,
+    onboarded_at,
     name,
     avatar_url
   )
@@ -225,6 +226,8 @@ BEGIN
     new.id::text,
     normalized_email,
     classified_type,
+    'kalvium',
+    now(),
     display_name,
     avatar
   )
@@ -232,6 +235,8 @@ BEGIN
   SET
     email = EXCLUDED.email,
     user_type = EXCLUDED.user_type,
+    college = EXCLUDED.college,
+    onboarded_at = coalesce(public.user_profiles.onboarded_at, now()),
     name = coalesce(EXCLUDED.name, public.user_profiles.name),
     avatar_url = coalesce(EXCLUDED.avatar_url, public.user_profiles.avatar_url),
     updated_at = now();

@@ -4,7 +4,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 import {
-  getUserTypeFromEmail,
+  getCollegeIdentityFromEmail,
   isAllowedEmail,
   isGoogleAuthUser,
   normalizeEmail
@@ -34,8 +34,13 @@ export function toAppUser(user: SupabaseUser): AppUser | null {
   if (!email || !isGoogleAuthUser(user)) {
     return null
   }
-  // Non-Kalvium Google accounts sign in without a mentor/student type.
-  const userType = getUserTypeFromEmail(email)
+  // Any Google account may sign in. A college email domain decides mentor
+  // access and, for students, their college; other accounts get neither here
+  // (their self-reported college comes from user_profiles, see
+  // getCurrentUser).
+  const identity = getCollegeIdentityFromEmail(email)
+  const userType = identity?.userType ?? null
+  const college = identity?.college ?? null
 
   const metadata = (user.user_metadata ?? {}) as Record<string, unknown>
   return {
@@ -45,7 +50,8 @@ export function toAppUser(user: SupabaseUser): AppUser | null {
     image: metaString(metadata, 'avatar_url', 'picture'),
     createdAt: user.created_at ?? null,
     userType,
-    role: userType
+    role: userType,
+    college
   }
 }
 

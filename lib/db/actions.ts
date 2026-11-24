@@ -14,6 +14,7 @@ import {
 } from 'drizzle-orm'
 
 import { normalizeEmail } from '@/lib/auth/domain'
+import type { CollegeSlug } from '@/lib/colleges/registry'
 import { HL_START, HL_STOP } from '@/lib/render/highlight-markers'
 import type { UIMessage } from '@/lib/types/ai'
 import type { PersistableUIMessage } from '@/lib/types/message-persistence'
@@ -1205,20 +1206,32 @@ export async function createChatWithFirstMessageTransaction({
   })
 }
 
+/**
+ * Create or refresh a signed-in user's profile.
+ *
+ * `college` is only passed when it is verified from a college email domain;
+ * it then overwrites the stored college and marks the user as onboarded.
+ * Without it, a self-reported college chosen at onboarding is kept.
+ */
 export async function upsertUserProfile({
   id,
   email,
   userType,
+  college,
   name = null,
   avatarUrl = null
 }: {
   id: string
   email: string
   userType: UserType
+  college?: CollegeSlug | null
   name?: string | null
   avatarUrl?: string | null
 }): Promise<UserProfile> {
   const normalizedEmail = normalizeEmail(email) ?? email.trim().toLowerCase()
+  const verifiedCollege = college
+    ? { college, onboardedAt: new Date() }
+    : undefined
   return withRLS(id, async tx => {
     const [profile] = await tx
       .insert(userProfiles)
@@ -1226,6 +1239,7 @@ export async function upsertUserProfile({
         id,
         email: normalizedEmail,
         userType,
+        ...verifiedCollege,
         name,
         avatarUrl
       })
@@ -1234,6 +1248,7 @@ export async function upsertUserProfile({
         set: {
           email: normalizedEmail,
           userType,
+          ...verifiedCollege,
           name,
           avatarUrl,
           updatedAt: new Date()
@@ -1242,6 +1257,24 @@ export async function upsertUserProfile({
       .returning()
 
     return profile
+  })
+}
+
+/**
+ * Save the student's answer to "Which college are you enrolled in?".
+ * `null` records that they are not enrolled (e.g. exploring admissions).
+ */
+export async function setUserProfileCollege(
+  userId: string,
+  college: CollegeSlug | null
+): Promise<UserProfile | null> {
+  return withRLS(userId, async tx => {
+    const [profile] = await tx
+      .update(userProfiles)
+      .set({ college, onboardedAt: new Date(), updatedAt: new Date() })
+      .where(eq(userProfiles.id, userId))
+      .returning()
+    return profile ?? null
   })
 }
 

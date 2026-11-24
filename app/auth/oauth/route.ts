@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import {
-  getUserTypeFromEmail,
+  getCollegeIdentityFromEmail,
   isGoogleAuthUser,
-  isKalviumDomainEmail,
   normalizeEmail
 } from '@/lib/auth/domain'
 import { safeRedirectPath } from '@/lib/auth/redirect-target'
-import { upsertUserProfile } from '@/lib/db/actions'
+import {
+  AUTH_COLLEGE_COOKIE,
+  collegePath,
+  type CollegeSlug,
+  isCollegeSlug
+} from '@/lib/colleges/registry'
+import { getUserProfile, upsertUserProfile } from '@/lib/db/actions'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 
@@ -32,7 +37,20 @@ function redirectAndClearNext(
     buildRedirectUrl(request, pathWithQuery)
   )
   response.cookies.delete('auth_next')
+  response.cookies.delete(AUTH_COLLEGE_COOKIE)
   return response
+}
+
+/** The login page a failed sign-in returns to. */
+function loginErrorPath(
+  mentorCollege: CollegeSlug | null,
+  error: string,
+  extra: Record<string, string> = {}
+): string {
+  const params = new URLSearchParams({ error, ...extra })
+  return mentorCollege
+    ? `${collegePath(mentorCollege, '/auth/mentor')}?${params}`
+    : `/auth/login?${params}`
 }
 
 function isDomainRejectionMessage(
@@ -66,6 +84,12 @@ export async function GET(request: NextRequest) {
   const oauthError = searchParams.get('error')
   const oauthErrorDescription = searchParams.get('error_description')
 
+  // Set by a college's mentor login; absent for the open student login.
+  const cookieCollege = request.cookies.get(AUTH_COLLEGE_COOKIE)?.value
+  const mentorCollege: CollegeSlug | null = isCollegeSlug(cookieCollege)
+    ? cookieCollege
+    : null
+
   if (oauthError || oauthErrorDescription) {
     const errorCode = isDomainRejectionMessage(
       oauthError,
@@ -73,7 +97,10 @@ export async function GET(request: NextRequest) {
     )
       ? 'unauthorized_domain'
       : 'oauth_failed'
-    return redirectAndClearNext(request, `/auth/login?error=${errorCode}`)
+    return redirectAndClearNext(
+      request,
+      loginErrorPath(mentorCollege, errorCode)
+    )
   }
 
   const code = searchParams.get('code')
@@ -86,20 +113,29 @@ export async function GET(request: NextRequest) {
   )
 
   if (!code) {
-    return redirectAndClearNext(request, '/auth/login?error=oauth_failed')
+    return redirectAndClearNext(
+      request,
+      loginErrorPath(mentorCollege, 'oauth_failed')
+    )
   }
 
   const supabase = await createClient()
   const { error: exchangeError } =
     await supabase.auth.exchangeCodeForSession(code)
   if (exchangeError) {
-    return redirectAndClearNext(request, '/auth/login?error=oauth_failed')
+    return redirectAndClearNext(
+      request,
+      loginErrorPath(mentorCollege, 'oauth_failed')
+    )
   }
 
   const { data: userData, error: userError } = await supabase.auth.getUser()
   const user = userData?.user
   if (userError || !user) {
-    return redirectAndClearNext(request, '/auth/login?error=oauth_failed')
+    return redirectAndClearNext(
+      request,
+      loginErrorPath(mentorCollege, 'oauth_failed')
+    )
   }
 
   const normalizedEmail = normalizeEmail(user.email)
@@ -113,26 +149,66 @@ export async function GET(request: NextRequest) {
     }
     return redirectAndClearNext(
       request,
-      '/auth/login?error=unauthorized_domain'
+      loginErrorPath(mentorCollege, 'unauthorized_domain')
     )
   }
 
-  // Any Google account may sign in. Only Kalvium accounts (and non-production
-  // mentor overrides) get a mentor/student profile row.
-  const userType = getUserTypeFromEmail(normalizedEmail)
-  if (userType && isKalviumDomainEmail(normalizedEmail)) {
-    const metadata = (user.user_metadata ?? {}) as Record<string, unknown>
-    try {
-      await upsertUserProfile({
-        id: user.id,
-        email: normalizedEmail,
-        userType,
-        name: extractMetadataString(metadata, 'full_name', 'name'),
-        avatarUrl: extractMetadataString(metadata, 'avatar_url', 'picture')
-      })
-    } catch (profileError) {
-      console.error('Failed to upsert user profile:', profileError)
+  // Any Google account may sign in. A college email domain decides mentor
+  // access and, for students on a college domain, their college.
+  const identity = getCollegeIdentityFromEmail(normalizedEmail)
+
+  if (mentorCollege) {
+    // Each college's mentor login only admits that college's mentors. The
+    // account itself stays valid (it can still use the student login).
+    const isMentorHere =
+      identity?.userType === 'mentor' && identity.college === mentorCollege
+    if (!isMentorHere) {
+      await supabase.auth.signOut()
+      const mentorElsewhere = identity?.userType === 'mentor'
+      return redirectAndClearNext(
+        request,
+        loginErrorPath(
+          mentorCollege,
+          mentorElsewhere ? 'wrong_college' : 'not_mentor',
+          mentorElsewhere ? { college: identity.college } : {}
+        )
+      )
     }
+  }
+
+  const metadata = (user.user_metadata ?? {}) as Record<string, unknown>
+  let collegeOnboarded = Boolean(identity?.college)
+  try {
+    await upsertUserProfile({
+      id: user.id,
+      email: normalizedEmail,
+      userType: identity?.userType ?? 'student',
+      // Only a verified college domain sets the college here; others keep
+      // the college they chose at onboarding.
+      college: identity?.college ?? null,
+      name: extractMetadataString(metadata, 'full_name', 'name'),
+      avatarUrl: extractMetadataString(metadata, 'avatar_url', 'picture')
+    })
+    if (!collegeOnboarded) {
+      collegeOnboarded = Boolean((await getUserProfile(user.id))?.onboardedAt)
+    }
+  } catch (profileError) {
+    console.error('Failed to upsert user profile:', profileError)
+    // Don't trap the user in onboarding when profiles are unavailable.
+    collegeOnboarded = true
+  }
+
+  if (mentorCollege) {
+    return redirectAndClearNext(
+      request,
+      next !== '/' ? next : collegePath(mentorCollege, '/mentor')
+    )
+  }
+
+  if (!collegeOnboarded) {
+    // New student sign-up: ask which college they are enrolled in.
+    const query = next !== '/' ? `?next=${encodeURIComponent(next)}` : ''
+    return redirectAndClearNext(request, `/onboarding/college${query}`)
   }
 
   return redirectAndClearNext(request, next)

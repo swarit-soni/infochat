@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { normalizeEmail } from '@/lib/auth/domain'
+import { getCollegeIdentityFromEmail, normalizeEmail } from '@/lib/auth/domain'
+import { getDefaultCollege } from '@/lib/colleges/access'
+import { type CollegeSlug, isCollegeSlug } from '@/lib/colleges/registry'
 import type { KnowledgeSenderRole } from '@/lib/db/schema'
 import { ingestUrgentUpdate } from '@/lib/rag/ingestion'
 import type { UrgentAttachmentInput } from '@/lib/rag/normalizer'
@@ -90,6 +92,12 @@ function isBroadcastSpace(payload: GChatWebhookPayload): boolean {
   return false
 }
 
+/** The college whose knowledge base this webhook feeds (`SERA_GCHAT_COLLEGE`). */
+function getGchatCollege(): CollegeSlug {
+  const configured = process.env.SERA_GCHAT_COLLEGE?.trim().toLowerCase()
+  return isCollegeSlug(configured) ? configured : getDefaultCollege()
+}
+
 export async function POST(request: NextRequest) {
   let payload: GChatWebhookPayload
   try {
@@ -162,8 +170,15 @@ export async function POST(request: NextRequest) {
     payload.user?.displayName ??
     undefined
 
+  // Each deployment's webhook feeds one college's knowledge base.
+  const college = getGchatCollege()
+  const senderIdentity = getCollegeIdentityFromEmail(senderEmail)
+
   let senderRole: KnowledgeSenderRole = 'student_cr'
-  if (senderEmail?.endsWith('@kalvium.com')) {
+  if (
+    senderIdentity?.userType === 'mentor' &&
+    senderIdentity.college === college
+  ) {
     senderRole = 'mentor'
   } else if (announcementSpace) {
     senderRole = 'official_space'
@@ -174,6 +189,7 @@ export async function POST(request: NextRequest) {
     : new Date()
 
   const result = await ingestUrgentUpdate({
+    college,
     rawText: cleanedText,
     channel: 'gchat',
     senderRole,

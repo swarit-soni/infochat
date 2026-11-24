@@ -8,6 +8,7 @@ import type {
 } from '@/lib/types/agent'
 import { type Model } from '@/lib/types/models'
 
+import type { CollegeSlug } from '../colleges/registry'
 import { createCampusRagTools } from '../tools/campus-rag'
 import { createDraftTools } from '../tools/draft'
 import { createFetchTool } from '../tools/fetch'
@@ -22,6 +23,7 @@ import { isTracingEnabled } from '../utils/telemetry'
 
 import {
   getAdaptiveModePrompt,
+  getQuickModePrompt,
   QUICK_MODE_PROMPT
 } from './prompts/search-mode-prompts'
 
@@ -103,7 +105,9 @@ export function createResearcher({
   citationLabelSeed,
   currentDraft = null,
   alternativesOnly = false,
-  spaceInstructions = ''
+  spaceInstructions = '',
+  college = null,
+  userId = null
 }: {
   model: string
   modelConfig?: Model
@@ -113,6 +117,12 @@ export function createResearcher({
   currentDraft?: DraftVersion | null
   alternativesOnly?: boolean
   spaceInstructions?: string
+  /**
+   * The asking user's college: scopes campus tools and the system prompt.
+   * Null: not enrolled anywhere (e.g. admission seekers), all colleges.
+   */
+  college?: CollegeSlug | null
+  userId?: string | null
 }) {
   try {
     // Date only: a second-precision timestamp sits at the head of the prompt
@@ -128,7 +138,13 @@ export function createResearcher({
     const askQuestionTool = createQuestionTool(model)
     const todoTools = createTodoTools()
     const draftTools = createDraftTools(currentDraft, alternativesOnly)
-    const campusRagTools = createCampusRagTools({ labelAllocator, model })
+    const campusRagTools = createCampusRagTools({
+      labelAllocator,
+      model,
+      college,
+      userId,
+      chatId
+    })
 
     let systemPrompt: string
     let activeToolsList: (keyof ResearcherTools)[] = []
@@ -141,7 +157,7 @@ export function createResearcher({
         console.log(
           '[Researcher] Quick mode: maxSteps=20, tools=[searchCampusKnowledge, queryEvents, getOfficialPortalLinks, searchOfficialWeb, logUnansweredQuery, search, fetch, editDraft]'
         )
-        systemPrompt = QUICK_MODE_PROMPT
+        systemPrompt = college ? getQuickModePrompt(college) : QUICK_MODE_PROMPT
         activeToolsList = [
           'searchCampusKnowledge',
           'queryEvents',
@@ -158,7 +174,7 @@ export function createResearcher({
 
       case 'adaptive':
       default:
-        systemPrompt = getAdaptiveModePrompt()
+        systemPrompt = getAdaptiveModePrompt(college)
         activeToolsList = [
           'searchCampusKnowledge',
           'queryEvents',

@@ -1,27 +1,24 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  ALLOWED_EMAIL_DOMAINS,
   extractEmailDomain,
-  getNonProdMentorEmails,
+  getCollegeIdentityFromEmail,
   getUserTypeFromEmail,
-  hasNonKalviumMentorOverride,
   isAllowedEmail,
   isGoogleAuthUser,
-  isKalviumDomainEmail,
   isNonProductionStage,
   normalizeEmail,
   UNAUTHORIZED_DOMAIN_ERROR,
   USER_TYPES
 } from '@/lib/auth/domain'
+import {
+  getLoginHintDomain,
+  getNonProdMentorOverrides
+} from '@/lib/colleges/access'
 
 describe('auth domain rules', () => {
-  it('defines mentor and student user types and domain map', () => {
+  it('defines mentor and student user types', () => {
     expect(USER_TYPES).toEqual(['mentor', 'student'])
-    expect(ALLOWED_EMAIL_DOMAINS).toEqual({
-      'kalvium.com': 'mentor',
-      'kalvium.community': 'student'
-    })
     expect(UNAUTHORIZED_DOMAIN_ERROR).toBe(
       'Please sign in with a Google account.'
     )
@@ -158,15 +155,20 @@ describe('auth domain rules', () => {
       }
 
       expect(isNonProductionStage(previewEnv)).toBe(true)
-      expect(Array.from(getNonProdMentorEmails(previewEnv))).toEqual([
-        'tester@gmail.com',
-        'second@example.com'
+      expect(Array.from(getNonProdMentorOverrides(previewEnv))).toEqual([
+        ['tester@gmail.com', 'kalvium'],
+        ['second@example.com', 'kalvium']
       ])
       expect(getUserTypeFromEmail('tester@gmail.com', previewEnv)).toBe(
         'mentor'
       )
-      expect(isKalviumDomainEmail('tester@gmail.com')).toBe(false)
-      expect(hasNonKalviumMentorOverride(previewEnv)).toBe(true)
+      expect(
+        getCollegeIdentityFromEmail('tester@gmail.com', previewEnv)
+      ).toEqual({ college: 'kalvium', userType: 'mentor' })
+      // Test mentors may use any domain, so Google must not filter the picker.
+      expect(
+        getLoginHintDomain('kalvium', 'mentor', previewEnv)
+      ).toBeUndefined()
       expect(getUserTypeFromEmail('other@gmail.com', previewEnv)).toBeNull()
     })
 
@@ -183,8 +185,10 @@ describe('auth domain rules', () => {
 
       for (const prodEnv of [vercelProdEnv, selfHostedProdEnv]) {
         expect(isNonProductionStage(prodEnv)).toBe(false)
-        expect(getNonProdMentorEmails(prodEnv).size).toBe(0)
-        expect(hasNonKalviumMentorOverride(prodEnv)).toBe(false)
+        expect(getNonProdMentorOverrides(prodEnv).size).toBe(0)
+        expect(getLoginHintDomain('kalvium', 'mentor', prodEnv)).toBe(
+          'kalvium.com'
+        )
         expect(getUserTypeFromEmail('tester@gmail.com', prodEnv)).toBeNull()
         expect(getUserTypeFromEmail('mentor@kalvium.com', prodEnv)).toBe(
           'mentor'

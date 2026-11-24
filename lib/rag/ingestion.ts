@@ -1,6 +1,12 @@
 import { and, desc, eq, ilike, inArray, ne, or, sql } from 'drizzle-orm'
 import { parse as parseHtml } from 'node-html-parser'
 
+import {
+  COLLEGE_SLUGS,
+  COLLEGES,
+  type CollegeSlug,
+  getOfficialWebDomains
+} from '@/lib/colleges/registry'
 import { db } from '@/lib/db'
 import {
   type CampusEvent,
@@ -37,12 +43,14 @@ import {
 } from './normalizer'
 import { DEFAULT_OFFICIAL_PORTALS } from './portals-seed'
 
-export const ALLOWED_OFFICIAL_CRAWL_DOMAINS = [
-  'jecrcuniversity.edu.in',
-  'kalvium.com'
-] as const
+/** Official domains any college may crawl (each college: its own + partners). */
+export const ALLOWED_OFFICIAL_CRAWL_DOMAINS: readonly string[] = [
+  ...new Set(COLLEGE_SLUGS.flatMap(slug => getOfficialWebDomains(slug)))
+]
 
 export interface IngestKnowledgeDocumentInput {
+  /** Owning college (tenant). */
+  college: CollegeSlug
   title: string
   content: string
   domain: KnowledgeDomain
@@ -84,6 +92,7 @@ export interface IngestUrgentUpdateResult {
 }
 
 export interface UpsertCampusEventInput {
+  college: CollegeSlug
   id?: string
   title: string
   organizer: string
@@ -105,6 +114,7 @@ export interface UpsertCampusEventInput {
 }
 
 export interface UpsertOfficialPortalInput {
+  college: CollegeSlug
   portalKey: string
   name: string
   authority: KnowledgeAuthority
@@ -116,6 +126,7 @@ export interface UpsertOfficialPortalInput {
 }
 
 export interface RecordUnansweredQueryInput {
+  college: CollegeSlug
   userId?: string | null
   chatId?: string | null
   query: string
@@ -147,6 +158,7 @@ async function supersedeMatchingDocuments(
   tx: TxInstance,
   target: {
     id: string
+    college: CollegeSlug
     domain: KnowledgeDomain
     authority: KnowledgeAuthority
     supersedesId?: string | null
@@ -163,6 +175,7 @@ async function supersedeMatchingDocuments(
         and(
           eq(knowledgeDocuments.id, target.supersedesId),
           ne(knowledgeDocuments.id, target.id),
+          eq(knowledgeDocuments.college, target.college),
           eq(knowledgeDocuments.status, 'active')
         )
       )
@@ -178,6 +191,7 @@ async function supersedeMatchingDocuments(
       .where(
         and(
           ne(knowledgeDocuments.id, target.id),
+          eq(knowledgeDocuments.college, target.college),
           eq(knowledgeDocuments.status, 'active'),
           eq(knowledgeDocuments.domain, target.domain),
           eq(knowledgeDocuments.authority, target.authority),
@@ -258,6 +272,7 @@ export async function ingestKnowledgeDocument(
       .from(knowledgeDocuments)
       .where(
         and(
+          eq(knowledgeDocuments.college, input.college),
           eq(knowledgeDocuments.contentHash, contentHash),
           inArray(knowledgeDocuments.status, ['active', 'pending_review'])
         )
@@ -291,6 +306,7 @@ export async function ingestKnowledgeDocument(
         .insert(knowledgeDocuments)
         .values({
           id: documentId,
+          college: input.college,
           title: trimmedTitle,
           domain: input.domain,
           sourceSystem: input.sourceSystem,
@@ -324,6 +340,7 @@ export async function ingestKnowledgeDocument(
         status === 'active'
           ? await supersedeMatchingDocuments(tx, {
               id: inserted.id,
+              college: inserted.college,
               domain: inserted.domain,
               authority: inserted.authority,
               supersedesId: inserted.supersedesId,
@@ -348,7 +365,7 @@ export async function ingestKnowledgeDocument(
  * the 5-stage normalization, PII filter, trust gate, and TTL pipeline.
  */
 export async function ingestUrgentUpdate(
-  input: NormalizeUrgentUpdateInput,
+  input: NormalizeUrgentUpdateInput & { college: CollegeSlug },
   userId?: string | null
 ): Promise<IngestUrgentUpdateResult> {
   const normalized = await normalizeUrgentUpdateInput(input)
@@ -363,6 +380,7 @@ export async function ingestUrgentUpdate(
 
   const ingested = await ingestKnowledgeDocument(
     {
+      college: input.college,
       title: normalized.title,
       content: normalized.normalizedMarkdown,
       domain: normalized.domain,
@@ -415,7 +433,8 @@ export async function ingestUrgentUpdate(
  */
 export async function approvePendingDocument(
   documentId: string,
-  mentorUserId: string
+  mentorUserId: string,
+  college: CollegeSlug
 ): Promise<{
   document: KnowledgeDocument | null
   supersededDocumentIds: string[]
@@ -427,7 +446,12 @@ export async function approvePendingDocument(
         status: 'active',
         updatedAt: new Date()
       })
-      .where(eq(knowledgeDocuments.id, documentId))
+      .where(
+        and(
+          eq(knowledgeDocuments.id, documentId),
+          eq(knowledgeDocuments.college, college)
+        )
+      )
       .returning()
 
     if (!updated) {
@@ -453,6 +477,7 @@ export async function approvePendingDocument(
 
     const supersededDocumentIds = await supersedeMatchingDocuments(tx, {
       id: updated.id,
+      college: updated.college,
       domain: updated.domain,
       authority: updated.authority,
       supersedesId: updated.supersedesId,
@@ -466,10 +491,15 @@ export async function approvePendingDocument(
 export async function updateDocumentStatus(
   documentId: string,
   status: KnowledgeStatus,
-  mentorUserId: string
+  mentorUserId: string,
+  college: CollegeSlug
 ): Promise<KnowledgeDocument | null> {
   if (status === 'active') {
-    const result = await approvePendingDocument(documentId, mentorUserId)
+    const result = await approvePendingDocument(
+      documentId,
+      mentorUserId,
+      college
+    )
     return result.document
   }
 
@@ -477,7 +507,12 @@ export async function updateDocumentStatus(
     const [updated] = await tx
       .update(knowledgeDocuments)
       .set({ status, updatedAt: new Date() })
-      .where(eq(knowledgeDocuments.id, documentId))
+      .where(
+        and(
+          eq(knowledgeDocuments.id, documentId),
+          eq(knowledgeDocuments.college, college)
+        )
+      )
       .returning()
 
     return updated ?? null
@@ -512,7 +547,12 @@ export async function upsertCampusEvent(
           status: input.status ?? 'upcoming',
           updatedAt: new Date()
         })
-        .where(eq(campusEvents.id, input.id))
+        .where(
+          and(
+            eq(campusEvents.id, input.id),
+            eq(campusEvents.college, input.college)
+          )
+        )
         .returning()
 
       if (updated) return updated
@@ -521,7 +561,10 @@ export async function upsertCampusEvent(
     const [created] = await tx
       .insert(campusEvents)
       .values({
-        id: input.id || generateId(),
+        // Never reuse a client-supplied id: it may belong to another
+        // college's event that the scoped update above did not match.
+        id: generateId(),
+        college: input.college,
         title: input.title.trim(),
         organizer: input.organizer.trim(),
         authority: input.authority ?? 'joint',
@@ -550,13 +593,16 @@ export async function upsertCampusEvent(
 export async function updateCampusEventStatus(
   eventId: string,
   status: CampusEventStatus,
-  mentorUserId: string
+  mentorUserId: string,
+  college: CollegeSlug
 ): Promise<CampusEvent | null> {
   return withRagWrite(mentorUserId, async tx => {
     const [updated] = await tx
       .update(campusEvents)
       .set({ status, updatedAt: new Date() })
-      .where(eq(campusEvents.id, eventId))
+      .where(
+        and(eq(campusEvents.id, eventId), eq(campusEvents.college, college))
+      )
       .returning()
 
     return updated ?? null
@@ -572,7 +618,8 @@ export async function upsertOfficialPortal(
     const [portal] = await tx
       .insert(officialPortals)
       .values({
-        id: `portal_${input.portalKey.trim()}`,
+        id: `portal_${input.college}_${input.portalKey.trim()}`,
+        college: input.college,
         portalKey: input.portalKey.trim(),
         name: input.name.trim(),
         authority: input.authority,
@@ -586,7 +633,7 @@ export async function upsertOfficialPortal(
         updatedAt: now
       })
       .onConflictDoUpdate({
-        target: officialPortals.portalKey,
+        target: [officialPortals.college, officialPortals.portalKey],
         set: {
           name: input.name.trim(),
           authority: input.authority,
@@ -607,12 +654,15 @@ export async function upsertOfficialPortal(
 }
 
 export async function seedDefaultOfficialPortals(
+  college: CollegeSlug,
   mentorUserId?: string | null
 ): Promise<OfficialPortal[]> {
   const results: OfficialPortal[] = []
   for (const portal of DEFAULT_OFFICIAL_PORTALS) {
+    if (portal.college !== college) continue
     const saved = await upsertOfficialPortal(
       {
+        college,
         portalKey: portal.portalKey,
         name: portal.name,
         authority: portal.authority,
@@ -641,6 +691,7 @@ export async function recordUnansweredQuery(
       .insert(unansweredQueries)
       .values({
         id: generateId(),
+        college: input.college,
         userId: input.userId ?? null,
         chatId: input.chatId ?? null,
         query: trimmedQuery,
@@ -666,7 +717,8 @@ export async function recordUnansweredQuery(
 export async function resolveUnansweredQuery(
   id: string,
   status: UnansweredQueryStatus,
-  mentorUserId: string
+  mentorUserId: string,
+  college: CollegeSlug
 ): Promise<UnansweredQuery | null> {
   return withRagWrite(mentorUserId, async tx => {
     const [updated] = await tx
@@ -676,23 +728,47 @@ export async function resolveUnansweredQuery(
         resolvedBy: mentorUserId,
         resolvedAt: status === 'open' ? null : new Date()
       })
-      .where(eq(unansweredQueries.id, id))
+      .where(
+        and(
+          eq(unansweredQueries.id, id),
+          eq(unansweredQueries.college, college)
+        )
+      )
       .returning()
 
     return updated ?? null
   })
 }
 
-export function isAllowedOfficialUrl(rawUrl: string): boolean {
+const WEB_SOURCE_SYSTEM_BY_COLLEGE: Record<CollegeSlug, KnowledgeSourceSystem> =
+  {
+    kalvium: 'kalvium_web',
+    jecrc: 'jecrc_web',
+    bkbirla: 'bkbirla_web'
+  }
+
+function hostMatchesDomain(hostname: string, domain: string): boolean {
+  return hostname === domain || hostname.endsWith(`.${domain}`)
+}
+
+/**
+ * Whether `rawUrl` is on an official domain. With `college`, only that
+ * college's and its partners' domains are accepted.
+ */
+export function isAllowedOfficialUrl(
+  rawUrl: string,
+  college?: CollegeSlug
+): boolean {
   try {
     const parsed = new URL(rawUrl)
     if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
       return false
     }
     const hostname = parsed.hostname.toLowerCase()
-    return ALLOWED_OFFICIAL_CRAWL_DOMAINS.some(
-      domain => hostname === domain || hostname.endsWith(`.${domain}`)
-    )
+    const domains = college
+      ? getOfficialWebDomains(college)
+      : ALLOWED_OFFICIAL_CRAWL_DOMAINS
+    return domains.some(domain => hostMatchesDomain(hostname, domain))
   } catch {
     return false
   }
@@ -778,26 +854,31 @@ export function extractMarkdownFromHtml(
  */
 export async function crawlAndIngestOfficialUrl(
   params: {
+    college: CollegeSlug
     url: string
     domain: KnowledgeDomain
     authority?: KnowledgeAuthority
-    sourceSystem?: Extract<KnowledgeSourceSystem, 'jecrc_web' | 'kalvium_web'>
+    sourceSystem?: KnowledgeSourceSystem
     title?: string
   },
   userId?: string | null
 ): Promise<IngestKnowledgeDocumentResult> {
-  if (!isAllowedOfficialUrl(params.url)) {
+  if (!isAllowedOfficialUrl(params.url, params.college)) {
     throw new Error(
-      `URL must belong to an official allowlisted domain (${ALLOWED_OFFICIAL_CRAWL_DOMAINS.join(', ')}).`
+      `URL must belong to an official allowlisted domain (${getOfficialWebDomains(params.college).join(', ')}).`
     )
   }
 
   const hostname = new URL(params.url).hostname.toLowerCase()
-  const inferredAuthority: KnowledgeAuthority =
-    params.authority ?? (hostname.endsWith('kalvium.com') ? 'kalvium' : 'jecrc')
-  const inferredSourceSystem =
-    params.sourceSystem ??
-    (inferredAuthority === 'kalvium' ? 'kalvium_web' : 'jecrc_web')
+  const hostCollege =
+    COLLEGE_SLUGS.find(slug =>
+      COLLEGES[slug].officialWebDomains.some(domain =>
+        hostMatchesDomain(hostname, domain)
+      )
+    ) ?? params.college
+  const inferredAuthority: KnowledgeAuthority = params.authority ?? hostCollege
+  const inferredSourceSystem: KnowledgeSourceSystem =
+    params.sourceSystem ?? WEB_SOURCE_SYSTEM_BY_COLLEGE[hostCollege]
 
   const response = await safeFetch(params.url, {
     headers: {
@@ -825,6 +906,7 @@ export async function crawlAndIngestOfficialUrl(
 
   return ingestKnowledgeDocument(
     {
+      college: params.college,
       title: params.title?.trim() || extracted.title,
       content: extracted.markdown,
       domain: params.domain,

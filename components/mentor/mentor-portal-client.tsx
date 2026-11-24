@@ -19,6 +19,11 @@ import {
   uploadKnowledgeDocumentAction
 } from '@/lib/actions/mentor'
 import {
+  type CollegeSlug,
+  getCollege,
+  getOfficialWebDomains
+} from '@/lib/colleges/registry'
+import {
   CAMPUS_EVENT_STATUSES,
   type CampusEventStatus,
   KNOWLEDGE_AUTHORITIES,
@@ -57,6 +62,14 @@ type TabKey = 'documents' | 'urgent' | 'events' | 'portals' | 'gaps'
 
 interface MentorPortalClientProps {
   initialData: MentorPortalOverview
+  /** The college this mentor manages; every record is saved under it. */
+  college: CollegeSlug
+}
+
+const DEFAULT_SOURCE_SYSTEM: Record<CollegeSlug, KnowledgeSourceSystem> = {
+  kalvium: 'kalvium_guide',
+  jecrc: 'jecrc_enotice',
+  bkbirla: 'bkbirla_notice'
 }
 
 function formatTimestamp(value: Date | string | null | undefined): string {
@@ -72,7 +85,12 @@ function formatTimestamp(value: Date | string | null | undefined): string {
   })
 }
 
-export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
+export function MentorPortalClient({
+  initialData,
+  college
+}: MentorPortalClientProps) {
+  const collegeConfig = getCollege(college)
+  const officialDomains = getOfficialWebDomains(college)
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [activeTab, setActiveTab] = useState<TabKey>('documents')
@@ -80,9 +98,10 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
   // Tab 1: Document upload & crawl state
   const [docTitle, setDocTitle] = useState('')
   const [docDomain, setDocDomain] = useState<KnowledgeDomain>('examinations')
-  const [docSourceSystem, setDocSourceSystem] =
-    useState<KnowledgeSourceSystem>('jecrc_enotice')
-  const [docAuthority, setDocAuthority] = useState<KnowledgeAuthority>('jecrc')
+  const [docSourceSystem, setDocSourceSystem] = useState<KnowledgeSourceSystem>(
+    DEFAULT_SOURCE_SYSTEM[college]
+  )
+  const [docAuthority, setDocAuthority] = useState<KnowledgeAuthority>(college)
   const [docPriority, setDocPriority] = useState<KnowledgePriority>('standard')
   const [docProgram, setDocProgram] = useState('')
   const [docSemester, setDocSemester] = useState('')
@@ -110,9 +129,9 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
 
   // Tab 3: Eventum event state
   const [eventTitle, setEventTitle] = useState('')
-  const [eventOrganizer, setEventOrganizer] = useState('Kalvium X JECRC')
+  const [eventOrganizer, setEventOrganizer] = useState(collegeConfig.shortName)
   const [eventAuthority, setEventAuthority] =
-    useState<KnowledgeAuthority>('joint')
+    useState<KnowledgeAuthority>(college)
   const [eventCategory, setEventCategory] = useState('Hackathon')
   const [eventStartAt, setEventStartAt] = useState('')
   const [eventEndAt, setEventEndAt] = useState('')
@@ -128,7 +147,7 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
   const [portalKey, setPortalKey] = useState('')
   const [portalName, setPortalName] = useState('')
   const [portalAuthority, setPortalAuthority] =
-    useState<KnowledgeAuthority>('jecrc')
+    useState<KnowledgeAuthority>(college)
   const [portalUrl, setPortalUrl] = useState('')
   const [portalRequiresLogin, setPortalRequiresLogin] = useState(true)
   const [portalCapabilities, setPortalCapabilities] = useState('')
@@ -457,7 +476,7 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
                         id="doc-title"
                         value={docTitle}
                         onChange={e => setDocTitle(e.target.value)}
-                        placeholder="e.g. JECRC End-Term Examination Form Circular (Nov 2026)"
+                        placeholder={`e.g. ${collegeConfig.shortName} End-Term Examination Form Circular (Nov 2026)`}
                         required
                       />
                     </div>
@@ -616,7 +635,7 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
                       id="doc-url"
                       value={docSourceUrl}
                       onChange={e => setDocSourceUrl(e.target.value)}
-                      placeholder="https://jecrcuniversity.edu.in/..."
+                      placeholder={`${collegeConfig.website}/...`}
                     />
                   </div>
 
@@ -629,7 +648,7 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
                       rows={7}
                       value={docContent}
                       onChange={e => setDocContent(e.target.value)}
-                      placeholder="Paste circular text, Markdown fee table, or Kalvium guide..."
+                      placeholder="Paste circular text, Markdown fee table, or programme guide..."
                       required
                     />
                   </div>
@@ -647,9 +666,9 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
                   Crawl Official Web Page
                 </CardTitle>
                 <CardDescription>
-                  Allowlisted strictly to `jecrcuniversity.edu.in` and
-                  `kalvium.com`. Extracts tables and headings directly into the
-                  KB.
+                  Allowlisted strictly to{' '}
+                  {officialDomains.map(domain => `\`${domain}\``).join(', ')}.
+                  Extracts tables and headings directly into the KB.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -661,7 +680,7 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
                       type="url"
                       value={crawlUrl}
                       onChange={e => setCrawlUrl(e.target.value)}
-                      placeholder="https://jecrcuniversity.edu.in/admissions"
+                      placeholder={`${collegeConfig.website}/admissions`}
                       required
                     />
                   </div>
@@ -691,7 +710,7 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
                       id="crawl-title"
                       value={crawlTitle}
                       onChange={e => setCrawlTitle(e.target.value)}
-                      placeholder="JECRC B.Tech Admissions 2026"
+                      placeholder={`${collegeConfig.shortName} Admissions 2026`}
                     />
                   </div>
                   <Button
@@ -962,7 +981,7 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
                     id="event-title"
                     value={eventTitle}
                     onChange={e => setEventTitle(e.target.value)}
-                    placeholder="Kalvium X JECRC Buildathon 2026"
+                    placeholder={`${collegeConfig.shortName} Buildathon 2026`}
                     required
                   />
                 </div>
@@ -1065,7 +1084,7 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
                       id="event-location"
                       value={eventLocation}
                       onChange={e => setEventLocation(e.target.value)}
-                      placeholder="JECRC Sitapura Campus, Block A"
+                      placeholder="Main campus, Block A"
                     />
                   </div>
                 </div>
@@ -1077,7 +1096,7 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
                       type="url"
                       value={eventRegUrl}
                       onChange={e => setEventRegUrl(e.target.value)}
-                      placeholder="https://jecrcuniversity.edu.in/events/register"
+                      placeholder={`${collegeConfig.website}/events/register`}
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1098,7 +1117,7 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
                     id="event-eligibility"
                     value={eventEligibility}
                     onChange={e => setEventEligibility(e.target.value)}
-                    placeholder="All Kalvium X JECRC Sem 1-4 students"
+                    placeholder="All Sem 1-4 students"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -1221,7 +1240,7 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
                       id="portal-key"
                       value={portalKey}
                       onChange={e => setPortalKey(e.target.value)}
-                      placeholder="jecrc_erp"
+                      placeholder={`${college}_erp`}
                       required
                     />
                   </div>
@@ -1252,7 +1271,7 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
                     id="portal-name"
                     value={portalName}
                     onChange={e => setPortalName(e.target.value)}
-                    placeholder="JECRC ERP Portal"
+                    placeholder={`${collegeConfig.shortName} ERP Portal`}
                     required
                   />
                 </div>
@@ -1263,7 +1282,7 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
                     type="url"
                     value={portalUrl}
                     onChange={e => setPortalUrl(e.target.value)}
-                    placeholder="https://jecrcuniversity.edu.in/erp"
+                    placeholder={`${collegeConfig.website}/...`}
                     required
                   />
                 </div>
@@ -1305,7 +1324,7 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
                     id="portal-contact"
                     value={portalContact}
                     onChange={e => setPortalContact(e.target.value)}
-                    placeholder="JECRC Registrar Office"
+                    placeholder={`${collegeConfig.shortName} Registrar Office`}
                   />
                 </div>
                 <Button type="submit" disabled={isPending}>

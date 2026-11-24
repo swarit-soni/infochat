@@ -1,5 +1,6 @@
 import { UIMessage } from '@ai-sdk/react'
 
+import type { CollegeSlug } from '../colleges/registry'
 import { Model } from '../types/models'
 import { SearchMode } from '../types/search'
 
@@ -14,5 +15,10 @@ export interface BaseStreamConfig {
   isNewChat?: boolean
   searchMode?: SearchMode
   spaceColor?: string
+  /**
+   * The asking user's college; scopes campus knowledge and tools. Null:
+   * not enrolled anywhere, so every college's records are visible.
+   */
+  college?: CollegeSlug | null
   onZeroPartError?: () => Promise<void>
 }
