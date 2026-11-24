@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('ai', () => ({
   isStepCount: vi.fn(),
   tool: vi.fn(options => options),
+  wrapLanguageModel: vi.fn(({ model }) => ({ ...model, wrapped: true })),
   ToolLoopAgent: vi.fn(function (
     this: { tools: unknown },
     options: Record<string, any>
@@ -113,6 +114,14 @@ describe('createResearcher', () => {
     expect(mocks.agentOptions?.providerOptions).toEqual({
       google: { thinkingConfig: { thinkingBudget: 1024 } }
     })
+  })
+
+  it('wraps Google models so an overloaded model is retried', () => {
+    createResearcher({ model: 'google:model-id' })
+    expect(mocks.agentOptions?.model).toEqual({ wrapped: true })
+
+    createResearcher({ model: 'openai:model-id' })
+    expect(mocks.agentOptions?.model).toEqual({})
   })
 
   it('preserves OpenAI options when no chat ID is available', () => {

@@ -1,5 +1,6 @@
 import { isStepCount, tool, ToolLoopAgent } from 'ai'
 
+import { FALLBACK_MODEL_ID } from '@/lib/config/default-model'
 import type { DraftVersion } from '@/lib/draft/draft'
 import type {
   ResearcherRuntimeContext,
@@ -17,6 +18,7 @@ import { createTodoTools } from '../tools/todo'
 import { SearchMode } from '../types/search'
 import { createCitationLabelAllocator } from '../utils/citation'
 import { getModel } from '../utils/registry'
+import { type StreamingModel, withStreamRetry } from '../utils/resilient-model'
 import { isTracingEnabled } from '../utils/telemetry'
 
 import {
@@ -72,6 +74,25 @@ function wrapSearchToolForQuickMode<
       }
     }
   }) as T
+}
+
+// Gemini can accept a request and then report "high demand" inside the
+// stream. Retry once, then fall back to FALLBACK_MODEL_ID, as long as nothing
+// has streamed yet.
+function getAnswerModel(model: string) {
+  const languageModel = getModel(model)
+  if (!model.startsWith('google:') || model === FALLBACK_MODEL_ID) {
+    return languageModel
+  }
+  return withStreamRetry(languageModel as StreamingModel, {
+    fallbacks: [getModel(FALLBACK_MODEL_ID) as StreamingModel],
+    onRetry: ({ attempt, modelId, nextModelId, error }) => {
+      console.warn(
+        `[Researcher] ${modelId} unavailable (attempt ${attempt}), retrying with ${nextModelId}:`,
+        error instanceof Error ? error.message : error
+      )
+    }
+  })
 }
 
 // Enhanced researcher function with improved type safety using ToolLoopAgent
@@ -196,7 +217,7 @@ export function createResearcher({
 
     // Create ToolLoopAgent with all configuration
     const agent = new ToolLoopAgent({
-      model: getModel(model),
+      model: getAnswerModel(model),
       instructions: `${systemPrompt}${spaceInstructions ? `\n\n${spaceInstructions}` : ''}\nCurrent date: ${currentDate}`,
       tools,
       activeTools: activeToolsList,
