@@ -48,7 +48,7 @@ describe('generateChatTitle', () => {
   it('does not send OpenAI options to other providers', async () => {
     await generateChatTitle({
       userMessageContent: 'Explain the latest model changes',
-      modelId: 'google:gemini-3.1-flash-lite'
+      modelId: 'google:gemini-3.5-flash-lite'
     })
 
     expect(generateText).toHaveBeenCalledWith(

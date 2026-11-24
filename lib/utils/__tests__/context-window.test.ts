@@ -73,6 +73,7 @@ describe('context-window', () => {
       for (const id of [
         'gemini-3-flash-preview',
         'gemini-3.1-flash-lite',
+        'gemini-3.5-flash-lite',
         'gemini-4-hydrogen'
       ]) {
         const maxTokens = getMaxAllowedTokens({

@@ -9,7 +9,7 @@ This specification defines how **SERA (Student Enquiry and Research Assistant)**
 
 ## 1. Fixed Model, Auth Roles & Core System Constraints
 
-- **Fixed Universal LLM:** **Google Gemini 3.1 Flash-Lite** (`google:gemini-3.1-flash-lite`) is enforced universally across all users, search modes (`quick` and `adaptive`), title generation, and multimodal notice parsing. Model selection is disabled in both the UI and runtime configuration (requiring only `GOOGLE_GENERATIVE_AI_API_KEY`).
+- **Fixed Universal LLM:** **Google Gemini 3.5 Flash-Lite** (`google:gemini-3.5-flash-lite`) is enforced universally across all users, search modes (`quick` and `adaptive`), title generation, and multimodal notice parsing. Model selection is disabled in both the UI and runtime configuration (requiring only `GOOGLE_GENERATIVE_AI_API_KEY`).
 - **Authentication & Roles (Student + Mentor Only):** Google-only OAuth via Supabase (`AUTH_PROVIDER=supabase`) strictly limits access to **two roles** with **no `admin` role**:
   - **Student** (`@kalvium.community`) — standard chatbot users; main sign-in at `/auth/login` displays student login with a small link to `/auth/mentor`.
   - **Mentor** (`@kalvium.com`) — campus data providers/curators who upload circulars, review urgent updates, manage Eventum entries, and monitor unanswered queries via the **Mentor Data Portal** (`/mentor`, gated on `user.userType === 'mentor'`).
@@ -128,7 +128,7 @@ flowchart TD
         WAIN["Mentor Quick-Post Inbox or Dedicated WhatsApp Intake Number"]
     end
 
-    subgraph Pipeline["Gemini 3.1 Flash-Lite Normalization Pipeline"]
+    subgraph Pipeline["Gemini 3.5 Flash-Lite Normalization Pipeline"]
         DEDUPE["1. Hash Deduplication and Sender Role Tagging"]
         PARSE["2. Multimodal OCR and Structured Field Extraction"]
         TRUST{"3. Sender Trust Gate"}
@@ -161,9 +161,9 @@ flowchart TD
 ### 3.2 Five-Stage Processing & Governance Pipeline
 
 1. **Deduplicate & Tag Provenance:** Compute a normalized content hash + time window to prevent duplicate ingestion when the same circular hits both WhatsApp and GChat. Attach `channel` (`gchat | whatsapp_forward`), `senderRole`, and `capturedAt`.
-2. **Triage & Multimodal Extraction (`Gemini 3.1 Flash-Lite`):**
+2. **Triage & Multimodal Extraction (`Gemini 3.5 Flash-Lite`):**
    - Classify message intent (`urgent_notice | timetable_change | exam_update | fee_deadline | event | noise`). Messages classified as `noise` or containing personal student data are discarded immediately.
-   - Use Gemini 3.1 Flash-Lite multimodal input to transcribe forwarded notice **screenshots, posters, and PDFs** into clean Markdown.
+   - Use Gemini 3.5 Flash-Lite multimodal input to transcribe forwarded notice **screenshots, posters, and PDFs** into clean Markdown.
    - Extract structured metadata: `domain`, `authority` (`kalvium | jecrc | joint`), `cohort/squad/semester`, `effectiveDate`, `expiresAt`, `actionRequired`, and `supersedesTopic`.
 3. **Sender Trust Gate:**
    - **Verified Mentors (`@kalvium.com`) / Broadcast GChat Spaces:** Auto-publish immediately with `status = 'active'` and `priority = 'urgent'` so SERA reflects room changes or cancellations within seconds.
@@ -199,13 +199,13 @@ flowchart TD
 
     CRAWL["Scheduled Crawler and PDF/Table Extractor"]
     MENTOR["Mentor Data Portal: Upload, Versioning and Quick-Ingest (/mentor)"]
-    NORM["Gemini 3.1 Flash-Lite Normalizer and Chunker"]
+    NORM["Gemini 3.5 Flash-Lite Normalizer and Chunker"]
 
     KB[("Postgres KB (pgvector + tsvector)")]
     EVENTS[("Structured campus_events Table")]
     PORTALS[("Verified official_portals Registry")]
 
-    AGENT["SERA ToolLoopAgent (Fixed: google:gemini-3.1-flash-lite)"]
+    AGENT["SERA ToolLoopAgent (Fixed: google:gemini-3.5-flash-lite)"]
     OUT["Grounded Answer + Inline Citations + Authority Labels + Portal Deep Links + Gap Logging"]
 
     JECRC_WEB --> CRAWL --> KB
@@ -267,7 +267,7 @@ When sources conflict, SERA resolves priority in strict descending order:
 ### 6.1 Repository Status Snapshot
 
 - **Documentation:** [PROBLEM_TREE.md](./PROBLEM_TREE.md), [CONFIGURATION.md](./CONFIGURATION.md), and this specification (`DATA_SOURCES.md`) are in place.
-- **Model Configuration & UI Lock-In:** User model selection is removed from the UI and configuration; `google:gemini-3.1-flash-lite` is enforced universally across `config/models/cloud.json`, `lib/config/default-model.ts`, `lib/utils/model-selection.ts`, `app/` pages, and `.env.local.example`.
+- **Model Configuration & UI Lock-In:** User model selection is removed from the UI and configuration; `google:gemini-3.5-flash-lite` is enforced universally across `config/models/cloud.json`, `lib/config/default-model.ts`, `lib/utils/model-selection.ts`, `app/` pages, and `.env.local.example`.
 - **Auth & Roles Alignment:** Google-only Kalvium OAuth enforces strictly `student` (`@kalvium.community`) and `mentor` (`@kalvium.com`) roles with no `admin` role; `/auth/login` displays student login with a small link to `/auth/mentor`, and `/mentor` hosts the Mentor Data Portal shell.
 - **Existing Foundation Ready to Reuse:** Streaming `ToolLoopAgent` + inline citations (`lib/agents/`), Drizzle + Postgres RLS + `tsvector` (`lib/db/schema.ts`), R2/S3 file uploads (`app/api/upload/route.ts`), feedback persistence, and Vitest/`evals/` harnesses.
 - **Not Yet Implemented (Next Engineering Sprint):** SERA Postgres KB/event/portal/urgent-queue tables + `pgvector` migration, interactive upload/curation forms inside `/mentor`, GChat webhook endpoint, `searchCampusKnowledge` / `queryEvents` / `getOfficialPortalLinks` tools, student cohort selector, and Kalvium X JECRC eval dataset.

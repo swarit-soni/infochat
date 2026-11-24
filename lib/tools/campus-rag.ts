@@ -111,7 +111,7 @@ export function createCampusRagTools(options?: {
     options?.labelAllocator ??
     createCitationLabelAllocator(options?.labelSeed ?? 1)
   const officialSearchTool = createSearchTool(
-    options?.model ?? 'google:gemini-3.1-flash-lite',
+    options?.model ?? 'google:gemini-3.5-flash-lite',
     { labelAllocator }
   )
 
