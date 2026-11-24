@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 
-import { IconX as X } from '@tabler/icons-react'
+import { IconLoader2 as Loader2, IconX as X } from '@tabler/icons-react'
 import { toast } from 'sonner'
 
 import { Chat as DBChat } from '@/lib/db/schema'
@@ -37,6 +37,7 @@ export function ChatHistoryClient() {
   const [nextOffset, setNextOffset] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [query, setQuery] = useState('')
+  const [isSearchLoading, setIsSearchLoading] = useState(false)
   const loadMoreRef = useRef<HTMLDivElement>(null)
   const resultsRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -319,8 +320,16 @@ export function ChatHistoryClient() {
             }}
             placeholder="Search history"
             aria-label="Search history"
-            className="h-8 text-xs pr-7"
+            className="h-8 text-xs pr-12"
           />
+          {searchMode && isSearchLoading && (
+            <Loader2
+              size={14}
+              role="status"
+              aria-label="Searching"
+              className="text-muted-foreground absolute right-7 top-1/2 -translate-y-1/2 animate-spin"
+            />
+          )}
           {query && (
             <button
               type="button"
@@ -339,6 +348,7 @@ export function ChatHistoryClient() {
             refreshKey={searchEpoch}
             query={query}
             onActiveValueChange={setActiveResult}
+            onLoadingChange={setIsSearchLoading}
           />
         ) : staleHiddenRefresh ? (
           listRetryFailed ? (
