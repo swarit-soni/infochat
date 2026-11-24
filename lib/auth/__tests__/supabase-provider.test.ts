@@ -108,19 +108,28 @@ describe('supabase provider', () => {
       })
     })
 
-    it('returns null for disallowed email domains or non-Google providers', async () => {
+    it('resolves any Google account without a Kalvium user type', async () => {
       getUser.mockResolvedValueOnce({
         data: {
           user: {
             id: 'u-3',
-            email: 'user@gmail.com',
+            email: 'User@Gmail.com',
             app_metadata: { provider: 'google' },
             user_metadata: {}
           }
         }
       })
-      await expect(supabaseAuthProvider.getCurrentUser()).resolves.toBeNull()
+      await expect(
+        supabaseAuthProvider.getCurrentUser()
+      ).resolves.toMatchObject({
+        id: 'u-3',
+        email: 'user@gmail.com',
+        userType: null,
+        role: null
+      })
+    })
 
+    it('returns null for non-Google providers', async () => {
       getUser.mockResolvedValueOnce({
         data: {
           user: {

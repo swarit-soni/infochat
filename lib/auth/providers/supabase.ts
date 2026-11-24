@@ -28,15 +28,17 @@ function metaString(
 }
 
 export function toAppUser(user: SupabaseUser): AppUser | null {
-  const userType = getUserTypeFromEmail(user.email)
-  if (!userType || !isGoogleAuthUser(user)) {
+  const email = normalizeEmail(user.email)
+  if (!email || !isGoogleAuthUser(user)) {
     return null
   }
+  // Non-Kalvium Google accounts sign in without a mentor/student type.
+  const userType = getUserTypeFromEmail(email)
 
   const metadata = (user.user_metadata ?? {}) as Record<string, unknown>
   return {
     id: user.id,
-    email: normalizeEmail(user.email),
+    email,
     name: metaString(metadata, 'full_name', 'name'),
     image: metaString(metadata, 'avatar_url', 'picture'),
     createdAt: user.created_at ?? null,
