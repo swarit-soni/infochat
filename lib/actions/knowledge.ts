@@ -1,8 +1,7 @@
 'use server'
 
-import { and, desc, eq, gt, inArray, isNull, lt, or } from 'drizzle-orm'
+import { and, desc, eq, gt, isNull, lt, or } from 'drizzle-orm'
 
-import { resolveVisibleColleges } from '@/lib/colleges/current'
 import { db } from '@/lib/db'
 import { type KnowledgeDocument, knowledgeDocuments } from '@/lib/db/schema'
 
@@ -33,19 +32,16 @@ export type KnowledgeLibraryItem = Pick<
 >
 
 /**
- * List the documents Sera answers from: active and not expired, newest
- * first, from the colleges visible to the user (see resolveVisibleColleges).
- * The knowledge base is public (its RLS select policy is `true`).
+ * List the documents Sera currently answers from: active and not expired,
+ * newest first. The knowledge base is readable by everyone (its RLS select
+ * policy is public), so no sign-in is required.
  */
 export async function listKnowledgeDocuments({
   limit = DEFAULT_KNOWLEDGE_PAGE_SIZE,
-  cursor,
-  college
+  cursor
 }: {
   limit?: number
   cursor?: KnowledgeListCursor | null
-  /** Ignored for signed-in users, who always see their own college. */
-  college?: string | null
 } = {}): Promise<{
   success: boolean
   documents?: KnowledgeLibraryItem[]
@@ -62,8 +58,6 @@ export async function listKnowledgeDocuments({
     cursor && cursorDate && !Number.isNaN(cursorDate.getTime())
 
   try {
-    const visibleColleges = await resolveVisibleColleges(college)
-
     const rows = await db
       .select({
         id: knowledgeDocuments.id,
@@ -84,7 +78,6 @@ export async function listKnowledgeDocuments({
       .from(knowledgeDocuments)
       .where(
         and(
-          inArray(knowledgeDocuments.college, visibleColleges),
           eq(knowledgeDocuments.status, 'active'),
           or(
             isNull(knowledgeDocuments.expiresAt),

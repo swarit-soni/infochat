@@ -10,7 +10,6 @@ import {
 import { getCurrentUser, getCurrentUserId } from '@/lib/auth/get-current-user'
 import { isAnonymousMode } from '@/lib/auth/provider'
 import { rejectIfBot } from '@/lib/bot-protection'
-import type { CollegeSlug } from '@/lib/colleges/registry'
 import { getUserMessageIds } from '@/lib/db/actions'
 import { generateId } from '@/lib/db/schema'
 import { checkAndEnforceAdaptiveLimit } from '@/lib/rate-limit/adaptive-limit'
@@ -123,9 +122,6 @@ export async function POST(req: Request) {
 
     const guestChatEnabled = process.env.ENABLE_GUEST_CHAT === 'true'
     const isGuest = !userId
-    // The user's college scopes campus knowledge. Null (guests, students
-    // not enrolled anywhere) means every college, for admission seekers.
-    const college: CollegeSlug | null = currentUser?.college ?? null
 
     if (exceedsAttachmentLimit({ isGuest, trigger, message, messages })) {
       return new Response(
@@ -448,8 +444,7 @@ export async function POST(req: Request) {
         model: selectedModel,
         abortSignal,
         searchMode,
-        chatId,
-        college
+        chatId
       })
     } else {
       try {
@@ -464,7 +459,6 @@ export async function POST(req: Request) {
           isNewChat,
           searchMode,
           spaceColor,
-          college,
           onZeroPartError: refundUsageOnce
         })
       } catch (error) {

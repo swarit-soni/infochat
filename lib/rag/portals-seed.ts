@@ -1,9 +1,7 @@
-import type { CollegeSlug } from '@/lib/colleges/registry'
 import type { KnowledgeAuthority } from '@/lib/db/schema'
 
 export interface OfficialPortalRecord {
   id: string
-  college: CollegeSlug
   portalKey: string
   name: string
   authority: KnowledgeAuthority
@@ -15,152 +13,90 @@ export interface OfficialPortalRecord {
   lastVerifiedAt: Date
 }
 
-// Every URL below was checked on 2026-11-24: the JECRC homepage links its
-// E-Notice, ERP, Result and Parent Portal entries to the same MastersoftERP
-// login, and its Service & Support desk to sws.jecrcuniversity.edu.in.
-const VERIFIED_AT = new Date('2026-11-24T00:00:00.000Z')
-
 export const DEFAULT_OFFICIAL_PORTALS: ReadonlyArray<OfficialPortalRecord> = [
   {
     id: 'portal_jecrc_erp',
-    college: 'jecrc',
     portalKey: 'jecrc_erp',
-    name: 'JECRC ERP (MastersoftERP)',
+    name: 'JECRC ERP Portal',
     authority: 'jecrc',
-    url: 'https://jecrc.mastersofterp.in/',
+    url: 'https://jecrcuniversity.edu.in/erp',
     requiresLogin: 1,
     capabilities:
-      'Personal attendance (the university gives no separate shortage notice; attendance is published here), semester results and grade cards, E-Notices, fee details, and the parent portal login.',
+      'Personal attendance percentage, course registration, fee payment history, official fee receipts, and personal student academic profile.',
     navigationSteps:
-      '1. Open the JECRC ERP. 2. Sign in with your ERP student credentials (parents use the parent portal login on the same page). 3. Open the attendance, result or notice section you need. Forgot your password? Use "Reset ERP Password" on the JU Service & Support Portal.',
-    supportContact:
-      'JECRC IT Department / ERP dashboard login helpline: +91 9982066992',
-    lastVerifiedAt: VERIFIED_AT
+      '1. Open the JECRC ERP Portal. 2. Sign in with your university enrollment ID and ERP password. 3. Use Academic -> Attendance for subject-wise percentage, or Finance -> Fee Receipts for payment confirmation.',
+    supportContact: 'JECRC ERP Helpdesk / Registrar Office',
+    lastVerifiedAt: new Date('2026-01-15T00:00:00.000Z')
+  },
+  {
+    id: 'portal_jecrc_enotice',
+    portalKey: 'jecrc_enotice',
+    name: 'JECRC E-Notice Portal',
+    authority: 'jecrc',
+    url: 'https://jecrcuniversity.edu.in/e-notice',
+    requiresLogin: 1,
+    capabilities:
+      'Official JECRC University circulars, exam form schedules, timetable revisions, holiday announcements, and campus-wide deadline notices.',
+    navigationSteps:
+      '1. Open the JECRC E-Notice Portal. 2. Sign in with your student portal credentials. 3. Filter notices by Examination, Academics, or Accounts and download the latest signed PDF circular.',
+    supportContact: 'JECRC Academic & Examination Cell',
+    lastVerifiedAt: new Date('2026-01-15T00:00:00.000Z')
+  },
+  {
+    id: 'portal_jecrc_result',
+    portalKey: 'jecrc_result',
+    name: 'JECRC Examination Result Portal',
+    authority: 'jecrc',
+    url: 'https://jecrcuniversity.edu.in/results',
+    requiresLogin: 1,
+    capabilities:
+      'Individual semester examination results, grade cards, SGPA/CGPA transcripts, and re-evaluation/backlog application status.',
+    navigationSteps:
+      '1. Open the JECRC Examination Result Portal. 2. Enter your enrollment number and select the exam session. 3. Download the provisional grade card or check re-evaluation status.',
+    supportContact: 'JECRC Controller of Examinations',
+    lastVerifiedAt: new Date('2026-01-15T00:00:00.000Z')
   },
   {
     id: 'portal_jecrc_support',
-    college: 'jecrc',
     portalKey: 'jecrc_support',
-    name: 'JU Service & Support Portal',
+    name: 'JECRC Student Support Portal',
     authority: 'jecrc',
-    url: 'https://sws.jecrcuniversity.edu.in/',
-    requiresLogin: 0,
+    url: 'https://jecrcuniversity.edu.in/student-support',
+    requiresLogin: 1,
     capabilities:
-      'Single-window service and grievance desk: raise and track queries, ERP password reset, help with checking attendance, applying for OD (on duty), uploading assignments, fee payment and no-dues.',
+      'Student grievance tickets, ID card/hostel/transport support requests, SLA contacts, and administrative escalation.',
     navigationSteps:
-      '1. Open the JU Service & Support Portal. 2. Choose "Raise Query" to open a ticket, "Track Query" to follow one up, or the ERP help tiles (Reset Password, Check Attendance, Apply OD, Pay Fees).',
-    supportContact: 'JECRC Registrar Office: +91 9116642282',
-    lastVerifiedAt: VERIFIED_AT
+      '1. Open the JECRC Student Support Portal. 2. Log in and select the relevant department category (Accounts, Hostel, Exams, IT). 3. Submit a support ticket with your enrollment number and screenshots.',
+    supportContact: 'JECRC Student Helpdesk',
+    lastVerifiedAt: new Date('2026-01-15T00:00:00.000Z')
   },
   {
-    id: 'portal_jecrc_calendar',
-    college: 'jecrc',
-    portalKey: 'jecrc_calendar',
-    name: 'JECRC Academic Calendar',
+    id: 'portal_jecrc_parent',
+    portalKey: 'jecrc_parent',
+    name: 'JECRC Parent Portal',
     authority: 'jecrc',
-    url: 'https://jecrcuniversity.edu.in/academic-calendar/',
-    requiresLogin: 0,
+    url: 'https://jecrcuniversity.edu.in/parent-portal',
+    requiresLogin: 1,
     capabilities:
-      'Official academic calendars with semester start dates, in-semester and end-semester exam windows, and holidays.',
+      'Parent access to ward attendance, fee schedules, payment status, and official university communications.',
     navigationSteps:
-      '1. Open the Academic Calendar page. 2. Download the calendar PDF for your programme and academic year.',
-    supportContact: 'JECRC Registrar Office: +91 9116642282',
-    lastVerifiedAt: VERIFIED_AT
+      '1. Open the JECRC Parent Portal. 2. Sign in using the registered parent credentials or student ID OTP. 3. View fee dues, attendance summary, and university notifications.',
+    supportContact: 'JECRC Parent & Student Relations',
+    lastVerifiedAt: new Date('2026-01-15T00:00:00.000Z')
   },
   {
     id: 'portal_kalvium_dashboard',
-    college: 'kalvium',
     portalKey: 'kalvium_dashboard',
     name: 'Kalvium Student Dashboard',
     authority: 'kalvium',
-    url: 'https://app.kalvium.community/',
+    url: 'https://app.kalvium.community/dashboard',
     requiresLogin: 1,
     capabilities:
       'Personal learning unit completion, assignment submissions, pending deadlines, assessment scores, personal learning progress, project team/repo reviews, elective enrollment, and 1:1 mentor booking.',
     navigationSteps:
       '1. Sign in to the Kalvium Student Dashboard using your @kalvium.community Google account. 2. Open Learning Units, Assignments, Assessments, or Projects from the left navigation to check your personal standing or book a 1:1 mentor session.',
     supportContact: 'Your Squad Mentor (@kalvium.com)',
-    lastVerifiedAt: VERIFIED_AT
-  },
-  {
-    id: 'portal_bkbirla_student',
-    college: 'bkbirla',
-    portalKey: 'bkbirla_student',
-    name: 'B.K. Birla College Student Login (MastersoftERP)',
-    authority: 'bkbirla',
-    url: 'https://cimsstudentnewui.mastersofterp.in/',
-    requiresLogin: 1,
-    capabilities:
-      'Student dashboard: notifications, admission form status and "Payable Fees" for paying academic fees online.',
-    navigationSteps:
-      '1. Open the student login (also linked from bkbck.edu.in → Student Corner → Student Login). 2. Sign in with the username and password sent to you by SMS at registration. 3. Check notifications, or scroll to "Payable Fees" to pay.',
-    supportContact:
-      'B.K. Birla College enquiry: 1800 233 0144 / enquiry@bkbck.edu.in',
-    lastVerifiedAt: VERIFIED_AT
-  },
-  {
-    id: 'portal_bkbirla_results',
-    college: 'bkbirla',
-    portalKey: 'bkbirla_results',
-    name: 'B.K. Birla College Results (Degree College)',
-    authority: 'bkbirla',
-    url: 'https://bkbck.edu.in/examination/results-degree-college/',
-    requiresLogin: 0,
-    capabilities:
-      'Published semester-end and ATKT examination results for the degree college.',
-    navigationSteps:
-      '1. Open the Results page. 2. Choose your programme, semester and exam session.',
-    supportContact:
-      'B.K. Birla College enquiry: 1800 233 0144 / enquiry@bkbck.edu.in',
-    lastVerifiedAt: VERIFIED_AT
-  },
-  {
-    id: 'portal_bkbirla_admit_card',
-    college: 'bkbirla',
-    portalKey: 'bkbirla_admit_card',
-    name: 'B.K. Birla College Admit Card',
-    authority: 'bkbirla',
-    url: 'https://bkbck.edu.in/examination/admit-card/',
-    requiresLogin: 0,
-    capabilities:
-      'Download hall tickets / admit cards for college examinations.',
-    navigationSteps:
-      '1. Open the Admit Card page. 2. Follow the link for your exam session.',
-    supportContact:
-      'B.K. Birla College enquiry: 1800 233 0144 / enquiry@bkbck.edu.in',
-    lastVerifiedAt: VERIFIED_AT
-  },
-  {
-    id: 'portal_bkbirla_timetable',
-    college: 'bkbirla',
-    portalKey: 'bkbirla_timetable',
-    name: 'B.K. Birla College Exam Timetables',
-    authority: 'bkbirla',
-    url: 'https://bkbck.edu.in/examination/exam-timetable/',
-    requiresLogin: 0,
-    capabilities:
-      'Regular and ATKT examination timetables for UG and PG programmes, by session.',
-    navigationSteps:
-      '1. Open the Exam Timetable page. 2. Download the PDF for your year, semester and session.',
-    supportContact:
-      'B.K. Birla College enquiry: 1800 233 0144 / enquiry@bkbck.edu.in',
-    lastVerifiedAt: VERIFIED_AT
-  },
-  {
-    id: 'portal_bkbirla_notices',
-    college: 'bkbirla',
-    portalKey: 'bkbirla_notices',
-    name: 'B.K. Birla College Notices',
-    authority: 'bkbirla',
-    url: 'https://bkbck.edu.in/notices',
-    requiresLogin: 0,
-    capabilities:
-      'Official notices: exam commencement, ATKT form and fee deadlines, merit lists, scholarship forms and recruitment.',
-    navigationSteps:
-      '1. Open the Notices page. 2. Notices are listed newest first with their posting date.',
-    supportContact:
-      'B.K. Birla College enquiry: 1800 233 0144 / enquiry@bkbck.edu.in',
-    lastVerifiedAt: VERIFIED_AT
+    lastVerifiedAt: new Date('2026-01-15T00:00:00.000Z')
   }
 ]
 
@@ -170,17 +106,19 @@ const PORTAL_SYNONYMS: Record<string, string[]> = {
     'attendance',
     'fee receipt',
     'receipt',
+    'registration',
+    'profile'
+  ],
+  jecrc_enotice: ['e-notice', 'enotice', 'circular', 'notice'],
+  jecrc_result: [
     'result',
     'marks',
     'grade',
     'cgpa',
     'sgpa',
-    'notice',
-    'e-notice',
-    'enotice',
-    'circular',
-    'parent',
-    'guardian'
+    'transcript',
+    're-evaluation',
+    'backlog'
   ],
   jecrc_support: [
     'support',
@@ -188,14 +126,10 @@ const PORTAL_SYNONYMS: Record<string, string[]> = {
     'ticket',
     'grievance',
     'complaint',
-    'query',
-    'password',
-    'od',
-    'on duty',
-    'no due',
-    'pay fee'
+    'hostel',
+    'id card'
   ],
-  jecrc_calendar: ['calendar', 'holiday', 'semester start', 'exam dates'],
+  jecrc_parent: ['parent', 'guardian', 'father', 'mother'],
   kalvium_dashboard: [
     'kalvium',
     'dashboard',
@@ -207,12 +141,7 @@ const PORTAL_SYNONYMS: Record<string, string[]> = {
     'mentor',
     '1:1',
     'elective'
-  ],
-  bkbirla_student: ['login', 'fee', 'pay', 'student corner', 'dashboard'],
-  bkbirla_results: ['result', 'marks', 'grade', 'atkt', 'sgpa', 'cgpa'],
-  bkbirla_admit_card: ['admit card', 'hall ticket', 'hallticket'],
-  bkbirla_timetable: ['timetable', 'time table', 'exam date', 'schedule'],
-  bkbirla_notices: ['notice', 'circular', 'merit list', 'scholarship']
+  ]
 }
 
 /**

@@ -174,8 +174,7 @@ describe('POST /api/chat guest message validation', () => {
       model,
       abortSignal: expect.any(AbortSignal),
       searchMode: 'quick',
-      chatId: undefined,
-      college: null
+      chatId: undefined
     })
   })
 

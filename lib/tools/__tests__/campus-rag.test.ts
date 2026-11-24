@@ -49,8 +49,8 @@ async function collectGeneratorResult<T = any>(
 describe('filterOfficialDomains', () => {
   it('strips non-official domains and falls back to official allowlist', () => {
     expect(filterOfficialDomains(['collegedunia.com', 'shiksha.com'])).toEqual([
-      'kalvium.com',
-      'jecrcuniversity.edu.in'
+      'jecrcuniversity.edu.in',
+      'kalvium.com'
     ])
 
     expect(
@@ -205,7 +205,7 @@ describe('createCampusRagTools', () => {
 
   it('logs abstention gaps via logUnansweredQuery', async () => {
     mocks.recordUnansweredQuery.mockResolvedValue({ id: 'uq-1' })
-    const tools = createCampusRagTools({ college: 'kalvium', userId: 'u-1' })
+    const tools = createCampusRagTools()
     const result = await tools.logUnansweredQuery.execute!(
       {
         query: 'When is Squad 99 industrial visit?',
@@ -218,71 +218,10 @@ describe('createCampusRagTools', () => {
     expect(result).toMatchObject({ logged: true, id: 'uq-1' })
     expect(mocks.recordUnansweredQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        college: 'kalvium',
-        userId: 'u-1',
         query: 'When is Squad 99 industrial visit?',
         domain: 'activities',
         kind: 'abstention'
       })
-    )
-  })
-
-  it('logs a gap for students without a college only when the model names one', async () => {
-    mocks.recordUnansweredQuery.mockResolvedValue({ id: 'uq-2' })
-    const tools = createCampusRagTools()
-
-    const unattributed = await tools.logUnansweredQuery.execute!(
-      { query: 'Hostel fees?', domain: 'fees', reason: 'Not in KB' },
-      { toolCallId: 'tc-a', messages: [], context: {} }
-    )
-    expect(unattributed).toMatchObject({ logged: false })
-    expect(mocks.recordUnansweredQuery).not.toHaveBeenCalled()
-
-    const attributed = await tools.logUnansweredQuery.execute!(
-      {
-        college: 'bkbirla',
-        query: 'Hostel fees?',
-        domain: 'fees',
-        reason: 'Not in KB'
-      },
-      { toolCallId: 'tc-b', messages: [], context: {} }
-    )
-    expect(attributed).toMatchObject({ logged: true, id: 'uq-2' })
-    expect(mocks.recordUnansweredQuery).toHaveBeenCalledWith(
-      expect.objectContaining({ college: 'bkbirla' })
-    )
-  })
-
-  it('scopes retrieval to the college and its partners, or every college', async () => {
-    mocks.retrieveCampusKnowledge.mockResolvedValue([])
-    const context = { toolCallId: 'tc', messages: [], context: {} }
-
-    await collectGeneratorResult(
-      createCampusRagTools({ college: 'kalvium' }).searchCampusKnowledge
-        .execute!({ query: 'fees', max_results: 3 }, context) as never
-    )
-    expect(mocks.retrieveCampusKnowledge).toHaveBeenLastCalledWith(
-      expect.objectContaining({ colleges: ['kalvium', 'jecrc'] })
-    )
-
-    await collectGeneratorResult(
-      createCampusRagTools({ college: 'jecrc' }).searchCampusKnowledge.execute!(
-        { query: 'fees', max_results: 3 },
-        context
-      ) as never
-    )
-    expect(mocks.retrieveCampusKnowledge).toHaveBeenLastCalledWith(
-      expect.objectContaining({ colleges: ['jecrc'] })
-    )
-
-    await collectGeneratorResult(
-      createCampusRagTools().searchCampusKnowledge.execute!(
-        { query: 'fees', max_results: 3 },
-        context
-      ) as never
-    )
-    expect(mocks.retrieveCampusKnowledge).toHaveBeenLastCalledWith(
-      expect.objectContaining({ colleges: ['kalvium', 'jecrc', 'bkbirla'] })
     )
   })
 })

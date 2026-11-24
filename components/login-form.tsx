@@ -4,13 +4,12 @@ import { useState } from 'react'
 import Link from 'next/link'
 
 import { signInWithGoogle } from '@/lib/actions/auth'
-import { USER_TYPE_LABELS } from '@/lib/auth/domain'
-import { safeRedirectPath } from '@/lib/auth/redirect-target'
 import {
-  collegePath,
-  type CollegeSlug,
-  getCollege
-} from '@/lib/colleges/registry'
+  DOMAIN_BY_USER_TYPE,
+  USER_TYPE_LABELS,
+  type UserType
+} from '@/lib/auth/domain'
+import { safeRedirectPath } from '@/lib/auth/redirect-target'
 import { useAuthCapabilities } from '@/lib/contexts/app-user-context'
 import { cn } from '@/lib/utils/index'
 
@@ -55,20 +54,13 @@ function GoogleIcon() {
 
 export function LoginForm({
   className,
-  mentorCollege,
-  mentorDomains = [],
+  mode = 'student',
   next,
   initialError = null,
   isBeta = false,
   ...props
 }: React.ComponentPropsWithoutRef<'div'> & {
-  /**
-   * Set for a college's mentor login (`/<college>/auth/mentor`). Omitted for
-   * the regular login, which any Google account may use.
-   */
-  mentorCollege?: CollegeSlug
-  /** Email domains accepted as mentors of `mentorCollege` (empty: not set up). */
-  mentorDomains?: string[]
+  mode?: UserType
   next?: string
   initialError?: string | null
   isBeta?: boolean
@@ -77,14 +69,15 @@ export function LoginForm({
   const [isLoading, setIsLoading] = useState(false)
   const capabilities = useAuthCapabilities()
 
-  const isMentor = mentorCollege !== undefined
-  const college = mentorCollege ? getCollege(mentorCollege) : null
-  const isEnabled = !isMentor || mentorDomains.length > 0
+  const isMentor = mode === 'mentor'
   const safeNext = next ? safeRedirectPath(next) : null
   const nextQuery =
     safeNext && safeNext !== '/' ? `?next=${encodeURIComponent(safeNext)}` : ''
-  const alternateHref = isMentor ? `/auth/login${nextQuery}` : '/auth/mentor'
-  const expectedDomain = mentorDomains.map(domain => `@${domain}`).join(' / ')
+  const alternateHref = isMentor
+    ? `/auth/login${nextQuery}`
+    : `/auth/mentor${nextQuery}`
+  const expectedDomain = `@${DOMAIN_BY_USER_TYPE[mode]}`
+  const roleLabel = USER_TYPE_LABELS[mode]
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true)
@@ -96,16 +89,14 @@ export function LoginForm({
       // Always write it: a login without a destination must clear a stale
       // cookie left by an abandoned attempt, or that old destination would
       // hijack the later sign-in.
-      const redirectTarget =
-        next ??
-        (mentorCollege ? collegePath(mentorCollege, '/mentor') : undefined)
+      const redirectTarget = next ?? (isMentor ? '/mentor' : undefined)
       document.cookie = redirectTarget
         ? `auth_next=${encodeURIComponent(
             safeRedirectPath(redirectTarget)
           )}; path=/; max-age=300; SameSite=Lax`
         : 'auth_next=; path=/; max-age=0; SameSite=Lax'
 
-      const result = await signInWithGoogle(mentorCollege)
+      const result = await signInWithGoogle(mode)
       if (!result.success) {
         throw new Error(result.error ?? 'An OAuth error occurred')
       }
@@ -140,25 +131,18 @@ export function LoginForm({
             </span>
           </CardTitle>
           <CardDescription>
-            {college
-              ? `Sign in with your ${college.shortName} mentor Google account to manage ${college.shortName} campus data.`
+            {isMentor
+              ? 'Sign in with your Kalvium mentor Google account to manage campus data.'
               : 'Sign in with your Google account.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4">
-            {college && (
+            {isMentor && (
               <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="min-w-0">
-                    <span className="block font-medium text-foreground">
-                      {college.shortName}
-                    </span>
-                    <span className="break-all">
-                      {isEnabled ? expectedDomain : 'Sign-in not set up yet'}
-                    </span>
-                  </span>
-                  <Badge variant="secondary">{USER_TYPE_LABELS.mentor}</Badge>
+                  <span>{expectedDomain}</span>
+                  <Badge variant="secondary">{roleLabel}</Badge>
                 </div>
               </div>
             )}
@@ -172,12 +156,7 @@ export function LoginForm({
               </p>
             )}
 
-            {!isEnabled ? (
-              <p className="text-center text-sm text-muted-foreground">
-                Mentor sign-in for {college?.shortName} is not set up yet.
-                Please contact your college administrator.
-              </p>
-            ) : capabilities.oauth ? (
+            {capabilities.oauth ? (
               <Button
                 type="button"
                 variant="outline"
@@ -206,11 +185,6 @@ export function LoginForm({
             {isMentor ? 'Regular login' : 'Mentor login'}
           </Link>
         </p>
-        {isMentor && (
-          <Link href="/auth/mentor" className="hover:underline">
-            Mentor at a different college?
-          </Link>
-        )}
         <Link href="/" className="hover:underline">
           &larr; Back to Home
         </Link>

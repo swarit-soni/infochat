@@ -1,11 +1,10 @@
 'use server'
 
-import { and, asc, desc, eq } from 'drizzle-orm'
+import { asc, desc, eq } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { getCurrentUser } from '@/lib/auth/get-current-user'
 import type { AppUser } from '@/lib/auth/types'
-import type { CollegeSlug } from '@/lib/colleges/registry'
 import { db } from '@/lib/db'
 import {
   CAMPUS_EVENT_STATUSES,
@@ -51,18 +50,12 @@ export interface MentorPortalOverview {
   unansweredQueries: UnansweredQuery[]
 }
 
-type MentorUser = AppUser & { college: CollegeSlug }
-
-/**
- * The signed-in mentor, with the college they manage. Every mentor action
- * reads and writes only that college's rows (tenant isolation).
- */
-async function requireMentorUser(): Promise<MentorUser | null> {
+async function requireMentorUser(): Promise<AppUser | null> {
   const user = await getCurrentUser()
-  if (!user || user.userType !== 'mentor' || !user.college) {
+  if (!user || user.userType !== 'mentor') {
     return null
   }
-  return { ...user, college: user.college }
+  return user
 }
 
 function parseOptionalDate(value?: string | null): Date | null {
@@ -151,24 +144,17 @@ export async function getMentorPortalOverview(): Promise<MentorPortalOverview> {
       db
         .select()
         .from(knowledgeDocuments)
-        .where(eq(knowledgeDocuments.college, mentor.college))
         .orderBy(desc(knowledgeDocuments.createdAt))
         .limit(100),
       db
         .select()
         .from(campusEvents)
-        .where(eq(campusEvents.college, mentor.college))
         .orderBy(desc(campusEvents.startAt))
         .limit(50),
-      db
-        .select()
-        .from(officialPortals)
-        .where(eq(officialPortals.college, mentor.college))
-        .orderBy(asc(officialPortals.portalKey)),
+      db.select().from(officialPortals).orderBy(asc(officialPortals.portalKey)),
       db
         .select()
         .from(unansweredQueries)
-        .where(eq(unansweredQueries.college, mentor.college))
         .orderBy(desc(unansweredQueries.createdAt))
         .limit(100)
     ])
@@ -192,9 +178,7 @@ export async function getMentorPortalOverview(): Promise<MentorPortalOverview> {
       documents: [],
       pendingDocuments: [],
       events: [],
-      portals: DEFAULT_OFFICIAL_PORTALS.filter(
-        p => p.college === mentor.college
-      ).map(p => ({
+      portals: DEFAULT_OFFICIAL_PORTALS.map(p => ({
         ...p,
         updatedBy: null,
         createdAt: p.lastVerifiedAt,
@@ -225,7 +209,6 @@ export async function uploadKnowledgeDocumentAction(
     const data = parsed.data
     const result = await ingestKnowledgeDocument(
       {
-        college: mentor.college,
         title: data.title,
         content: data.content,
         domain: data.domain,
@@ -286,7 +269,6 @@ export async function submitUrgentUpdateAction(
     const data = parsed.data
     const result = await ingestUrgentUpdate(
       {
-        college: mentor.college,
         rawText: data.rawText,
         channel: data.channel,
         senderRole: data.senderRole,
@@ -331,11 +313,7 @@ export async function reviewUrgentUpdateAction(input: {
 
   try {
     if (input.decision === 'approve') {
-      const result = await approvePendingDocument(
-        input.documentId,
-        mentor.id,
-        mentor.college
-      )
+      const result = await approvePendingDocument(input.documentId, mentor.id)
       if (!result.document) {
         return { success: false, error: 'Document not found.' }
       }
@@ -351,8 +329,7 @@ export async function reviewUrgentUpdateAction(input: {
     const updated = await updateDocumentStatus(
       input.documentId,
       nextStatus,
-      mentor.id,
-      mentor.college
+      mentor.id
     )
     if (!updated) {
       return { success: false, error: 'Document not found.' }
@@ -394,7 +371,6 @@ export async function saveCampusEventAction(
     const event = await upsertCampusEvent(
       {
         ...parsed.data,
-        college: mentor.college,
         startAt,
         endAt: parseOptionalDate(parsed.data.endAt),
         registrationDeadline: parseOptionalDate(
@@ -430,8 +406,7 @@ export async function updateCampusEventStatusAction(input: {
     const event = await updateCampusEventStatus(
       input.eventId,
       input.status,
-      mentor.id,
-      mentor.college
+      mentor.id
     )
     if (!event) {
       return { success: false, error: 'Event not found.' }
@@ -467,7 +442,6 @@ export async function saveOfficialPortalAction(
   try {
     const portal = await upsertOfficialPortal(
       {
-        college: mentor.college,
         portalKey: parsed.data.portalKey,
         name: parsed.data.name,
         authority: parsed.data.authority,
@@ -498,7 +472,7 @@ export async function seedOfficialPortalsAction() {
   }
 
   try {
-    const portals = await seedDefaultOfficialPortals(mentor.college, mentor.id)
+    const portals = await seedDefaultOfficialPortals(mentor.id)
     return { success: true, portals }
   } catch (error) {
     return {
@@ -528,10 +502,7 @@ export async function crawlOfficialUrlAction(
   }
 
   try {
-    const result = await crawlAndIngestOfficialUrl(
-      { ...parsed.data, college: mentor.college },
-      mentor.id
-    )
+    const result = await crawlAndIngestOfficialUrl(parsed.data, mentor.id)
     return {
       success: true,
       deduplicated: result.deduplicated,
@@ -561,25 +532,16 @@ export async function flagDocumentCitationAction(input: {
     const [doc] = await db
       .select()
       .from(knowledgeDocuments)
-      .where(
-        and(
-          eq(knowledgeDocuments.id, input.documentId),
-          eq(knowledgeDocuments.college, mentor.college)
-        )
-      )
+      .where(eq(knowledgeDocuments.id, input.documentId))
       .limit(1)
-    if (!doc) {
-      return { success: false, error: 'Document not found.' }
-    }
 
     const flagged = await recordUnansweredQuery({
-      college: mentor.college,
       userId: mentor.id,
       query:
         input.query?.trim() || doc?.title || `Document ${input.documentId}`,
       domain: doc?.domain ?? 'general',
       reason: input.reason.trim() || 'Flagged as outdated / inaccurate',
-      flaggedDocumentId: doc.id,
+      flaggedDocumentId: doc?.id ?? input.documentId,
       kind: 'citation_flag'
     })
 
@@ -612,8 +574,7 @@ export async function resolveUnansweredQueryAction(input: {
     const updated = await resolveUnansweredQuery(
       input.id,
       input.status,
-      mentor.id,
-      mentor.college
+      mentor.id
     )
     if (!updated) {
       return { success: false, error: 'Query log entry not found.' }
