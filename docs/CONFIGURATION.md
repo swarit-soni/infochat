@@ -50,7 +50,7 @@ This command applies all migrations from the `drizzle/` directory. Docker runs m
 
 ### Fixed Universal Model
 
-Sera enforces **Google Gemini 3.1 Flash-Lite** (`google:gemini-3.1-flash-lite`) as the fixed, universal model for all users across all environments (`local`, `docker`, and `cloud`) and search modes (`quick` and `adaptive`). Model selection is removed from both the user interface and runtime configuration.
+Sera enforces **Google Gemini 3.5 Flash-Lite** (`google:gemini-3.5-flash-lite`) as the fixed, universal model for all users across all environments (`local`, `docker`, and `cloud`) and search modes (`quick` and `adaptive`). Model selection is removed from both the user interface and runtime configuration.
 
 ### Required Provider Key
 
@@ -61,7 +61,7 @@ GOOGLE_GENERATIVE_AI_API_KEY=[YOUR_API_KEY]
 ```
 
 > [!NOTE]
-> `config/models/cloud.json`, `lib/config/default-model.ts`, and `lib/utils/model-selection.ts` all pin `google:gemini-3.1-flash-lite` so user cookies or alternative provider keys cannot override the model.
+> `config/models/cloud.json`, `lib/config/default-model.ts`, and `lib/utils/model-selection.ts` all pin `google:gemini-3.5-flash-lite` so user cookies or alternative provider keys cannot override the model.
 
 ## Search Providers
 

@@ -2,14 +2,14 @@
   "version": 2,
   "models": {
     "quick": {
-      "id": "gemini-3.1-flash-lite",
-      "name": "Gemini 3.1 Flash-Lite",
+      "id": "gemini-3.5-flash-lite",
+      "name": "Gemini 3.5 Flash-Lite",
       "provider": "Google",
       "providerId": "google"
     },
     "adaptive": {
-      "id": "gemini-3.1-flash-lite",
-      "name": "Gemini 3.1 Flash-Lite",
+      "id": "gemini-3.5-flash-lite",
+      "name": "Gemini 3.5 Flash-Lite",
       "provider": "Google",
       "providerId": "google"
     }

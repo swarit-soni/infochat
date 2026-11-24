@@ -415,7 +415,7 @@ async function runLlmExtraction(
     }
 
     const result = await generateText({
-      model: getModel('google:gemini-3.1-flash-lite'),
+      model: getModel('google:gemini-3.5-flash-lite'),
       output: Output.object({
         schema: urgentExtractionSchema,
         name: 'CampusUrgentUpdateExtraction',
@@ -433,7 +433,7 @@ async function runLlmExtraction(
     return result.output
   } catch (error) {
     console.warn(
-      '[RAG] Gemini 3.1 Flash-Lite normalization failed, using heuristic fallback:',
+      '[RAG] Gemini 3.5 Flash-Lite normalization failed, using heuristic fallback:',
       error instanceof Error ? error.message : String(error)
     )
     return null
@@ -443,7 +443,7 @@ async function runLlmExtraction(
 /**
  * Five-stage Urgent Update & Multimodal Normalization Pipeline:
  * 1. Content-hash deduplication & provenance tagging
- * 2. Gemini 3.1 Flash-Lite triage, multimodal OCR, PII/noise filtering
+ * 2. Gemini 3.5 Flash-Lite triage, multimodal OCR, PII/noise filtering
  * 3. Sender trust gate (Mentor / Broadcast Space -> active, CR forward -> pending_review)
  * 4. Effective date & ephemeral TTL calculation
  */

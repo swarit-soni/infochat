@@ -52,6 +52,7 @@ const MODEL_TO_ENCODING: Record<string, TiktokenEncoding> = {
   'claude-3-5-haiku-20241022': 'cl100k_base',
   'gemini-3-flash-preview': 'cl100k_base', // Use GPT-4 tokenizer as approximation for Gemini
   'gemini-3.1-flash-lite': 'cl100k_base',
+  'gemini-3.5-flash-lite': 'cl100k_base',
   'gemini-2.5-flash': 'cl100k_base',
   'gemini-2.5-pro': 'cl100k_base',
   'gemini-4-hydrogen': 'cl100k_base',
