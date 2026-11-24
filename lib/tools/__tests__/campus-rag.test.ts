@@ -1,3 +1,4 @@
+import { modelMessageSchema } from 'ai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createCitationLabelAllocator } from '@/lib/utils/citation'
@@ -106,6 +107,59 @@ describe('createCampusRagTools', () => {
       ) as any
     )
     expect(portalOut.results[0].label).toBe('S2')
+  })
+
+  it('gives the model JSON-safe output when portal rows carry Date fields', async () => {
+    const lastVerifiedAt = new Date('2026-11-20T10:00:00.000Z')
+    mocks.retrieveOfficialPortals.mockResolvedValue([
+      {
+        id: 'portal_jecrc_erp',
+        portalKey: 'jecrc_erp',
+        name: 'JECRC ERP Portal',
+        authority: 'jecrc',
+        url: 'https://jecrcuniversity.edu.in/erp',
+        requiresLogin: 1,
+        capabilities: 'Attendance and fee receipts',
+        navigationSteps: 'Sign in with enrollment ID',
+        supportContact: null,
+        lastVerifiedAt,
+        createdAt: lastVerifiedAt,
+        updatedAt: lastVerifiedAt
+      }
+    ])
+
+    const tools = createCampusRagTools({
+      labelAllocator: createCitationLabelAllocator(1)
+    })
+    const output = await collectGeneratorResult<any>(
+      tools.getOfficialPortalLinks.execute!(
+        { query: 'contact placement cell' },
+        { toolCallId: 'tc-portal', messages: [], context: {} }
+      ) as any
+    )
+    const modelOutput = await tools.getOfficialPortalLinks.toModelOutput!({
+      toolCallId: 'tc-portal',
+      input: { query: 'contact placement cell' },
+      output
+    } as any)
+
+    expect((modelOutput as any).value.portals[0].lastVerifiedAt).toBe(
+      '2026-11-20T10:00:00.000Z'
+    )
+    // The next model step validates tool results against this schema; a Date
+    // here fails the whole turn with AI_InvalidPromptError.
+    const parsed = modelMessageSchema.safeParse({
+      role: 'tool',
+      content: [
+        {
+          type: 'tool-result',
+          toolCallId: 'tc-portal',
+          toolName: 'getOfficialPortalLinks',
+          output: modelOutput
+        }
+      ]
+    })
+    expect(parsed.success).toBe(true)
   })
 
   it('enforces official domain allowlist in searchOfficialWeb fallback', async () => {
