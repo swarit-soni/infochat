@@ -74,12 +74,16 @@ interface ChatHistorySearchProps {
   // ARIA (aria-activedescendant) onto the search input, which lives outside
   // the Command scope and therefore cannot use cmdk's own CommandInput.
   onActiveValueChange?: (value: string) => void
+  // Reports whether a search request (main or thinking) is in flight, so
+  // the parent can show a loading indicator in the search input.
+  onLoadingChange?: (loading: boolean) => void
 }
 
 export function ChatHistorySearch({
   query,
   refreshKey,
-  onActiveValueChange
+  onActiveValueChange,
+  onLoadingChange
 }: ChatHistorySearchProps) {
   const router = useRouter()
   const [results, setResults] = useState<SearchResponse | null>(null)
@@ -247,6 +251,13 @@ export function ChatHistorySearch({
       void handleSearchThinking()
     }
   }, [refreshKey, thinkingRequested, handleSearchThinking, query])
+
+  useEffect(() => {
+    onLoadingChange?.(isSearching || isSearchingThinking)
+  }, [isSearching, isSearchingThinking, onLoadingChange])
+
+  // Unmounting (leaving search mode) must not leave the indicator spinning
+  useEffect(() => () => onLoadingChange?.(false), [onLoadingChange])
 
   const openChat = useCallback(
     (chatId: string) => {

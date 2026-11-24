@@ -70,7 +70,8 @@ const originalEnv = {
   R2_SIGNED_URL_STABILITY_WINDOW_SECONDS:
     process.env.R2_SIGNED_URL_STABILITY_WINDOW_SECONDS,
   R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
-  S3_ENDPOINT: process.env.S3_ENDPOINT
+  S3_ENDPOINT: process.env.S3_ENDPOINT,
+  S3_REGION: process.env.S3_REGION
 }
 
 async function importR2Client() {
@@ -92,6 +93,7 @@ describe('R2 client', () => {
     delete process.env.R2_SIGNED_URL_STABILITY_WINDOW_SECONDS
     process.env.S3_ENDPOINT = 'https://r2.example.com'
     delete process.env.R2_ACCOUNT_ID
+    delete process.env.S3_REGION
   })
 
   afterEach(() => {
@@ -175,6 +177,22 @@ describe('R2 client', () => {
     expect((s3Mocks.getSignedUrl.mock.calls[0][1] as any).input).toEqual({
       Bucket: 'test-bucket',
       Key: 'user-id/file.png'
+    })
+  })
+
+  it('signs for the auto region unless S3_REGION is set', async () => {
+    const first = await importR2Client()
+    first.getR2Client()
+    expect((s3Mocks.S3Client.mock.calls[0] as unknown[])[0]).toMatchObject({
+      region: 'auto',
+      forcePathStyle: true
+    })
+
+    process.env.S3_REGION = 'ap-south-1'
+    const second = await importR2Client()
+    second.getR2Client()
+    expect((s3Mocks.S3Client.mock.calls[1] as unknown[])[0]).toMatchObject({
+      region: 'ap-south-1'
     })
   })
 

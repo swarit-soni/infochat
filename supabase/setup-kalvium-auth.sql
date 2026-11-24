@@ -126,6 +126,8 @@ CREATE POLICY "supabase_auth_admin_read_nonprod_mentor_allowlist"
 -- 3. Supabase Auth "Before User Created" Hook
 -- Configure in Supabase Dashboard -> Authentication -> Hooks -> Before User Created:
 --   Postgres Function: public.hook_restrict_kalvium_signup
+-- Any Google account may sign up; Kalvium domains only decide the profile type
+-- (see the auth.users sync trigger below). Non-Google providers are rejected.
 CREATE OR REPLACE FUNCTION public.hook_restrict_kalvium_signup(event jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -133,10 +135,6 @@ SET search_path = ''
 AS $$
 DECLARE
   auth_provider text;
-  user_email text;
-  email_local text;
-  email_domain text;
-  is_nonprod_allowlisted boolean;
 BEGIN
   auth_provider := lower(coalesce(event->'user'->'app_metadata'->>'provider', ''));
   IF auth_provider <> 'google' THEN
@@ -144,40 +142,7 @@ BEGIN
       'error',
       jsonb_build_object(
         'http_code', 403,
-        'message', 'Only @kalvium.com and @kalvium.community Google accounts are allowed.'
-      )
-    );
-  END IF;
-
-  user_email := lower(trim(coalesce(event->'user'->>'email', '')));
-  email_local := split_part(user_email, '@', 1);
-  email_domain := split_part(user_email, '@', 2);
-
-  IF email_local = ''
-     OR (length(user_email) - length(replace(user_email, '@', ''))) <> 1 THEN
-    RETURN jsonb_build_object(
-      'error',
-      jsonb_build_object(
-        'http_code', 403,
-        'message', 'Only @kalvium.com and @kalvium.community Google accounts are allowed.'
-      )
-    );
-  END IF;
-
-  SELECT EXISTS (
-    SELECT 1
-    FROM private.nonprod_mentor_allowlist
-    WHERE email = user_email
-  )
-  INTO is_nonprod_allowlisted;
-
-  IF email_domain NOT IN ('kalvium.com', 'kalvium.community')
-     AND NOT coalesce(is_nonprod_allowlisted, false) THEN
-    RETURN jsonb_build_object(
-      'error',
-      jsonb_build_object(
-        'http_code', 403,
-        'message', 'Only @kalvium.com and @kalvium.community Google accounts are allowed.'
+        'message', 'Please sign in with a Google account.'
       )
     );
   END IF;

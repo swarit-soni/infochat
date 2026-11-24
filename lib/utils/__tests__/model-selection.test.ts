@@ -31,7 +31,7 @@ describe('selectModel', () => {
     )
   })
 
-  it('always returns the fixed Gemini 3.1 Flash-Lite model', async () => {
+  it('always returns the fixed Gemini 3.5 Flash-Lite model', async () => {
     const result = await selectModel({
       searchMode: 'quick',
       cookieStore: createCookieStore()
@@ -40,8 +40,8 @@ describe('selectModel', () => {
     expect(result).toEqual(FIXED_MODEL)
     expect(result).toEqual(DEFAULT_MODEL)
     expect(result).toEqual({
-      id: 'gemini-3.1-flash-lite',
-      name: 'Gemini 3.1 Flash-Lite',
+      id: 'gemini-3.5-flash-lite',
+      name: 'Gemini 3.5 Flash-Lite',
       provider: 'Google',
       providerId: 'google'
     })

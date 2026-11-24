@@ -26,10 +26,6 @@ vi.mock('../artifact/artifact-context', () => ({
   useArtifact: () => ({ close: vi.fn() })
 }))
 
-vi.mock('../action-buttons', () => ({
-  ActionButtons: () => <div data-testid="suggestions" />
-}))
-
 vi.mock('../library/library-context', () => ({
   useLibrary: () => ({
     upsertCachedFile: vi.fn()
@@ -72,6 +68,46 @@ describe('ChatPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     deleteCookie('searchMode')
+  })
+
+  test('keeps the input editable while answering but holds the send until done', () => {
+    const handleSubmit = vi.fn((e: React.FormEvent) => e.preventDefault())
+    const handleInputChange = vi.fn()
+    const props = {
+      input: 'next question',
+      handleInputChange,
+      handleSubmit,
+      messages: [
+        { id: 'u1', role: 'user' as const, parts: [] },
+        { id: 'a1', role: 'assistant' as const, parts: [] }
+      ],
+      setMessages: vi.fn(),
+      stop: vi.fn(),
+      append: vi.fn(),
+      showScrollToBottomButton: false,
+      uploadedFiles: [],
+      setUploadedFiles: vi.fn(),
+      quotedContexts: [],
+      setQuotedContexts: vi.fn(),
+      noteContexts: [],
+      setNoteContexts: vi.fn(),
+      chatId: 'chat',
+      scrollContainerRef: React.createRef<HTMLDivElement>()
+    }
+    const view = render(<ChatPanel {...props} status="streaming" />)
+
+    const input = screen.getByRole('textbox')
+    expect(input).not.toBeDisabled()
+    fireEvent.change(input, { target: { value: 'next question!' } })
+    expect(handleInputChange).toHaveBeenCalled()
+
+    fireEvent.keyDown(input, { key: 'Enter' })
+    fireEvent.submit(input.closest('form')!)
+    expect(handleSubmit).not.toHaveBeenCalled()
+
+    view.rerender(<ChatPanel {...props} status="ready" />)
+    fireEvent.submit(screen.getByRole('textbox').closest('form')!)
+    expect(handleSubmit).toHaveBeenCalledOnce()
   })
 
   test.each(['sidebar', 'shortcut'])(
@@ -182,13 +218,11 @@ describe('ChatPanel', () => {
     expect(
       screen.queryByRole('heading', { name: "Curious? Let's get into it." })
     ).not.toBeInTheDocument()
-    expect(screen.queryByTestId('suggestions')).not.toBeInTheDocument()
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
     view.rerender(<ChatPanel {...props} />)
     expect(
       screen.getByRole('heading', { name: "Curious? Let's get into it." })
     ).toBeInTheDocument()
-    expect(screen.getByTestId('suggestions')).toBeInTheDocument()
     expect(screen.getByRole('textbox')).toBeInTheDocument()
   })
 

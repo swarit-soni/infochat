@@ -14,7 +14,7 @@ Sera helps students and mentors quickly find accurate information about admissio
 
 ## Features
 
-- Google-only authentication restricted to Kalvium accounts (`@kalvium.com` for Mentors, `@kalvium.community` for Students)
+- Google sign-in open to any Google account; Kalvium accounts get a role (`@kalvium.com` for Mentors, `@kalvium.community` for Students)
 - Powered by Gemini 4 Hydrogen (`google:gemini-4-hydrogen`) via the Vercel AI SDK, with multi-provider support (Google, OpenAI, Anthropic, Ollama, Vercel AI Gateway, OpenAI-compatible providers)
 - Search modes: Quick and Adaptive
 - Grounded answers with inline citations and generative UI components

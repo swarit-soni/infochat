@@ -88,6 +88,37 @@ describe('ChatHistorySearch', () => {
     expect(fetchMock.mock.calls[0][0]).toContain('/api/search?q=ro')
   })
 
+  it('reports loading while a search is in flight', async () => {
+    const response = deferred<unknown>()
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(response.promise))
+    const onLoadingChange = vi.fn()
+
+    const ui = render(
+      <ChatHistorySearch query="rob" onLoadingChange={onLoadingChange} />
+    )
+    await flush(300)
+    expect(onLoadingChange).toHaveBeenLastCalledWith(true)
+
+    await act(async () => {
+      response.resolve({
+        ok: true,
+        status: 200,
+        json: async () => emptyResponse
+      })
+    })
+    await flush(0)
+    expect(onLoadingChange).toHaveBeenLastCalledWith(false)
+
+    onLoadingChange.mockClear()
+    ui.rerender(
+      <ChatHistorySearch query="robert" onLoadingChange={onLoadingChange} />
+    )
+    await flush(0)
+    expect(onLoadingChange).toHaveBeenLastCalledWith(true)
+    ui.unmount()
+    expect(onLoadingChange).toHaveBeenLastCalledWith(false)
+  })
+
   it('drops a stale response that arrives after a newer query resolved', async () => {
     const robResponse = deferred<unknown>()
     const robertResponse = deferred<unknown>()

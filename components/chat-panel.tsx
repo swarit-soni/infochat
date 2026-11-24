@@ -46,6 +46,7 @@ import {
 } from '@/lib/utils/cookies'
 import { faviconUrl } from '@/lib/utils/favicon'
 import { stripMarkdownText } from '@/lib/utils/markdown'
+import { readUploadError } from '@/lib/utils/upload-error'
 
 import { useArtifact } from './artifact/artifact-context'
 import { useLibrary } from './library/library-context'
@@ -66,13 +67,11 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from './ui/tooltip'
-import { ActionButtons } from './action-buttons'
 import { MessageNavigationDots } from './message-navigation-dots'
 import { SearchModeSelector } from './search-mode-selector'
 import { UploadedFileList } from './uploaded-file-list'
 
 // Constants for timing delays
-const INPUT_UPDATE_DELAY_MS = 10 // Delay to ensure input value is updated before form submission
 // Only paste events at/over this size become a content card, so short/normal
 // pastes stay inline. Sized by chars, not lines — a line-count trigger carded
 // short, many-line pastes that read fine inline and were mostly reverted.
@@ -340,7 +339,7 @@ export function ChatPanel({
             })
 
             if (!res.ok) {
-              throw new Error('Upload failed')
+              throw new Error(await readUploadError(res))
             }
 
             const { file: uploaded } = await res.json()
@@ -363,7 +362,9 @@ export function ChatPanel({
               )
             )
           } catch (e) {
-            toast.error(`Failed to upload ${uf.file.name}`)
+            toast.error(`Failed to upload ${uf.file.name}`, {
+              description: e instanceof Error ? e.message : undefined
+            })
             setUploadedFiles(prev =>
               prev.map(f =>
                 f.file === uf.file ? { ...f, status: 'error' } : f
@@ -469,6 +470,12 @@ export function ChatPanel({
       <form
         {...hiddenBySettings}
         onSubmit={e => {
+          // The input stays editable while Sera answers so the next message
+          // can be drafted, but it is only sent once the answer is done.
+          if (isLoading || isToolInvocationInProgress()) {
+            e.preventDefault()
+            return
+          }
           // Pasted attachments (content cards / URL chips) are sent as
           // structured data parts alongside the instruction text part — no
           // in-band markers. The server maps them to the model prompt.
@@ -787,7 +794,7 @@ export function ChatPanel({
             placeholder={messages.length > 0 ? 'Reply...' : 'Ask anything...'}
             spellCheck={false}
             value={input}
-            disabled={disabled || isLoading || isToolInvocationInProgress()}
+            disabled={disabled}
             className="resize-none w-full min-h-12 bg-transparent border-0 p-3 md:p-4 text-sm placeholder:text-muted-foreground focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
             onChange={handleInputChange}
             onPaste={e => {
@@ -825,7 +832,11 @@ export function ChatPanel({
 
               // Plain Enter (no modifiers) → submit
               if (!e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey) {
-                if (!hasPendingInput) {
+                if (
+                  !hasPendingInput ||
+                  isLoading ||
+                  isToolInvocationInProgress()
+                ) {
                   e.preventDefault()
                   return
                 }
@@ -966,35 +977,6 @@ export function ChatPanel({
             </div>
           </div>
         </div>
-
-        {/* Action buttons for prompt suggestions */}
-        {messages.length === 0 && (
-          <ActionButtons
-            onSelectPrompt={message => {
-              // Set the input value and submit
-              handleInputChange({
-                target: { value: message }
-              } as React.ChangeEvent<HTMLTextAreaElement>)
-              // Submit the form after a small delay to ensure the input is updated
-              setTimeout(() => {
-                inputRef.current?.form?.requestSubmit()
-                // Reset focus state after action button submission
-                setIsInputFocused(false)
-                inputRef.current?.blur()
-              }, INPUT_UPDATE_DELAY_MS)
-            }}
-            onCategoryClick={category => {
-              // Set the category in the input
-              handleInputChange({
-                target: { value: category }
-              } as React.ChangeEvent<HTMLTextAreaElement>)
-              // Focus the input
-              inputRef.current?.focus()
-            }}
-            inputRef={inputRef}
-            className="mt-2 hidden md:block"
-          />
-        )}
       </form>
       <LibraryPickerDialog
         open={isLibraryPickerOpen}

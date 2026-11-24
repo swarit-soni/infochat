@@ -714,12 +714,14 @@ const SidebarMenuSkeleton = React.forwardRef<
     >
       {showIcon && (
         <Skeleton
-          className="size-4 rounded-md"
+          className="size-4 rounded-md bg-sidebar-accent"
           data-sidebar="menu-skeleton-icon"
         />
       )}
       <Skeleton
-        className="h-4 max-w-(--skeleton-width) flex-1"
+        // bg-muted matches the sidebar background in both themes, which
+        // would make the skeleton invisible; use the sidebar accent instead.
+        className="h-4 max-w-(--skeleton-width) flex-1 bg-sidebar-accent"
         data-sidebar="menu-skeleton-text"
         style={
           {

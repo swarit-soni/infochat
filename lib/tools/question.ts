@@ -15,4 +15,4 @@ export function createQuestionTool(fullModel: string) {
 }
 
 // Default export for backward compatibility, using the fixed universal model
-export const askQuestionTool = createQuestionTool('google:gemini-3.1-flash-lite')
+export const askQuestionTool = createQuestionTool('google:gemini-3.5-flash-lite')

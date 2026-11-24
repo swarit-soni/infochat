@@ -11,7 +11,7 @@ interface ModelSelectionParams {
 }
 
 /**
- * Returns the fixed universal model (Gemini 3.1 Flash-Lite) for all users
+ * Returns the fixed universal model (Gemini 3.5 Flash-Lite) for all users
  * when the Google provider is enabled. User and mode-based model selection
  * are disabled.
  */

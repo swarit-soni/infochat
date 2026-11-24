@@ -23,6 +23,7 @@ import { updateSession } from '@/lib/supabase/middleware'
 
 describe('supabase provider', () => {
   const getUser = vi.fn()
+  const getClaims = vi.fn()
   const signInWithOAuth = vi.fn()
   const signOut = vi.fn()
 
@@ -32,6 +33,7 @@ describe('supabase provider', () => {
     vi.mocked(createClient).mockResolvedValue({
       auth: {
         getUser,
+        getClaims,
         signInWithOAuth,
         signOut
       }
@@ -108,19 +110,28 @@ describe('supabase provider', () => {
       })
     })
 
-    it('returns null for disallowed email domains or non-Google providers', async () => {
+    it('resolves any Google account without a Kalvium user type', async () => {
       getUser.mockResolvedValueOnce({
         data: {
           user: {
             id: 'u-3',
-            email: 'user@gmail.com',
+            email: 'User@Gmail.com',
             app_metadata: { provider: 'google' },
             user_metadata: {}
           }
         }
       })
-      await expect(supabaseAuthProvider.getCurrentUser()).resolves.toBeNull()
+      await expect(
+        supabaseAuthProvider.getCurrentUser()
+      ).resolves.toMatchObject({
+        id: 'u-3',
+        email: 'user@gmail.com',
+        userType: null,
+        role: null
+      })
+    })
 
+    it('returns null for non-Google providers', async () => {
       getUser.mockResolvedValueOnce({
         data: {
           user: {
@@ -132,6 +143,67 @@ describe('supabase provider', () => {
         }
       })
       await expect(supabaseAuthProvider.getCurrentUser()).resolves.toBeNull()
+    })
+  })
+
+  describe('getCurrentUserId', () => {
+    it('returns the id from locally verified claims without calling getUser', async () => {
+      getClaims.mockResolvedValueOnce({
+        data: {
+          claims: {
+            sub: 'u-1',
+            email: 'student@kalvium.community',
+            app_metadata: { provider: 'google', providers: ['google'] }
+          }
+        },
+        error: null
+      })
+
+      await expect(supabaseAuthProvider.getCurrentUserId?.()).resolves.toBe(
+        'u-1'
+      )
+      expect(getUser).not.toHaveBeenCalled()
+    })
+
+    it('returns undefined without a session', async () => {
+      getClaims.mockResolvedValueOnce({ data: null, error: null })
+
+      await expect(
+        supabaseAuthProvider.getCurrentUserId?.()
+      ).resolves.toBeUndefined()
+    })
+
+    it('returns the id for Google accounts outside the Kalvium domains', async () => {
+      getClaims.mockResolvedValueOnce({
+        data: {
+          claims: {
+            sub: 'u-3',
+            email: 'user@gmail.com',
+            app_metadata: { provider: 'google' }
+          }
+        },
+        error: null
+      })
+      await expect(supabaseAuthProvider.getCurrentUserId?.()).resolves.toBe(
+        'u-3'
+      )
+    })
+
+    it('returns undefined for non-Google providers', async () => {
+      getClaims.mockResolvedValueOnce({
+        data: {
+          claims: {
+            sub: 'u-4',
+            email: 'mentor@kalvium.com',
+            app_metadata: { provider: 'email', providers: ['email'] },
+            user_metadata: { provider: 'google' }
+          }
+        },
+        error: null
+      })
+      await expect(
+        supabaseAuthProvider.getCurrentUserId?.()
+      ).resolves.toBeUndefined()
     })
   })
 

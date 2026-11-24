@@ -48,12 +48,14 @@ describe('LoginForm', () => {
     document.cookie = 'auth_next=; path=/; max-age=0; SameSite=Lax'
   })
 
-  it('renders student-only Google sign-in card with a small link to mentor login', () => {
+  it('renders an open Google sign-in card with a small link to mentor login', () => {
     renderForm()
 
     expect(screen.getByText('Sign in to Sera')).toBeInTheDocument()
-    expect(screen.getByText('@kalvium.community')).toBeInTheDocument()
-    expect(screen.getByText('Student')).toBeInTheDocument()
+    expect(
+      screen.getByText('Sign in with your Google account.')
+    ).toBeInTheDocument()
+    expect(screen.queryByText('@kalvium.community')).not.toBeInTheDocument()
     expect(screen.queryByText('@kalvium.com')).not.toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'Sign In with Google' })
@@ -72,7 +74,7 @@ describe('LoginForm', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('renders mentor sign-in card in mentor mode with link back to student login and preserves next', () => {
+  it('renders mentor sign-in card in mentor mode with link back to regular login and preserves next', () => {
     renderForm({}, '/mentor', null, false, 'mentor')
 
     expect(screen.getByText('Mentor sign in')).toBeInTheDocument()
@@ -80,7 +82,7 @@ describe('LoginForm', () => {
     expect(screen.getByText('Mentor')).toBeInTheDocument()
     expect(screen.queryByText('@kalvium.community')).not.toBeInTheDocument()
 
-    const studentLink = screen.getByRole('link', { name: 'Student login' })
+    const studentLink = screen.getByRole('link', { name: 'Regular login' })
     expect(studentLink).toHaveAttribute('href', '/auth/login?next=%2Fmentor')
   })
 
