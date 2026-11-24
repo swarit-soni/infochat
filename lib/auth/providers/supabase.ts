@@ -1,9 +1,11 @@
+import { cache } from 'react'
 import { type NextRequest, NextResponse } from 'next/server'
 
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 import {
   getCollegeIdentityFromEmail,
+  isAllowedEmail,
   isGoogleAuthUser,
   normalizeEmail
 } from '@/lib/auth/domain'
@@ -28,16 +30,22 @@ function metaString(
 }
 
 export function toAppUser(user: SupabaseUser): AppUser | null {
-  const identity = getCollegeIdentityFromEmail(user.email)
-  if (!identity || !isGoogleAuthUser(user)) {
+  const email = normalizeEmail(user.email)
+  if (!email || !isGoogleAuthUser(user)) {
     return null
   }
-  const { userType, college } = identity
+  // Any Google account may sign in. A college email domain decides mentor
+  // access and, for students, their college; other accounts get neither here
+  // (their self-reported college comes from user_profiles, see
+  // getCurrentUser).
+  const identity = getCollegeIdentityFromEmail(email)
+  const userType = identity?.userType ?? null
+  const college = identity?.college ?? null
 
   const metadata = (user.user_metadata ?? {}) as Record<string, unknown>
   return {
     id: user.id,
-    email: normalizeEmail(user.email),
+    email,
     name: metaString(metadata, 'full_name', 'name'),
     image: metaString(metadata, 'avatar_url', 'picture'),
     createdAt: user.created_at ?? null,
@@ -46,6 +54,42 @@ export function toAppUser(user: SupabaseUser): AppUser | null {
     college
   }
 }
+
+// The full user (getUser) is one Auth server round trip; cache() shares it
+// across the layout, page and metadata of a single server render.
+const getCurrentSupabaseUser = cache(async (): Promise<AppUser | null> => {
+  if (!hasSupabasePublicConfig()) {
+    return null // Supabase is not configured
+  }
+
+  const supabase = await createClient()
+  const { data } = await supabase.auth.getUser()
+  return data.user ? toAppUser(data.user) : null
+})
+
+// Most callers only need the id. getClaims() verifies the session JWT locally
+// against the project's cached JWKS instead of calling the Auth server, and
+// the same email / Google-provider gate as toAppUser is applied to the
+// claims so an id is only returned for a user getCurrentUser would accept.
+const getCurrentSupabaseUserId = cache(
+  async (): Promise<string | undefined> => {
+    if (!hasSupabasePublicConfig()) {
+      return undefined
+    }
+
+    const supabase = await createClient()
+    const { data } = await supabase.auth.getClaims()
+    const claims = data?.claims
+    if (
+      !claims?.sub ||
+      !isAllowedEmail(claims.email) ||
+      !isGoogleAuthUser({ app_metadata: claims.app_metadata })
+    ) {
+      return undefined
+    }
+    return claims.sub
+  }
+)
 
 export const supabaseAuthProvider: AuthProvider = {
   name: 'supabase',
@@ -58,15 +102,9 @@ export const supabaseAuthProvider: AuthProvider = {
     share: true
   },
 
-  async getCurrentUser(): Promise<AppUser | null> {
-    if (!hasSupabasePublicConfig()) {
-      return null // Supabase is not configured
-    }
+  getCurrentUser: getCurrentSupabaseUser,
 
-    const supabase = await createClient()
-    const { data } = await supabase.auth.getUser()
-    return data.user ? toAppUser(data.user) : null
-  },
+  getCurrentUserId: getCurrentSupabaseUserId,
 
   async handleSession(request: NextRequest): Promise<NextResponse> {
     if (!hasSupabasePublicConfig()) {

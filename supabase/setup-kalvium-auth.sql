@@ -24,18 +24,14 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
   avatar_url text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT user_profiles_email_unique UNIQUE (email),
-  CONSTRAINT user_profiles_domain_matches_type CHECK (
-    (
-      user_type = 'mentor'
-      AND split_part(lower(email), '@', 2) = 'kalvium.com'
-    )
-    OR (
-      user_type = 'student'
-      AND split_part(lower(email), '@', 2) = 'kalvium.community'
-    )
-  )
+  CONSTRAINT user_profiles_email_unique UNIQUE (email)
 );
+
+-- College membership (drizzle/0024_add_college_tenancy.sql). Any Google
+-- account may sign in, so the old Kalvium-only domain check is dropped.
+ALTER TABLE public.user_profiles ADD COLUMN IF NOT EXISTS college varchar(32);
+ALTER TABLE public.user_profiles ADD COLUMN IF NOT EXISTS onboarded_at timestamp with time zone;
+ALTER TABLE public.user_profiles DROP CONSTRAINT IF EXISTS user_profiles_domain_matches_type;
 
 CREATE INDEX IF NOT EXISTS user_profiles_user_type_idx
   ON public.user_profiles USING btree (user_type);
@@ -126,6 +122,8 @@ CREATE POLICY "supabase_auth_admin_read_nonprod_mentor_allowlist"
 -- 3. Supabase Auth "Before User Created" Hook
 -- Configure in Supabase Dashboard -> Authentication -> Hooks -> Before User Created:
 --   Postgres Function: public.hook_restrict_kalvium_signup
+-- Any Google account may sign up; Kalvium domains only decide the profile type
+-- (see the auth.users sync trigger below). Non-Google providers are rejected.
 CREATE OR REPLACE FUNCTION public.hook_restrict_kalvium_signup(event jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -133,10 +131,6 @@ SET search_path = ''
 AS $$
 DECLARE
   auth_provider text;
-  user_email text;
-  email_local text;
-  email_domain text;
-  is_nonprod_allowlisted boolean;
 BEGIN
   auth_provider := lower(coalesce(event->'user'->'app_metadata'->>'provider', ''));
   IF auth_provider <> 'google' THEN
@@ -144,40 +138,7 @@ BEGIN
       'error',
       jsonb_build_object(
         'http_code', 403,
-        'message', 'Only @kalvium.com and @kalvium.community Google accounts are allowed.'
-      )
-    );
-  END IF;
-
-  user_email := lower(trim(coalesce(event->'user'->>'email', '')));
-  email_local := split_part(user_email, '@', 1);
-  email_domain := split_part(user_email, '@', 2);
-
-  IF email_local = ''
-     OR (length(user_email) - length(replace(user_email, '@', ''))) <> 1 THEN
-    RETURN jsonb_build_object(
-      'error',
-      jsonb_build_object(
-        'http_code', 403,
-        'message', 'Only @kalvium.com and @kalvium.community Google accounts are allowed.'
-      )
-    );
-  END IF;
-
-  SELECT EXISTS (
-    SELECT 1
-    FROM private.nonprod_mentor_allowlist
-    WHERE email = user_email
-  )
-  INTO is_nonprod_allowlisted;
-
-  IF email_domain NOT IN ('kalvium.com', 'kalvium.community')
-     AND NOT coalesce(is_nonprod_allowlisted, false) THEN
-    RETURN jsonb_build_object(
-      'error',
-      jsonb_build_object(
-        'http_code', 403,
-        'message', 'Only @kalvium.com and @kalvium.community Google accounts are allowed.'
+        'message', 'Please sign in with a Google account.'
       )
     );
   END IF;
@@ -249,10 +210,15 @@ BEGIN
     nullif(trim(new.raw_user_meta_data->>'picture'), '')
   );
 
+  -- Kalvium accounts are verified Kalvium members (see lib/colleges). Other
+  -- colleges' profiles, and every other Google account's, are created by the
+  -- app's OAuth callback, which also asks students their enrolled college.
   INSERT INTO public.user_profiles (
     id,
     email,
     user_type,
+    college,
+    onboarded_at,
     name,
     avatar_url
   )
@@ -260,6 +226,8 @@ BEGIN
     new.id::text,
     normalized_email,
     classified_type,
+    'kalvium',
+    now(),
     display_name,
     avatar
   )
@@ -267,6 +235,8 @@ BEGIN
   SET
     email = EXCLUDED.email,
     user_type = EXCLUDED.user_type,
+    college = EXCLUDED.college,
+    onboarded_at = coalesce(public.user_profiles.onboarded_at, now()),
     name = coalesce(EXCLUDED.name, public.user_profiles.name),
     avatar_url = coalesce(EXCLUDED.avatar_url, public.user_profiles.avatar_url),
     updated_at = now();

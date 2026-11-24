@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { upsertUserProfile } from '@/lib/db/actions'
+import { getUserProfile, upsertUserProfile } from '@/lib/db/actions'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 
@@ -17,7 +17,8 @@ vi.mock('@/lib/supabase/admin', () => ({
 }))
 
 vi.mock('@/lib/db/actions', () => ({
-  upsertUserProfile: vi.fn()
+  upsertUserProfile: vi.fn(),
+  getUserProfile: vi.fn()
 }))
 
 describe('GET /auth/oauth', () => {
@@ -32,6 +33,10 @@ describe('GET /auth/oauth', () => {
     signOut.mockResolvedValue({ error: null })
     deleteUser.mockResolvedValue({ data: { user: null }, error: null })
     vi.mocked(upsertUserProfile).mockResolvedValue({} as never)
+    // By default the account already answered the enrolled-college question.
+    vi.mocked(getUserProfile).mockResolvedValue({
+      onboardedAt: new Date('2026-11-01T00:00:00Z')
+    } as never)
     vi.mocked(createClient).mockResolvedValue({
       auth: {
         exchangeCodeForSession,
@@ -95,14 +100,15 @@ describe('GET /auth/oauth', () => {
     )
   })
 
-  it('signs out, deletes user, and redirects when email domain is disallowed', async () => {
+  it('signs in any Google account and sends a new one to the enrolled-college question', async () => {
+    vi.mocked(getUserProfile).mockResolvedValue({ onboardedAt: null } as never)
     getUser.mockResolvedValue({
       data: {
         user: {
-          id: 'user-bad',
+          id: 'user-gmail',
           email: 'user@gmail.com',
           app_metadata: { provider: 'google' },
-          user_metadata: { full_name: 'Bad User' }
+          user_metadata: { full_name: 'Gmail User' }
         }
       },
       error: null
@@ -113,12 +119,20 @@ describe('GET /auth/oauth', () => {
     )
     const response = await GET(request)
 
-    expect(signOut).toHaveBeenCalledTimes(1)
-    expect(deleteUser).toHaveBeenCalledWith('user-bad')
-    expect(upsertUserProfile).not.toHaveBeenCalled()
+    expect(signOut).not.toHaveBeenCalled()
+    expect(deleteUser).not.toHaveBeenCalled()
+    // No verified college: the profile keeps any self-reported college.
+    expect(upsertUserProfile).toHaveBeenCalledWith({
+      id: 'user-gmail',
+      email: 'user@gmail.com',
+      userType: 'student',
+      college: null,
+      name: 'Gmail User',
+      avatarUrl: null
+    })
     expect(response.status).toBe(307)
     expect(response.headers.get('location')).toBe(
-      'http://localhost:3000/auth/login?error=unauthorized_domain'
+      'http://localhost:3000/onboarding/college'
     )
     expect(response.cookies.get('auth_next')?.value).toBe('')
   })
@@ -157,7 +171,7 @@ describe('GET /auth/oauth', () => {
         user: {
           id: 'user-bad',
           email: 'outsider@example.com',
-          app_metadata: { provider: 'google' }
+          app_metadata: { provider: 'email', providers: ['email'] }
         }
       },
       error: null
@@ -204,6 +218,7 @@ describe('GET /auth/oauth', () => {
       id: 'mentor-1',
       email: 'alice@kalvium.com',
       userType: 'mentor',
+      college: 'kalvium',
       name: 'Alice Mentor',
       avatarUrl: 'https://example.com/a.png'
     })
@@ -237,6 +252,7 @@ describe('GET /auth/oauth', () => {
       id: 'student-1',
       email: 'bob@kalvium.community',
       userType: 'student',
+      college: 'kalvium',
       name: 'Bob Student',
       avatarUrl: 'https://img/b.png'
     })
@@ -267,7 +283,7 @@ describe('GET /auth/oauth', () => {
     expect(response.headers.get('location')).toBe('http://localhost:3000/')
   })
 
-  it('allows non-production SERA_MENTOR_EMAILS login in preview without calling upsertUserProfile', async () => {
+  it('allows non-production SERA_MENTOR_EMAILS login in preview as a Kalvium mentor', async () => {
     vi.stubEnv('VERCEL_ENV', 'preview')
     vi.stubEnv('SERA_MENTOR_EMAILS', 'tester@gmail.com')
     getUser.mockResolvedValue({
@@ -292,12 +308,16 @@ describe('GET /auth/oauth', () => {
 
     expect(signOut).not.toHaveBeenCalled()
     expect(deleteUser).not.toHaveBeenCalled()
-    expect(upsertUserProfile).not.toHaveBeenCalled()
+    expect(upsertUserProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ userType: 'mentor', college: 'kalvium' })
+    )
     expect(response.status).toBe(307)
-    expect(response.headers.get('location')).toBe('http://localhost:3000/mentor')
+    expect(response.headers.get('location')).toBe(
+      'http://localhost:3000/mentor'
+    )
   })
 
-  it('rejects SERA_MENTOR_EMAILS external account in production stage', async () => {
+  it('signs in SERA_MENTOR_EMAILS external account in production without mentor access', async () => {
     vi.stubEnv('VERCEL_ENV', 'production')
     vi.stubEnv('SERA_MENTOR_EMAILS', 'tester@gmail.com')
     getUser.mockResolvedValue({
@@ -315,12 +335,86 @@ describe('GET /auth/oauth', () => {
       new NextRequest('http://localhost:3000/auth/oauth?code=good-code')
     )
 
-    expect(signOut).toHaveBeenCalledTimes(1)
-    expect(deleteUser).toHaveBeenCalledWith('test-mentor-1')
-    expect(upsertUserProfile).not.toHaveBeenCalled()
-    expect(response.status).toBe(307)
-    expect(response.headers.get('location')).toBe(
-      'http://localhost:3000/auth/login?error=unauthorized_domain'
+    expect(signOut).not.toHaveBeenCalled()
+    expect(deleteUser).not.toHaveBeenCalled()
+    expect(upsertUserProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ userType: 'student', college: null })
     )
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe('http://localhost:3000/')
+  })
+
+  describe("a college's mentor login", () => {
+    function mentorLoginRequest(college: string) {
+      return new NextRequest(
+        'http://localhost:3000/auth/oauth?code=good-code',
+        { headers: { cookie: `auth_college=${college}` } }
+      )
+    }
+
+    it("admits that college's mentors and lands on its dashboard", async () => {
+      getUser.mockResolvedValue({
+        data: {
+          user: {
+            id: 'mentor-1',
+            email: 'alice@kalvium.com',
+            app_metadata: { provider: 'google' }
+          }
+        },
+        error: null
+      })
+
+      const response = await GET(mentorLoginRequest('kalvium'))
+
+      expect(signOut).not.toHaveBeenCalled()
+      expect(response.headers.get('location')).toBe(
+        'http://localhost:3000/kalvium/mentor'
+      )
+      expect(response.cookies.get('auth_college')?.value).toBe('')
+    })
+
+    it('turns away a mentor of another college without deleting the account', async () => {
+      vi.stubEnv('SERA_JECRC_MENTOR_EMAILS', 'prof@jecrcu.edu.in')
+      getUser.mockResolvedValue({
+        data: {
+          user: {
+            id: 'jecrc-mentor',
+            email: 'prof@jecrcu.edu.in',
+            app_metadata: { provider: 'google' }
+          }
+        },
+        error: null
+      })
+
+      const response = await GET(mentorLoginRequest('kalvium'))
+
+      expect(signOut).toHaveBeenCalled()
+      expect(deleteUser).not.toHaveBeenCalled()
+      expect(upsertUserProfile).not.toHaveBeenCalled()
+      expect(response.headers.get('location')).toBe(
+        'http://localhost:3000/kalvium/auth/mentor?error=wrong_college&college=jecrc'
+      )
+    })
+
+    it('turns away students and other accounts', async () => {
+      getUser.mockResolvedValue({
+        data: {
+          user: {
+            id: 'student-1',
+            email: 'student@jecrcu.edu.in',
+            app_metadata: { provider: 'google' }
+          }
+        },
+        error: null
+      })
+
+      const response = await GET(mentorLoginRequest('jecrc'))
+
+      expect(signOut).toHaveBeenCalled()
+      expect(deleteUser).not.toHaveBeenCalled()
+      expect(response.headers.get('location')).toBe(
+        'http://localhost:3000/jecrc/auth/mentor?error=not_mentor'
+      )
+    })
   })
 })

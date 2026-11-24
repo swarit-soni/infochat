@@ -1,22 +1,29 @@
-import { redirect } from 'next/navigation'
+import { getAuthErrorMessage } from '@/lib/auth/error-messages'
+import { isBetaVersion } from '@/lib/version/semver'
 
-import { getDefaultCollege } from '@/lib/colleges/access'
-import { getCollegeFromPathname } from '@/lib/colleges/registry'
+import { LoginForm } from '@/components/login-form'
 
+import packageJson from '../../../package.json'
+
+// Capabilities and provider selection depend on runtime env (AUTH_PROVIDER);
+// a prerendered login page would bake in build-time values in prebuilt images.
 export const dynamic = 'force-dynamic'
 
-/**
- * Legacy login URL. Each college now has its own login page; send the
- * visitor to the college their destination belongs to (or the default).
- */
-export default async function LegacyStudentLoginPage(props: {
+export default async function Page(props: {
   searchParams: Promise<{ next?: string; error?: string }>
 }) {
   const { next, error } = await props.searchParams
-  const college = getCollegeFromPathname(next) ?? getDefaultCollege()
-  const params = new URLSearchParams()
-  if (next) params.set('next', next)
-  if (error) params.set('error', error)
-  const query = params.size > 0 ? `?${params}` : ''
-  redirect(`/${college}/auth/student${query}`)
+  const initialError = getAuthErrorMessage(error)
+
+  return (
+    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
+      <div className="w-full max-w-sm">
+        <LoginForm
+          next={next}
+          initialError={initialError}
+          isBeta={isBetaVersion(packageJson.version)}
+        />
+      </div>
+    </div>
+  )
 }

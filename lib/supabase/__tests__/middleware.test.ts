@@ -38,7 +38,14 @@ describe('updateSession', () => {
       options: typeof cookieHandlers
     ) => {
       cookieHandlers = options
-      return { auth: { getUser, signOut } } as never
+      // updateSession reads the session through getClaims(); the tests
+      // describe users the way getUser() returns them.
+      const getClaims = async () => {
+        const result = await getUser()
+        const user = result?.data?.user
+        return { data: user ? { claims: user } : null, error: null }
+      }
+      return { auth: { getClaims, signOut } } as never
     }) as never)
   })
 
@@ -132,13 +139,32 @@ describe('updateSession', () => {
     expect(signOut).not.toHaveBeenCalled()
   })
 
-  it('signs out disallowed domain sessions, preserves cleared cookies, and redirects to unauthorized_domain', async () => {
+  it('lets any Google account through, regardless of email domain', async () => {
+    getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: 'user-gmail',
+          email: 'user@gmail.com',
+          app_metadata: { provider: 'google' }
+        }
+      }
+    })
+
+    const response = await updateSession(
+      new NextRequest('http://localhost:3000/search/abc')
+    )
+
+    expect(signOut).not.toHaveBeenCalled()
+    expect(response.headers.get('location')).toBeNull()
+  })
+
+  it('signs out non-Google sessions, preserves cleared cookies, and redirects to unauthorized_domain', async () => {
     getUser.mockResolvedValue({
       data: {
         user: {
           id: 'user-bad',
           email: 'user@gmail.com',
-          app_metadata: { provider: 'google' }
+          app_metadata: { provider: 'github' }
         }
       }
     })

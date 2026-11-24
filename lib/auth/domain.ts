@@ -16,8 +16,7 @@ export const USER_TYPE_LABELS: Readonly<Record<UserType, string>> = {
   student: 'Student'
 }
 
-export const UNAUTHORIZED_DOMAIN_ERROR =
-  "This Google account doesn't belong to any college on Sera. Sign in with your college Google account."
+export const UNAUTHORIZED_DOMAIN_ERROR = 'Please sign in with a Google account.'
 
 export interface AuthUserMetadataContainer {
   app_metadata?: {
@@ -88,12 +87,13 @@ export function getUserTypeFromEmail(
   return resolveCollegeIdentity(email, env)?.userType ?? null
 }
 
-/** Return true when the email belongs to a configured college. */
-export function isAllowedEmail(
-  email: string | null | undefined,
-  env: Record<string, string | undefined> = process.env
-): boolean {
-  return resolveCollegeIdentity(email, env) !== null
+/**
+ * Return true for any structurally valid email address. Sign-in is open to all
+ * Google accounts; college domains only decide mentor access and, for
+ * students on a college domain, their college.
+ */
+export function isAllowedEmail(email: string | null | undefined): boolean {
+  return normalizeEmail(email) !== null
 }
 
 /**

@@ -16,8 +16,11 @@ export function getAuthErrorMessage(
       const owner = isCollegeSlug(context.college)
         ? COLLEGES[context.college].shortName
         : 'another college'
-      return `That Google account belongs to ${owner}. Each college has its own sign-in: use ${owner}'s login page instead.`
+      return `That Google account is a mentor at ${owner}. Each college has its own mentor sign-in: use ${owner}'s mentor login instead.`
     }
+    case 'not_mentor':
+      return "That Google account isn't a mentor account for this college. Students sign in from the regular login."
+
     case 'oauth_failed':
       return 'Google sign-in failed. Please try again.'
     default:

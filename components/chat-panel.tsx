@@ -26,7 +26,6 @@ import {
 import { toast } from 'sonner'
 
 import { captureClient } from '@/lib/analytics/posthog-client'
-import { useCollegeHref } from '@/lib/colleges/use-college'
 import { SHORTCUT_EVENTS } from '@/lib/keyboard-shortcuts'
 import {
   isAdaptiveModeAuthBlocked,
@@ -151,7 +150,6 @@ export function ChatPanel({
   sections = []
 }: ChatPanelProps) {
   const router = useRouter()
-  const collegeHref = useCollegeHref()
   const { editor: spaceEditor } = useSpaces()
   // Space settings cover the home; keep what is underneath out of reach.
   const hiddenBySettings = (
@@ -229,8 +227,8 @@ export function ChatPanel({
     inputRef.current?.blur()
     // Reset chatId in parent component
     onNewChat?.()
-    router.push(collegeHref('/'))
-  }, [setMessages, closeArtifact, onNewChat, router, collegeHref])
+    router.push('/')
+  }, [setMessages, closeArtifact, onNewChat, router])
 
   // Listen for keyboard shortcut events
   // Uses defaultPrevented to prevent duplicate handling
@@ -472,6 +470,12 @@ export function ChatPanel({
       <form
         {...hiddenBySettings}
         onSubmit={e => {
+          // The input stays editable while Sera answers so the next message
+          // can be drafted, but it is only sent once the answer is done.
+          if (isLoading || isToolInvocationInProgress()) {
+            e.preventDefault()
+            return
+          }
           // Pasted attachments (content cards / URL chips) are sent as
           // structured data parts alongside the instruction text part — no
           // in-band markers. The server maps them to the model prompt.
@@ -790,7 +794,7 @@ export function ChatPanel({
             placeholder={messages.length > 0 ? 'Reply...' : 'Ask anything...'}
             spellCheck={false}
             value={input}
-            disabled={disabled || isLoading || isToolInvocationInProgress()}
+            disabled={disabled}
             className="resize-none w-full min-h-12 bg-transparent border-0 p-3 md:p-4 text-sm placeholder:text-muted-foreground focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
             onChange={handleInputChange}
             onPaste={e => {
@@ -828,7 +832,11 @@ export function ChatPanel({
 
               // Plain Enter (no modifiers) → submit
               if (!e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey) {
-                if (!hasPendingInput) {
+                if (
+                  !hasPendingInput ||
+                  isLoading ||
+                  isToolInvocationInProgress()
+                ) {
                   e.preventDefault()
                   return
                 }

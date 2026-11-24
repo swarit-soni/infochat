@@ -87,7 +87,7 @@ export function createResearcher({
   currentDraft = null,
   alternativesOnly = false,
   spaceInstructions = '',
-  college = 'kalvium',
+  college = null,
   userId = null
 }: {
   model: string
@@ -98,8 +98,11 @@ export function createResearcher({
   currentDraft?: DraftVersion | null
   alternativesOnly?: boolean
   spaceInstructions?: string
-  /** The asking user's college: scopes campus tools and the system prompt. */
-  college?: CollegeSlug
+  /**
+   * The asking user's college: scopes campus tools and the system prompt.
+   * Null: not enrolled anywhere (e.g. admission seekers), all colleges.
+   */
+  college?: CollegeSlug | null
   userId?: string | null
 }) {
   try {
@@ -135,8 +138,7 @@ export function createResearcher({
         console.log(
           '[Researcher] Quick mode: maxSteps=20, tools=[searchCampusKnowledge, queryEvents, getOfficialPortalLinks, searchOfficialWeb, logUnansweredQuery, search, fetch, editDraft]'
         )
-        systemPrompt =
-          college === 'kalvium' ? QUICK_MODE_PROMPT : getQuickModePrompt(college)
+        systemPrompt = college ? getQuickModePrompt(college) : QUICK_MODE_PROMPT
         activeToolsList = [
           'searchCampusKnowledge',
           'queryEvents',

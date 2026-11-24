@@ -8,6 +8,7 @@ import {
   isGoogleAuthUser,
   isNonProductionStage,
   normalizeEmail,
+  UNAUTHORIZED_DOMAIN_ERROR,
   USER_TYPES
 } from '@/lib/auth/domain'
 import {
@@ -18,6 +19,9 @@ import {
 describe('auth domain rules', () => {
   it('defines mentor and student user types', () => {
     expect(USER_TYPES).toEqual(['mentor', 'student'])
+    expect(UNAUTHORIZED_DOMAIN_ERROR).toBe(
+      'Please sign in with a Google account.'
+    )
   })
 
   describe('normalizeEmail', () => {
@@ -69,7 +73,7 @@ describe('auth domain rules', () => {
       expect(isAllowedEmail('student@kalvium.community')).toBe(true)
     })
 
-    it('rejects lookalike, subdomain, and external email domains', () => {
+    it('gives no user type to lookalike, subdomain, and external email domains', () => {
       const rejected = [
         'user@evil-kalvium.com',
         'user@sub.kalvium.com',
@@ -94,8 +98,17 @@ describe('auth domain rules', () => {
           continue
         }
         expect(getUserTypeFromEmail(email)).toBeNull()
-        expect(isAllowedEmail(email)).toBe(false)
       }
+    })
+
+    it('allows any structurally valid email to sign in', () => {
+      expect(isAllowedEmail('user@gmail.com')).toBe(true)
+      expect(isAllowedEmail('user@sub.kalvium.com')).toBe(true)
+      expect(isAllowedEmail('mentor@kalvium.com')).toBe(true)
+      expect(isAllowedEmail('')).toBe(false)
+      expect(isAllowedEmail(null)).toBe(false)
+      expect(isAllowedEmail(undefined)).toBe(false)
+      expect(isAllowedEmail('a@kalvium.com@evil.com')).toBe(false)
     })
   })
 
@@ -152,7 +165,6 @@ describe('auth domain rules', () => {
       expect(
         getCollegeIdentityFromEmail('tester@gmail.com', previewEnv)
       ).toEqual({ college: 'kalvium', userType: 'mentor' })
-      expect(isAllowedEmail('tester@gmail.com', previewEnv)).toBe(true)
       // Test mentors may use any domain, so Google must not filter the picker.
       expect(
         getLoginHintDomain('kalvium', 'mentor', previewEnv)
@@ -178,7 +190,6 @@ describe('auth domain rules', () => {
           'kalvium.com'
         )
         expect(getUserTypeFromEmail('tester@gmail.com', prodEnv)).toBeNull()
-        expect(isAllowedEmail('tester@gmail.com', prodEnv)).toBe(false)
         expect(getUserTypeFromEmail('mentor@kalvium.com', prodEnv)).toBe(
           'mentor'
         )

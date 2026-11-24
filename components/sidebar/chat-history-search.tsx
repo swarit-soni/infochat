@@ -9,7 +9,6 @@ import {
 } from '@tabler/icons-react'
 import { toast } from 'sonner'
 
-import { useCollegeHref } from '@/lib/colleges/use-college'
 import { HL_START, HL_STOP } from '@/lib/render/highlight-markers'
 import {
   effectiveQueryLength,
@@ -87,7 +86,6 @@ export function ChatHistorySearch({
   onLoadingChange
 }: ChatHistorySearchProps) {
   const router = useRouter()
-  const collegeHref = useCollegeHref()
   const [results, setResults] = useState<SearchResponse | null>(null)
   const [isSearching, setIsSearching] = useState(false)
   const [thinkingRequested, setThinkingRequested] = useState(false)
@@ -263,9 +261,9 @@ export function ChatHistorySearch({
 
   const openChat = useCallback(
     (chatId: string) => {
-      router.push(collegeHref(`/search/${chatId}`))
+      router.push(`/search/${chatId}`)
     },
-    [router, collegeHref]
+    [router]
   )
 
   const hasAnyResults =

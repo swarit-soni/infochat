@@ -13,42 +13,23 @@ function matchesPathPrefix(pathname: string, prefix: string): boolean {
 
 function isPublicPath(pathname: string): boolean {
   if (
-    pathname === '/' ||
     matchesPathPrefix(pathname, '/auth') ||
     matchesPathPrefix(pathname, '/api')
   ) {
     return true
   }
 
+  // Each college's mentor login, `/<college>/auth/mentor`.
   const college = getCollegeFromPathname(pathname)
   if (college && matchesPathPrefix(pathname, `/${college}/auth`)) {
     return true
   }
 
   if (process.env.ENABLE_GUEST_CHAT === 'true') {
-    return (
-      (college !== null && pathname === `/${college}`) ||
-      matchesPathPrefix(pathname, '/share')
-    )
+    return pathname === '/' || matchesPathPrefix(pathname, '/share')
   }
 
   return false
-}
-
-/** Where an unauthenticated visitor to `pathname` should sign in. */
-function loginPathFor(pathname: string): string {
-  const college = getCollegeFromPathname(pathname)
-  if (!college) {
-    // Outside any college area there is no login to pick: show the
-    // college picker, which carries ?next= into the chosen login.
-    return '/'
-  }
-  return collegePath(
-    college,
-    matchesPathPrefix(pathname, `/${college}/mentor`)
-      ? '/auth/mentor'
-      : '/auth/student'
-  )
 }
 
 export async function updateSession(request: NextRequest) {
@@ -87,23 +68,28 @@ export async function updateSession(request: NextRequest) {
   )
 
   // Do not run code between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
+  // supabase.auth.getClaims(). A simple mistake could make it very hard to
+  // debug issues with users being randomly logged out.
 
-  // IMPORTANT: DO NOT REMOVE auth.getUser()
-
-  const {
-    data: { user }
-  } = await supabase.auth.getUser()
+  // IMPORTANT: DO NOT REMOVE auth.getClaims()
+  // getClaims() refreshes an expired session (writing the new cookies through
+  // setAll above) and verifies the JWT locally against the project's cached
+  // JWKS, so it costs no Auth server round trip per request the way getUser()
+  // does. With a legacy symmetric JWT secret it falls back to getUser().
+  const { data } = await supabase.auth.getClaims()
+  const user = data?.claims ?? null
 
   const pathname = request.nextUrl.pathname
 
   // Reject and sign out sessions from disallowed domains or non-Google providers.
-  if (user && (!isAllowedEmail(user.email) || !isGoogleAuthUser(user))) {
+  if (
+    user &&
+    (!isAllowedEmail(user.email) ||
+      !isGoogleAuthUser({ app_metadata: user.app_metadata }))
+  ) {
     await supabase.auth.signOut()
     const loginUrl = request.nextUrl.clone()
-    const college = getCollegeFromPathname(pathname)
-    loginUrl.pathname = college ? collegePath(college, '/auth/student') : '/'
+    loginUrl.pathname = '/auth/login'
     loginUrl.search = ''
     loginUrl.searchParams.set('error', 'unauthorized_domain')
     const redirectResponse = NextResponse.redirect(loginUrl)
@@ -116,10 +102,14 @@ export async function updateSession(request: NextRequest) {
   // Redirect to login if the user is not authenticated and the path is not public.
   if (!user && !isPublicPath(pathname)) {
     const loginUrl = request.nextUrl.clone()
-    loginUrl.pathname = loginPathFor(pathname)
-    loginUrl.search = ''
     const college = getCollegeFromPathname(pathname)
-    if (!college || pathname !== `/${college}`) {
+    loginUrl.pathname = college
+      ? collegePath(college, '/auth/mentor')
+      : matchesPathPrefix(pathname, '/mentor')
+        ? '/auth/mentor'
+        : '/auth/login'
+    loginUrl.search = ''
+    if (pathname !== '/') {
       loginUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
     }
     return NextResponse.redirect(loginUrl)

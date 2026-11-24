@@ -5,7 +5,7 @@ import {
   COLLEGES,
   type CollegeSlug,
   getOfficialWebDomains,
-  getVisibleColleges
+  getVisibleCollegesFor
 } from '@/lib/colleges/registry'
 import {
   CAMPUS_EVENT_STATUSES,
@@ -116,13 +116,15 @@ export function createCampusRagTools(options?: {
    * The asking user's college. Tools only read that college's and its
    * partner colleges' records, and only search their official domains.
    */
-  college?: CollegeSlug
+  college?: CollegeSlug | null
   /** Attributed on logged knowledge gaps. */
   userId?: string | null
   chatId?: string | null
 }) {
-  const college = options?.college ?? 'kalvium'
-  const visibleColleges = getVisibleColleges(college)
+  // Null: the user is not enrolled anywhere (admission seekers, guests),
+  // so every college's records are visible.
+  const college = options?.college ?? null
+  const visibleColleges = getVisibleCollegesFor(college)
   const collegeNames = visibleColleges
     .map(slug => COLLEGES[slug].shortName)
     .join(' & ')
@@ -490,8 +492,14 @@ export function createCampusRagTools(options?: {
 
   const logUnansweredQuery = tool({
     description:
-      `Log a campus query gap when verified campus knowledge is missing, expired, or contradictory so ${COLLEGES[college].shortName} mentors can curate an authoritative answer. Always call before abstaining.`,
+      `Log a campus query gap when verified campus knowledge is missing, expired, or contradictory so ${college ? COLLEGES[college].shortName : "that college's"} mentors can curate an authoritative answer. Always call before abstaining.`,
     inputSchema: z.object({
+      college: z
+        .enum(visibleColleges as [CollegeSlug, ...CollegeSlug[]])
+        .optional()
+        .describe(
+          `Which college the question is about (${visibleColleges.join(', ')}). Defaults to the user's own college.`
+        ),
       query: z
         .string()
         .describe('The unanswered or ambiguous student question'),
@@ -509,9 +517,20 @@ export function createCampusRagTools(options?: {
           'Why SERA abstained (e.g. missing circular, expired notice, conflicting source)'
         )
     }),
-    async execute({ query, domain = 'general', cohort, reason }) {
+    async execute({
+      college: questionCollege,
+      query,
+      domain = 'general',
+      cohort,
+      reason
+    }) {
+      const gapCollege = questionCollege ?? college
+      if (!gapCollege) {
+        // Without a college no mentor team owns the gap.
+        return { logged: false, id: null, query, domain, reason }
+      }
       const inserted = await recordUnansweredQuery({
-        college,
+        college: gapCollege,
         userId: options?.userId ?? null,
         chatId: options?.chatId ?? null,
         query,

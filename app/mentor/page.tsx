@@ -5,5 +5,9 @@ import { getCurrentUser } from '@/lib/auth/get-current-user'
 /** Legacy `/mentor`: each college now has its own mentor dashboard. */
 export default async function LegacyMentorPage() {
   const user = await getCurrentUser()
-  redirect(user?.college ? `/${user.college}/mentor` : '/')
+  redirect(
+    user?.userType === 'mentor' && user.college
+      ? `/${user.college}/mentor`
+      : '/auth/mentor'
+  )
 }

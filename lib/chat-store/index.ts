@@ -4,7 +4,6 @@ import { Chat } from '@ai-sdk/react'
 import { ChatInit, DefaultChatTransport } from 'ai'
 
 import { getDistinctId } from '@/lib/analytics/posthog-client'
-import { getCollegeFromPathname } from '@/lib/colleges/registry'
 import { generateId } from '@/lib/db/schema'
 import type { ChatSpace } from '@/lib/spaces/space'
 import type { UIMessage } from '@/lib/types/ai'
@@ -111,13 +110,6 @@ export class ChatStore {
                 messageId,
                 clientSource: 'web',
                 analyticsId: getDistinctId(),
-                // The page's college; the server only uses it for guests
-                // (signed-in users always get their own college).
-                college:
-                  typeof window !== 'undefined'
-                    ? (getCollegeFromPathname(window.location.pathname) ??
-                      undefined)
-                    : undefined,
                 ...(options.isGuest ? { messages } : {}),
                 message:
                   trigger === 'regenerate-message' && original?.role === 'user'

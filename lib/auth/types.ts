@@ -21,10 +21,16 @@ export interface AppUser {
   /** Role when the provider resolves one (`mentor` | `student`). */
   role?: string | null
   /**
-   * The college (tenant) the account belongs to. Every account belongs to
-   * exactly one college and may only use that college's area of the app.
+   * The college the account belongs to: verified from a college email
+   * domain, or self-reported at onboarding. Null when not enrolled anywhere
+   * (e.g. exploring admissions) or not answered yet.
    */
   college?: CollegeSlug | null
+  /**
+   * Whether the enrolled-college question is settled (answered, or the
+   * college came from a verified college email). False: ask it.
+   */
+  collegeOnboarded?: boolean
 }
 
 /**

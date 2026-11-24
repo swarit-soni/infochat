@@ -597,10 +597,13 @@ export const userProfiles = pgTable(
     id: varchar('id', { length: USER_ID_LENGTH }).primaryKey(),
     email: varchar('email', { length: 320 }).notNull().unique(),
     userType: userTypeEnum('user_type').notNull(),
-    // The college (tenant) the account belongs to; see lib/colleges.
-    college: varchar('college', { length: 32, enum: COLLEGE_SLUGS })
-      .notNull()
-      .default('kalvium'),
+    // The college the account belongs to: verified from a college email
+    // domain, or self-reported by a student at onboarding. Null means not
+    // enrolled anywhere (e.g. exploring admissions). See lib/colleges.
+    college: varchar('college', { length: 32, enum: COLLEGE_SLUGS }),
+    // When the student answered the enrolled-college question (or the college
+    // was set from a verified college email). Null: not asked yet.
+    onboardedAt: timestamp('onboarded_at', { withTimezone: true }),
     name: text('name'),
     avatarUrl: text('avatar_url'),
     createdAt: timestamp('created_at', { withTimezone: true })

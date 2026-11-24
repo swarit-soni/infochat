@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
 
-import type { UserType } from '@/lib/auth/domain'
 import { getAuthErrorMessage } from '@/lib/auth/error-messages'
 import { getCurrentUser } from '@/lib/auth/get-current-user'
 import { safeRedirectPath } from '@/lib/auth/redirect-target'
@@ -16,24 +15,19 @@ import { LoginForm } from '@/components/login-form'
 
 import packageJson from '../../package.json'
 
-/**
- * Shared server page for `/<college>/auth/student` and
- * `/<college>/auth/mentor`.
- */
-export async function CollegeLoginPage({
+/** Server page for a college's mentor login, `/<college>/auth/mentor`. */
+export async function CollegeMentorLoginPage({
   college,
-  mode,
   searchParams
 }: {
   college: string
-  mode: UserType
   searchParams: { next?: string; error?: string; college?: string }
 }) {
   if (!isCollegeSlug(college)) {
-    redirect('/')
+    redirect('/auth/mentor')
   }
 
-  // Only accept destinations inside this college's own area.
+  // Only accept destinations inside this college's own mentor area.
   const safeNext = searchParams.next
     ? safeRedirectPath(searchParams.next)
     : undefined
@@ -43,13 +37,14 @@ export async function CollegeLoginPage({
       : undefined
 
   const user = await getCurrentUser()
-  if (user?.college === college && !searchParams.error) {
-    redirect(next ?? collegePath(college, mode === 'mentor' ? '/mentor' : '/'))
+  if (
+    user?.userType === 'mentor' &&
+    user.college === college &&
+    !searchParams.error
+  ) {
+    redirect(next ?? collegePath(college, '/mentor'))
   }
 
-  const config = getCollegeLoginConfig(college)
-  const loginDomains =
-    mode === 'mentor' ? config.mentorDomains : config.studentDomains
   const initialError = getAuthErrorMessage(searchParams.error, {
     college: searchParams.college
   })
@@ -58,10 +53,9 @@ export async function CollegeLoginPage({
     <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
       <div className="w-full max-w-sm">
         <LoginForm
-          college={college}
-          mode={mode}
+          mentorCollege={college}
+          mentorDomains={getCollegeLoginConfig(college).mentorDomains}
           next={next}
-          loginDomains={loginDomains}
           initialError={initialError}
           isBeta={isBetaVersion(packageJson.version)}
         />

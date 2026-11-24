@@ -115,11 +115,26 @@ export function getVisibleColleges(slug: CollegeSlug): CollegeSlug[] {
   return [slug, ...COLLEGES[slug].partnerColleges.filter(p => p !== slug)]
 }
 
-/** Official web domains for a college and its partners, deduplicated. */
-export function getOfficialWebDomains(slug: CollegeSlug): string[] {
+/**
+ * Visible colleges for a user's college, or every college when the user is
+ * not enrolled anywhere (admission seekers and guests compare colleges).
+ */
+export function getVisibleCollegesFor(
+  slug: CollegeSlug | null | undefined
+): CollegeSlug[] {
+  return slug ? getVisibleColleges(slug) : [...COLLEGE_SLUGS]
+}
+
+/**
+ * Official web domains for a college and its partners (every college's when
+ * `slug` is null), deduplicated.
+ */
+export function getOfficialWebDomains(
+  slug: CollegeSlug | null | undefined
+): string[] {
   return [
     ...new Set(
-      getVisibleColleges(slug).flatMap(c => COLLEGES[c].officialWebDomains)
+      getVisibleCollegesFor(slug).flatMap(c => COLLEGES[c].officialWebDomains)
     )
   ]
 }

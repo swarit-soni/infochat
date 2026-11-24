@@ -1,10 +1,14 @@
--- College (tenant) isolation. Every account and every shared campus record
--- belongs to exactly one college. Existing rows were created for Kalvium.
+-- College (tenant) isolation. Every shared campus record belongs to exactly
+-- one college, and each mentor manages only their college's records.
+-- Existing campus rows were created for Kalvium.
 
--- 1. user_profiles: add college, drop the Kalvium-only domain check (domain
---    rules are now per-college configuration enforced by the app and the
---    Supabase signup hook, see supabase/setup-college-auth.sql).
-ALTER TABLE "user_profiles" ADD COLUMN IF NOT EXISTS "college" varchar(32) DEFAULT 'kalvium' NOT NULL;--> statement-breakpoint
+-- 1. user_profiles: add the account's college (null = not enrolled, e.g. an
+--    admission seeker) and when the student answered the college question.
+--    Drop the Kalvium-only domain check: sign-in is open to any Google
+--    account, and every signed-in account now gets a profile row.
+ALTER TABLE "user_profiles" ADD COLUMN IF NOT EXISTS "college" varchar(32);--> statement-breakpoint
+ALTER TABLE "user_profiles" ADD COLUMN IF NOT EXISTS "onboarded_at" timestamp with time zone;--> statement-breakpoint
+UPDATE "user_profiles" SET "college" = 'kalvium', "onboarded_at" = COALESCE("onboarded_at", now()) WHERE "college" IS NULL AND split_part(lower("email"), '@', 2) IN ('kalvium.com', 'kalvium.community');--> statement-breakpoint
 ALTER TABLE "user_profiles" DROP CONSTRAINT IF EXISTS "user_profiles_domain_matches_type";--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "user_profiles_college_idx" ON "user_profiles" USING btree ("college");--> statement-breakpoint
 

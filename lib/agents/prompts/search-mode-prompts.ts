@@ -2,7 +2,7 @@ import {
   COLLEGES,
   type CollegeSlug,
   getOfficialWebDomains,
-  getVisibleColleges
+  getVisibleCollegesFor
 } from '@/lib/colleges/registry'
 import { getDraftPrompt } from '@/lib/draft/prompt'
 import {
@@ -36,30 +36,39 @@ function getIdentityGuidance(): string {
 - When asked who or what you are, identify yourself as Sera. Never claim to be ChatGPT, Claude, Gemini, or any other assistant, and do not name the underlying model or its provider.`
 }
 
-function getSeraCampusRagGuidance(college: CollegeSlug): string {
-  const self = COLLEGES[college]
-  const visible = getVisibleColleges(college)
-  const partners = visible.filter(slug => slug !== college)
+function getSeraCampusRagGuidance(college: CollegeSlug | null): string {
+  const visible = getVisibleCollegesFor(college)
   const names = visible.map(slug => COLLEGES[slug].name)
   const domains = getOfficialWebDomains(college)
     .map(domain => `\`${domain}\``)
     .join(', ')
-  const partnerNote =
-    partners.length > 0
-      ? `\n   - ${self.shortName} students study with ${partners
-          .map(slug => COLLEGES[slug].name)
-          .join(' and ')}; their records are included in the same tools.`
-      : ''
-  const disambiguation =
-    partners.length > 0
-      ? `3. **Multi-Authority Disambiguation:** Whenever a policy differs between ${names
-          .map(name => `**${name}**`)
-          .join(' and ')} (such as attendance cutoffs, exam registration, or academic calendars), present each authority clearly separated rather than blending them.`
-      : `3. **Single-Authority Scope:** You serve ${self.name} only. Never apply another college's rules, fees or dates to ${self.shortName} students.`
 
-  return `SERA Campus RAG & Source Precedence Rules (${self.name}):
+  let audience: string
+  let scopeRule: string
+  if (!college) {
+    audience = `The user is not enrolled at a listed college (for example, they are exploring admissions). Campus tools cover every college on Sera: ${names.join(', ')}.`
+    scopeRule = `3. **College Attribution:** Always say which college each rule, fee, date or contact belongs to. Never blend colleges' policies; when the user hasn't said which college they mean, answer per college or ask.`
+  } else {
+    const self = COLLEGES[college]
+    const partners = visible.filter(slug => slug !== college)
+    audience = `The user is enrolled at **${self.name}** (${self.location}). Campus tools only return ${names.join(' and ')} records.${
+      partners.length > 0
+        ? ` ${self.shortName} students study with ${partners
+            .map(slug => COLLEGES[slug].name)
+            .join(' and ')}, so those records are included.`
+        : ''
+    }`
+    scopeRule =
+      partners.length > 0
+        ? `3. **Multi-Authority Disambiguation:** Whenever a policy differs between ${names
+            .map(name => `**${name}**`)
+            .join(' and ')} (such as attendance cutoffs, exam registration, or academic calendars), present each authority clearly separated rather than blending them.`
+        : `3. **Single-College Scope:** Never apply another college's rules, fees or dates to ${self.shortName} students.`
+  }
+
+  return `SERA Campus RAG & Source Precedence Rules:
 1. **Primary Campus Retrieval Order:**
-   - The asking user belongs to **${self.name}** (${self.location}). Campus tools only return ${names.join(' and ')} records.${partnerNote}
+   - ${audience}
    - Call \`searchCampusKnowledge\` FIRST for admissions, fees, examinations, timetables, curriculum, assessments, mentorship guides, circulars, and urgent notices.
    - Call \`queryEvents\` for college activities, hackathons, workshops, event schedules, venues, registration deadlines, and event results.
    - Call \`getOfficialPortalLinks\` whenever a student asks for personal/individual records (their personal attendance percentage, individual semester marks/results, personal fee receipt/balance, personal dashboard progress, or 1:1 mentor booking). Never guess portal URLs and never ask students for ERP or portal credentials.
@@ -70,7 +79,7 @@ function getSeraCampusRagGuidance(college: CollegeSlug): string {
    3) Mentor-Verified Curriculum, Assessment & Mentorship Guides
    4) Structured Campus Event Records (\`campus_events\`)
    5) Official Public Websites (${domains})
-${disambiguation}
+${scopeRule}
 4. **Strict Abstention & Gap Logging:** If verified campus information is missing, expired, or contradictory, do NOT guess. Call \`logUnansweredQuery\`, provide the relevant verified portal link via \`getOfficialPortalLinks\` or human escalation contact, and state clearly what could not be verified.`
 }
 
@@ -93,7 +102,9 @@ function getSourceDirectionGuidance(allowFallback = true): string {
 export const LANGUAGE_RULE = `- Respond in the user's language by default.
 - Exception: if the Space instructions at the end of this prompt set a language for content you write (articles, reports, drafts), write that content in that language and keep the rest of the reply in the user's language, unless they clearly ask for the whole conversation in that language.`
 
-export function getQuickModePrompt(college: CollegeSlug = 'kalvium'): string {
+export function getQuickModePrompt(
+  college: CollegeSlug | null = null
+): string {
   const hasGeneralProvider = isGeneralSearchProviderAvailable()
 
   return `
@@ -279,7 +290,7 @@ Rule precedence:
 }
 
 export function getAdaptiveModePrompt(
-  college: CollegeSlug = 'kalvium'
+  college: CollegeSlug | null = null
 ): string {
   return `
 Instructions:

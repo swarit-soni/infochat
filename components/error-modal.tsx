@@ -75,10 +75,7 @@ export function ErrorModal({
           'You have made too many requests. Please wait a moment before trying again.'
         )
       case 'auth':
-        return (
-          error.message ||
-          'Sign in with your @kalvium.com (Mentor) or @kalvium.community (Student) Google account.'
-        )
+        return error.message || 'Sign in with your Google account to continue.'
       case 'forbidden':
         return 'You do not have permission to access this resource.'
       default:

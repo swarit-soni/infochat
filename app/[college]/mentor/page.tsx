@@ -28,8 +28,12 @@ export default async function CollegeMentorPortalPage(props: {
       )}`
     )
   }
-  if (user.userType !== 'mentor' || user.college !== college) {
-    redirect(collegePath(user.college ?? college))
+  if (user.userType !== 'mentor') {
+    redirect('/')
+  }
+  if (user.college !== college) {
+    // Mentor dashboards are disconnected: go to your own college's.
+    redirect(user.college ? collegePath(user.college, '/mentor') : '/')
   }
 
   const collegeConfig = getCollege(college)
@@ -51,7 +55,7 @@ export default async function CollegeMentorPortalPage(props: {
             </p>
           </div>
           <Button asChild variant="outline" size="sm">
-            <Link href={collegePath(college)}>Back to Sera Chat</Link>
+            <Link href="/">Back to Sera Chat</Link>
           </Button>
         </div>
 

@@ -2,7 +2,6 @@
 
 import { cookies } from 'next/headers'
 
-import type { UserType } from '@/lib/auth/domain'
 import { getAuthProvider } from '@/lib/auth/provider'
 import type { AuthActionResult } from '@/lib/auth/types'
 import { getLoginHintDomain, isCollegeRoleEnabled } from '@/lib/colleges/access'
@@ -16,17 +15,32 @@ function unavailable(): AuthActionResult {
   return { success: false, error: 'Authentication is not available.' }
 }
 
+/**
+ * Start Google sign-in.
+ *
+ * - Students and visitors (no `mentorCollege`) use one open login: any Google
+ *   account may sign in, and new accounts pick their college afterwards.
+ * - Mentors sign in to one college (`mentorCollege`). The OAuth callback only
+ *   accepts accounts that are mentors of that college, so each college's
+ *   mentor login is disconnected from the others.
+ */
 export async function signInWithGoogle(
-  college: string,
-  userType: UserType = 'student'
+  mentorCollege?: string
 ): Promise<AuthActionResult> {
-  if (!isCollegeSlug(college)) {
-    return { success: false, error: 'Unknown college.' }
-  }
-  if (!isCollegeRoleEnabled(college, userType)) {
-    return {
-      success: false,
-      error: `${userType === 'mentor' ? 'Mentor' : 'Student'} sign-in is not set up for ${getCollege(college).shortName} yet.`
+  const cookieStore = await cookies()
+
+  if (mentorCollege === undefined) {
+    // A stale mentor attempt must not turn this into a mentor sign-in.
+    cookieStore.delete(AUTH_COLLEGE_COOKIE)
+  } else {
+    if (!isCollegeSlug(mentorCollege)) {
+      return { success: false, error: 'Unknown college.' }
+    }
+    if (!isCollegeRoleEnabled(mentorCollege, 'mentor')) {
+      return {
+        success: false,
+        error: `Mentor sign-in is not set up for ${getCollege(mentorCollege).shortName} yet.`
+      }
     }
   }
 
@@ -35,16 +49,18 @@ export async function signInWithGoogle(
     return unavailable()
   }
 
-  const cookieStore = await cookies()
-  cookieStore.set(AUTH_COLLEGE_COOKIE, college, {
+  if (mentorCollege === undefined) {
+    return provider.signInWithOAuth('google')
+  }
+
+  cookieStore.set(AUTH_COLLEGE_COOKIE, mentorCollege, {
     path: '/',
     maxAge: 300,
     sameSite: 'lax',
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production'
   })
-
-  const loginHintDomain = getLoginHintDomain(college, userType)
+  const loginHintDomain = getLoginHintDomain(mentorCollege, 'mentor')
   return provider.signInWithOAuth(
     'google',
     loginHintDomain ? { loginHintDomain } : undefined

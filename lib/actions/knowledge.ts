@@ -2,9 +2,7 @@
 
 import { and, desc, eq, gt, inArray, isNull, lt, or } from 'drizzle-orm'
 
-import { getCurrentUser } from '@/lib/auth/get-current-user'
-import { getDefaultCollege } from '@/lib/colleges/access'
-import { getVisibleColleges, isCollegeSlug } from '@/lib/colleges/registry'
+import { resolveVisibleColleges } from '@/lib/colleges/current'
 import { db } from '@/lib/db'
 import { type KnowledgeDocument, knowledgeDocuments } from '@/lib/db/schema'
 
@@ -35,12 +33,9 @@ export type KnowledgeLibraryItem = Pick<
 >
 
 /**
- * List the documents Sera answers from for a college: active and not
- * expired, newest first, from the college and its partner colleges.
- *
- * Signed-in users always see their own college's knowledge base. Visitors
- * without an account see the college whose page they are on (`college`);
- * the knowledge base is public (its RLS select policy is `true`).
+ * List the documents Sera answers from: active and not expired, newest
+ * first, from the colleges visible to the user (see resolveVisibleColleges).
+ * The knowledge base is public (its RLS select policy is `true`).
  */
 export async function listKnowledgeDocuments({
   limit = DEFAULT_KNOWLEDGE_PAGE_SIZE,
@@ -49,6 +44,7 @@ export async function listKnowledgeDocuments({
 }: {
   limit?: number
   cursor?: KnowledgeListCursor | null
+  /** Ignored for signed-in users, who always see their own college. */
   college?: string | null
 } = {}): Promise<{
   success: boolean
@@ -66,10 +62,7 @@ export async function listKnowledgeDocuments({
     cursor && cursorDate && !Number.isNaN(cursorDate.getTime())
 
   try {
-    const user = await getCurrentUser()
-    const tenant =
-      user?.college ?? (isCollegeSlug(college) ? college : getDefaultCollege())
-    const visibleColleges = getVisibleColleges(tenant)
+    const visibleColleges = await resolveVisibleColleges(college)
 
     const rows = await db
       .select({
