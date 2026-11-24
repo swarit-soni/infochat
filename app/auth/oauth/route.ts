@@ -207,8 +207,7 @@ export async function GET(request: NextRequest) {
 
   if (!collegeOnboarded) {
     // New student sign-up: ask which college they are enrolled in.
-    const query =
-      next !== '/' ? `?next=${encodeURIComponent(next)}` : ''
+    const query = next !== '/' ? `?next=${encodeURIComponent(next)}` : ''
     return redirectAndClearNext(request, `/onboarding/college${query}`)
   }
 

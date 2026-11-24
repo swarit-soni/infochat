@@ -62,7 +62,9 @@ function getSeraCampusRagGuidance(college: CollegeSlug | null): string {
       partners.length > 0
         ? `3. **Multi-Authority Disambiguation:** Whenever a policy differs between ${names
             .map(name => `**${name}**`)
-            .join(' and ')} (such as attendance cutoffs, exam registration, or academic calendars), present each authority clearly separated rather than blending them.`
+            .join(
+              ' and '
+            )} (such as attendance cutoffs, exam registration, or academic calendars), present each authority clearly separated rather than blending them.`
         : `3. **Single-College Scope:** Never apply another college's rules, fees or dates to ${self.shortName} students.`
   }
 
@@ -102,9 +104,7 @@ function getSourceDirectionGuidance(allowFallback = true): string {
 export const LANGUAGE_RULE = `- Respond in the user's language by default.
 - Exception: if the Space instructions at the end of this prompt set a language for content you write (articles, reports, drafts), write that content in that language and keep the rest of the reply in the user's language, unless they clearly ask for the whole conversation in that language.`
 
-export function getQuickModePrompt(
-  college: CollegeSlug | null = null
-): string {
+export function getQuickModePrompt(college: CollegeSlug | null = null): string {
   const hasGeneralProvider = isGeneralSearchProviderAvailable()
 
   return `

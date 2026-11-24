@@ -97,7 +97,8 @@ export function LoginForm({
       // cookie left by an abandoned attempt, or that old destination would
       // hijack the later sign-in.
       const redirectTarget =
-        next ?? (mentorCollege ? collegePath(mentorCollege, '/mentor') : undefined)
+        next ??
+        (mentorCollege ? collegePath(mentorCollege, '/mentor') : undefined)
       document.cookie = redirectTarget
         ? `auth_next=${encodeURIComponent(
             safeRedirectPath(redirectTarget)

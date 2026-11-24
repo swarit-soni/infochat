@@ -98,8 +98,9 @@ export function MentorPortalClient({
   // Tab 1: Document upload & crawl state
   const [docTitle, setDocTitle] = useState('')
   const [docDomain, setDocDomain] = useState<KnowledgeDomain>('examinations')
-  const [docSourceSystem, setDocSourceSystem] =
-    useState<KnowledgeSourceSystem>(DEFAULT_SOURCE_SYSTEM[college])
+  const [docSourceSystem, setDocSourceSystem] = useState<KnowledgeSourceSystem>(
+    DEFAULT_SOURCE_SYSTEM[college]
+  )
   const [docAuthority, setDocAuthority] = useState<KnowledgeAuthority>(college)
   const [docPriority, setDocPriority] = useState<KnowledgePriority>('standard')
   const [docProgram, setDocProgram] = useState('')
@@ -128,9 +129,7 @@ export function MentorPortalClient({
 
   // Tab 3: Eventum event state
   const [eventTitle, setEventTitle] = useState('')
-  const [eventOrganizer, setEventOrganizer] = useState(
-    collegeConfig.shortName
-  )
+  const [eventOrganizer, setEventOrganizer] = useState(collegeConfig.shortName)
   const [eventAuthority, setEventAuthority] =
     useState<KnowledgeAuthority>(college)
   const [eventCategory, setEventCategory] = useState('Hackathon')
