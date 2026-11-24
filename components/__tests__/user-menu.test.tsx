@@ -122,8 +122,9 @@ describe('UserMenu', () => {
       </AppUserProvider>
     )
 
-    expect(screen.getByText('Test Person')).toBeInTheDocument()
-    expect(screen.getByText('person@example.com')).toBeInTheDocument()
+    // Shown on the sidebar trigger and again in the menu header.
+    expect(screen.getAllByText('Test Person')).toHaveLength(2)
+    expect(screen.getAllByText('person@example.com')).toHaveLength(2)
   })
 
   it('shows the Mentor or Student badge when userType is present', () => {

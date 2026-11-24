@@ -8,6 +8,7 @@ import {
   IconChartBar as ChartBar,
   IconLink as Link2,
   IconLogout as LogOut,
+  IconSelector,
   IconShield,
   IconUserCircle as UserRound
 } from '@tabler/icons-react'
@@ -35,7 +36,6 @@ import { AccountSettingsDialog } from '@/components/account-settings-dialog'
 import { useUsageBudget } from '@/components/usage-budget-provider'
 import { UsageDialog } from '@/components/usage-dialog'
 
-import { Button } from './ui/button'
 import { ExternalLinkItems } from './external-link-items'
 
 interface UserMenuProps {
@@ -95,27 +95,43 @@ export default function UserMenu({ user }: UserMenuProps) {
     <>
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen} modal={false}>
         <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="relative size-6 rounded-full"
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-hidden ring-sidebar-ring transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             aria-label={accountMenuLabel}
           >
-            <Avatar className="size-6">
-              <AvatarImage src={avatarUrl} alt={userName} />
-              <AvatarFallback>
-                {getInitials(userName, user.email)}
-              </AvatarFallback>
-            </Avatar>
-            {isLow && (
-              <span
-                className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-destructive ring-2 ring-background"
-                aria-hidden="true"
-                data-testid="usage-status-dot"
-              />
-            )}
-          </Button>
+            <span className="relative shrink-0">
+              <Avatar className="size-8">
+                <AvatarImage src={avatarUrl} alt={userName} />
+                <AvatarFallback>
+                  {getInitials(userName, user.email)}
+                </AvatarFallback>
+              </Avatar>
+              {isLow && (
+                <span
+                  className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-destructive ring-2 ring-sidebar"
+                  aria-hidden="true"
+                  data-testid="usage-status-dot"
+                />
+              )}
+            </span>
+            <span className="grid min-w-0 flex-1 leading-tight">
+              <span className="truncate font-medium">{userName}</span>
+              {user.email && (
+                <span className="truncate text-xs text-muted-foreground">
+                  {user.email}
+                </span>
+              )}
+            </span>
+            <IconSelector className="size-4 shrink-0 text-muted-foreground" />
+          </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-60" align="end" forceMount>
+        <DropdownMenuContent
+          className="w-(--radix-dropdown-menu-trigger-width) min-w-60"
+          side="top"
+          align="start"
+          forceMount
+        >
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
               <div className="flex items-center justify-between gap-2">
