@@ -9,6 +9,7 @@ import {
 } from 'react'
 
 import type { LibraryFileItem } from '@/lib/actions/files'
+import type { KnowledgeLibraryItem } from '@/lib/actions/knowledge'
 import type { Note } from '@/lib/db/schema'
 
 import { useSidebar } from '../ui/sidebar'
@@ -32,10 +33,24 @@ type FilesCache = {
   updatedAt: number
 }
 
+type KnowledgeCache = {
+  documents: KnowledgeLibraryItem[]
+  nextCursor: NotesListCursor | null
+  hasMore: boolean
+  updatedAt: number
+}
+
+type KnowledgePage = {
+  documents: KnowledgeLibraryItem[]
+  nextCursor: NotesListCursor | null
+  hasMore: boolean
+}
+
 type LibraryContextValue = {
   isOpen: boolean
   notesCache: NotesCache | null
   filesCache: FilesCache | null
+  knowledgeCache: KnowledgeCache | null
   refreshKey: number
   openLibrary: () => void
   closeLibrary: () => void
@@ -64,6 +79,8 @@ type LibraryContextValue = {
   }) => void
   upsertCachedFile: (file: LibraryFileItem) => void
   removeCachedFile: (fileId: string) => void
+  replaceKnowledgeCache: (page: KnowledgePage) => void
+  appendKnowledgeCache: (page: KnowledgePage) => void
   refreshLibrary: () => void
 }
 
@@ -73,6 +90,9 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
   const [notesCache, setNotesCache] = useState<NotesCache | null>(null)
   const [filesCache, setFilesCache] = useState<FilesCache | null>(null)
+  const [knowledgeCache, setKnowledgeCache] = useState<KnowledgeCache | null>(
+    null
+  )
   const [refreshKey, setRefreshKey] = useState(0)
   const { setOpen: setSidebarOpen, setOpenMobile: setSidebarOpenMobile } =
     useSidebar()
@@ -218,6 +238,27 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       }
     })
   }, [])
+  const replaceKnowledgeCache = useCallback((page: KnowledgePage) => {
+    setKnowledgeCache({ ...page, updatedAt: Date.now() })
+  }, [])
+  const appendKnowledgeCache = useCallback((page: KnowledgePage) => {
+    setKnowledgeCache(cache => {
+      if (!cache) {
+        return { ...page, updatedAt: Date.now() }
+      }
+
+      const existingIds = new Set(cache.documents.map(doc => doc.id))
+      return {
+        documents: [
+          ...cache.documents,
+          ...page.documents.filter(doc => !existingIds.has(doc.id))
+        ],
+        nextCursor: page.nextCursor,
+        hasMore: page.hasMore,
+        updatedAt: Date.now()
+      }
+    })
+  }, [])
   const refreshLibrary = useCallback(() => {
     setRefreshKey(key => key + 1)
   }, [])
@@ -227,6 +268,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       isOpen,
       notesCache,
       filesCache,
+      knowledgeCache,
       refreshKey,
       openLibrary,
       closeLibrary,
@@ -239,19 +281,24 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       appendFilesCache,
       upsertCachedFile,
       removeCachedFile,
+      replaceKnowledgeCache,
+      appendKnowledgeCache,
       refreshLibrary
     }),
     [
       closeLibrary,
       appendNotesCache,
       appendFilesCache,
+      appendKnowledgeCache,
       isOpen,
+      knowledgeCache,
       filesCache,
       notesCache,
       openLibrary,
       removeCachedNote,
       removeCachedFile,
       replaceFilesCache,
+      replaceKnowledgeCache,
       replaceNotesCache,
       refreshLibrary,
       toggleLibrary,
