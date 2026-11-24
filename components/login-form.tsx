@@ -133,17 +133,19 @@ export function LoginForm({
           <CardDescription>
             {isMentor
               ? 'Sign in with your Kalvium mentor Google account to manage campus data.'
-              : 'Sign in with your Kalvium student Google account.'}
+              : 'Sign in with your Google account.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4">
-            <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
-              <div className="flex items-center justify-between gap-2">
-                <span>{expectedDomain}</span>
-                <Badge variant="secondary">{roleLabel}</Badge>
+            {isMentor && (
+              <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
+                <div className="flex items-center justify-between gap-2">
+                  <span>{expectedDomain}</span>
+                  <Badge variant="secondary">{roleLabel}</Badge>
+                </div>
               </div>
-            </div>
+            )}
 
             {error && (
               <p
@@ -175,12 +177,12 @@ export function LoginForm({
       </Card>
       <div className="flex flex-col items-center gap-2 text-center text-xs text-muted-foreground">
         <p>
-          {isMentor ? 'Looking for student login? ' : 'Are you a mentor? '}
+          {isMentor ? 'Not a mentor? ' : 'Are you a mentor? '}
           <Link
             href={alternateHref}
             className="underline underline-offset-4 hover:text-foreground"
           >
-            {isMentor ? 'Student login' : 'Mentor login'}
+            {isMentor ? 'Regular login' : 'Mentor login'}
           </Link>
         </p>
         <Link href="/" className="hover:underline">

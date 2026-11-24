@@ -20,10 +20,12 @@ export async function signInWithGoogle(
     return unavailable()
   }
 
-  const skipDomainHint =
-    userType === 'mentor' && hasNonKalviumMentorOverride()
+  // Any Google account may sign in, so only the mentor flow narrows Google's
+  // account picker to @kalvium.com (unless a non-prod override is set).
   const loginHintDomain =
-    userType && !skipDomainHint ? DOMAIN_BY_USER_TYPE[userType] : undefined
+    userType === 'mentor' && !hasNonKalviumMentorOverride()
+      ? DOMAIN_BY_USER_TYPE.mentor
+      : undefined
 
   return provider.signInWithOAuth(
     'google',

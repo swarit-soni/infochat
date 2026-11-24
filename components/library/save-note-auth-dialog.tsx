@@ -38,8 +38,8 @@ export function SaveNoteAuthDialog({
             Save notes to your library
           </DialogTitle>
           <DialogDescription className="text-center text-muted-foreground">
-            Sign in with your @kalvium.com or @kalvium.community Google account
-            to save answers and selected text to your Library.
+            Sign in with your Google account to save answers and selected text
+            to your Library.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex-col gap-2">

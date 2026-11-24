@@ -102,8 +102,8 @@ export async function GET(request: NextRequest) {
     return redirectAndClearNext(request, '/auth/login?error=oauth_failed')
   }
 
-  const userType = getUserTypeFromEmail(user.email)
-  if (!userType || !isGoogleAuthUser(user)) {
+  const normalizedEmail = normalizeEmail(user.email)
+  if (!normalizedEmail || !isGoogleAuthUser(user)) {
     await supabase.auth.signOut()
     try {
       const adminClient = createAdminClient()
@@ -117,8 +117,10 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  const normalizedEmail = normalizeEmail(user.email)
-  if (normalizedEmail && isKalviumDomainEmail(normalizedEmail)) {
+  // Any Google account may sign in. Only Kalvium accounts (and non-production
+  // mentor overrides) get a mentor/student profile row.
+  const userType = getUserTypeFromEmail(normalizedEmail)
+  if (userType && isKalviumDomainEmail(normalizedEmail)) {
     const metadata = (user.user_metadata ?? {}) as Record<string, unknown>
     try {
       await upsertUserProfile({

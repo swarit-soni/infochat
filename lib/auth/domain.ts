@@ -17,8 +17,7 @@ export const USER_TYPE_LABELS: Readonly<Record<UserType, string>> = {
   student: 'Student'
 }
 
-export const UNAUTHORIZED_DOMAIN_ERROR =
-  'Only @kalvium.com (Mentor) and @kalvium.community (Student) Google accounts are allowed.'
+export const UNAUTHORIZED_DOMAIN_ERROR = 'Please sign in with a Google account.'
 
 export interface AuthUserMetadataContainer {
   app_metadata?: {
@@ -160,14 +159,11 @@ export function getUserTypeFromEmail(
 }
 
 /**
- * Return true only for allowed @kalvium.com, @kalvium.community, or strictly
- * non-production allowlisted mentor email addresses.
+ * Return true for any structurally valid email address. Sign-in is open to all
+ * Google accounts; Kalvium domains only decide the mentor/student user type.
  */
-export function isAllowedEmail(
-  email: string | null | undefined,
-  env: Record<string, string | undefined> = process.env
-): boolean {
-  return getUserTypeFromEmail(email, env) !== null
+export function isAllowedEmail(email: string | null | undefined): boolean {
+  return normalizeEmail(email) !== null
 }
 
 /**

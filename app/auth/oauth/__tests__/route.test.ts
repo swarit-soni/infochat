@@ -95,14 +95,14 @@ describe('GET /auth/oauth', () => {
     )
   })
 
-  it('signs out, deletes user, and redirects when email domain is disallowed', async () => {
+  it('signs in any Google account without creating a Kalvium profile', async () => {
     getUser.mockResolvedValue({
       data: {
         user: {
-          id: 'user-bad',
+          id: 'user-gmail',
           email: 'user@gmail.com',
           app_metadata: { provider: 'google' },
-          user_metadata: { full_name: 'Bad User' }
+          user_metadata: { full_name: 'Gmail User' }
         }
       },
       error: null
@@ -113,13 +113,11 @@ describe('GET /auth/oauth', () => {
     )
     const response = await GET(request)
 
-    expect(signOut).toHaveBeenCalledTimes(1)
-    expect(deleteUser).toHaveBeenCalledWith('user-bad')
+    expect(signOut).not.toHaveBeenCalled()
+    expect(deleteUser).not.toHaveBeenCalled()
     expect(upsertUserProfile).not.toHaveBeenCalled()
     expect(response.status).toBe(307)
-    expect(response.headers.get('location')).toBe(
-      'http://localhost:3000/auth/login?error=unauthorized_domain'
-    )
+    expect(response.headers.get('location')).toBe('http://localhost:3000/')
     expect(response.cookies.get('auth_next')?.value).toBe('')
   })
 
@@ -157,7 +155,7 @@ describe('GET /auth/oauth', () => {
         user: {
           id: 'user-bad',
           email: 'outsider@example.com',
-          app_metadata: { provider: 'google' }
+          app_metadata: { provider: 'email', providers: ['email'] }
         }
       },
       error: null
@@ -294,10 +292,12 @@ describe('GET /auth/oauth', () => {
     expect(deleteUser).not.toHaveBeenCalled()
     expect(upsertUserProfile).not.toHaveBeenCalled()
     expect(response.status).toBe(307)
-    expect(response.headers.get('location')).toBe('http://localhost:3000/mentor')
+    expect(response.headers.get('location')).toBe(
+      'http://localhost:3000/mentor'
+    )
   })
 
-  it('rejects SERA_MENTOR_EMAILS external account in production stage', async () => {
+  it('signs in SERA_MENTOR_EMAILS external account in production without mentor access', async () => {
     vi.stubEnv('VERCEL_ENV', 'production')
     vi.stubEnv('SERA_MENTOR_EMAILS', 'tester@gmail.com')
     getUser.mockResolvedValue({
@@ -315,12 +315,10 @@ describe('GET /auth/oauth', () => {
       new NextRequest('http://localhost:3000/auth/oauth?code=good-code')
     )
 
-    expect(signOut).toHaveBeenCalledTimes(1)
-    expect(deleteUser).toHaveBeenCalledWith('test-mentor-1')
+    expect(signOut).not.toHaveBeenCalled()
+    expect(deleteUser).not.toHaveBeenCalled()
     expect(upsertUserProfile).not.toHaveBeenCalled()
     expect(response.status).toBe(307)
-    expect(response.headers.get('location')).toBe(
-      'http://localhost:3000/auth/login?error=unauthorized_domain'
-    )
+    expect(response.headers.get('location')).toBe('http://localhost:3000/')
   })
 })

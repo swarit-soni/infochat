@@ -29,8 +29,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
             Continue with Sera
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Sign in with your @kalvium.community student Google account to
-            continue.
+            Sign in with your Google account to continue.
           </DialogDescription>
         </DialogHeader>
         <div className="mt-6 flex flex-col items-center gap-3">
