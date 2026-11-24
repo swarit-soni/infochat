@@ -585,7 +585,7 @@ html:active-view-transition-type(space)::view-transition-old(space-keep) {
 /* Soft gradient cloud that sits behind the empty-state chat input. */
 .empty-chat-cloud {
   position: absolute;
-  inset: -3.5rem -2.5rem;
+  inset: -6rem -5rem;
   pointer-events: none;
   border-radius: 9999px;
   background: radial-gradient(
@@ -593,7 +593,7 @@ html:active-view-transition-type(space)::view-transition-old(space-keep) {
     color-mix(in oklch, var(--chart-1) 85%, transparent),
     transparent
   );
-  filter: blur(36px);
+  filter: blur(48px);
   opacity: 0.8;
   animation: empty-chat-cloud-drift 18s ease-in-out infinite alternate;
 }
