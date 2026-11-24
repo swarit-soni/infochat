@@ -173,7 +173,7 @@ describe('supabase provider', () => {
       ).resolves.toBeUndefined()
     })
 
-    it('returns undefined for disallowed domains or non-Google providers', async () => {
+    it('returns the id for Google accounts outside the Kalvium domains', async () => {
       getClaims.mockResolvedValueOnce({
         data: {
           claims: {
@@ -184,10 +184,12 @@ describe('supabase provider', () => {
         },
         error: null
       })
-      await expect(
-        supabaseAuthProvider.getCurrentUserId?.()
-      ).resolves.toBeUndefined()
+      await expect(supabaseAuthProvider.getCurrentUserId?.()).resolves.toBe(
+        'u-3'
+      )
+    })
 
+    it('returns undefined for non-Google providers', async () => {
       getClaims.mockResolvedValueOnce({
         data: {
           claims: {
