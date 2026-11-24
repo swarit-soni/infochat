@@ -19,11 +19,6 @@ import {
   uploadKnowledgeDocumentAction
 } from '@/lib/actions/mentor'
 import {
-  type CollegeSlug,
-  getCollege,
-  getOfficialWebDomains
-} from '@/lib/colleges/registry'
-import {
   CAMPUS_EVENT_STATUSES,
   type CampusEventStatus,
   KNOWLEDGE_AUTHORITIES,
@@ -62,14 +57,6 @@ type TabKey = 'documents' | 'urgent' | 'events' | 'portals' | 'gaps'
 
 interface MentorPortalClientProps {
   initialData: MentorPortalOverview
-  /** The college this mentor manages; every record is saved under it. */
-  college: CollegeSlug
-}
-
-const DEFAULT_SOURCE_SYSTEM: Record<CollegeSlug, KnowledgeSourceSystem> = {
-  kalvium: 'kalvium_guide',
-  jecrc: 'jecrc_enotice',
-  bkbirla: 'bkbirla_notice'
 }
 
 function formatTimestamp(value: Date | string | null | undefined): string {
@@ -85,12 +72,7 @@ function formatTimestamp(value: Date | string | null | undefined): string {
   })
 }
 
-export function MentorPortalClient({
-  initialData,
-  college
-}: MentorPortalClientProps) {
-  const collegeConfig = getCollege(college)
-  const officialDomains = getOfficialWebDomains(college)
+export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [activeTab, setActiveTab] = useState<TabKey>('documents')
@@ -98,10 +80,9 @@ export function MentorPortalClient({
   // Tab 1: Document upload & crawl state
   const [docTitle, setDocTitle] = useState('')
   const [docDomain, setDocDomain] = useState<KnowledgeDomain>('examinations')
-  const [docSourceSystem, setDocSourceSystem] = useState<KnowledgeSourceSystem>(
-    DEFAULT_SOURCE_SYSTEM[college]
-  )
-  const [docAuthority, setDocAuthority] = useState<KnowledgeAuthority>(college)
+  const [docSourceSystem, setDocSourceSystem] =
+    useState<KnowledgeSourceSystem>('jecrc_enotice')
+  const [docAuthority, setDocAuthority] = useState<KnowledgeAuthority>('jecrc')
   const [docPriority, setDocPriority] = useState<KnowledgePriority>('standard')
   const [docProgram, setDocProgram] = useState('')
   const [docSemester, setDocSemester] = useState('')
@@ -129,9 +110,9 @@ export function MentorPortalClient({
 
   // Tab 3: Eventum event state
   const [eventTitle, setEventTitle] = useState('')
-  const [eventOrganizer, setEventOrganizer] = useState(collegeConfig.shortName)
+  const [eventOrganizer, setEventOrganizer] = useState('Kalvium X JECRC')
   const [eventAuthority, setEventAuthority] =
-    useState<KnowledgeAuthority>(college)
+    useState<KnowledgeAuthority>('joint')
   const [eventCategory, setEventCategory] = useState('Hackathon')
   const [eventStartAt, setEventStartAt] = useState('')
   const [eventEndAt, setEventEndAt] = useState('')
@@ -147,7 +128,7 @@ export function MentorPortalClient({
   const [portalKey, setPortalKey] = useState('')
   const [portalName, setPortalName] = useState('')
   const [portalAuthority, setPortalAuthority] =
-    useState<KnowledgeAuthority>(college)
+    useState<KnowledgeAuthority>('jecrc')
   const [portalUrl, setPortalUrl] = useState('')
   const [portalRequiresLogin, setPortalRequiresLogin] = useState(true)
   const [portalCapabilities, setPortalCapabilities] = useState('')
@@ -476,7 +457,7 @@ export function MentorPortalClient({
                         id="doc-title"
                         value={docTitle}
                         onChange={e => setDocTitle(e.target.value)}
-                        placeholder={`e.g. ${collegeConfig.shortName} End-Term Examination Form Circular (Nov 2026)`}
+                        placeholder="e.g. JECRC End-Term Examination Form Circular (Nov 2026)"
                         required
                       />
                     </div>
@@ -635,7 +616,7 @@ export function MentorPortalClient({
                       id="doc-url"
                       value={docSourceUrl}
                       onChange={e => setDocSourceUrl(e.target.value)}
-                      placeholder={`${collegeConfig.website}/...`}
+                      placeholder="https://jecrcuniversity.edu.in/..."
                     />
                   </div>
 
@@ -648,7 +629,7 @@ export function MentorPortalClient({
                       rows={7}
                       value={docContent}
                       onChange={e => setDocContent(e.target.value)}
-                      placeholder="Paste circular text, Markdown fee table, or programme guide..."
+                      placeholder="Paste circular text, Markdown fee table, or Kalvium guide..."
                       required
                     />
                   </div>
@@ -666,9 +647,9 @@ export function MentorPortalClient({
                   Crawl Official Web Page
                 </CardTitle>
                 <CardDescription>
-                  Allowlisted strictly to{' '}
-                  {officialDomains.map(domain => `\`${domain}\``).join(', ')}.
-                  Extracts tables and headings directly into the KB.
+                  Allowlisted strictly to `jecrcuniversity.edu.in` and
+                  `kalvium.com`. Extracts tables and headings directly into the
+                  KB.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -680,7 +661,7 @@ export function MentorPortalClient({
                       type="url"
                       value={crawlUrl}
                       onChange={e => setCrawlUrl(e.target.value)}
-                      placeholder={`${collegeConfig.website}/admissions`}
+                      placeholder="https://jecrcuniversity.edu.in/admissions"
                       required
                     />
                   </div>
@@ -710,7 +691,7 @@ export function MentorPortalClient({
                       id="crawl-title"
                       value={crawlTitle}
                       onChange={e => setCrawlTitle(e.target.value)}
-                      placeholder={`${collegeConfig.shortName} Admissions 2026`}
+                      placeholder="JECRC B.Tech Admissions 2026"
                     />
                   </div>
                   <Button
@@ -981,7 +962,7 @@ export function MentorPortalClient({
                     id="event-title"
                     value={eventTitle}
                     onChange={e => setEventTitle(e.target.value)}
-                    placeholder={`${collegeConfig.shortName} Buildathon 2026`}
+                    placeholder="Kalvium X JECRC Buildathon 2026"
                     required
                   />
                 </div>
@@ -1084,7 +1065,7 @@ export function MentorPortalClient({
                       id="event-location"
                       value={eventLocation}
                       onChange={e => setEventLocation(e.target.value)}
-                      placeholder="Main campus, Block A"
+                      placeholder="JECRC Sitapura Campus, Block A"
                     />
                   </div>
                 </div>
@@ -1096,7 +1077,7 @@ export function MentorPortalClient({
                       type="url"
                       value={eventRegUrl}
                       onChange={e => setEventRegUrl(e.target.value)}
-                      placeholder={`${collegeConfig.website}/events/register`}
+                      placeholder="https://jecrcuniversity.edu.in/events/register"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1117,7 +1098,7 @@ export function MentorPortalClient({
                     id="event-eligibility"
                     value={eventEligibility}
                     onChange={e => setEventEligibility(e.target.value)}
-                    placeholder="All Sem 1-4 students"
+                    placeholder="All Kalvium X JECRC Sem 1-4 students"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -1240,7 +1221,7 @@ export function MentorPortalClient({
                       id="portal-key"
                       value={portalKey}
                       onChange={e => setPortalKey(e.target.value)}
-                      placeholder={`${college}_erp`}
+                      placeholder="jecrc_erp"
                       required
                     />
                   </div>
@@ -1271,7 +1252,7 @@ export function MentorPortalClient({
                     id="portal-name"
                     value={portalName}
                     onChange={e => setPortalName(e.target.value)}
-                    placeholder={`${collegeConfig.shortName} ERP Portal`}
+                    placeholder="JECRC ERP Portal"
                     required
                   />
                 </div>
@@ -1282,7 +1263,7 @@ export function MentorPortalClient({
                     type="url"
                     value={portalUrl}
                     onChange={e => setPortalUrl(e.target.value)}
-                    placeholder={`${collegeConfig.website}/...`}
+                    placeholder="https://jecrcuniversity.edu.in/erp"
                     required
                   />
                 </div>
@@ -1324,7 +1305,7 @@ export function MentorPortalClient({
                     id="portal-contact"
                     value={portalContact}
                     onChange={e => setPortalContact(e.target.value)}
-                    placeholder={`${collegeConfig.shortName} Registrar Office`}
+                    placeholder="JECRC Registrar Office"
                   />
                 </div>
                 <Button type="submit" disabled={isPending}>
