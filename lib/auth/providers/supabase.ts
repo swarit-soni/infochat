@@ -5,6 +5,7 @@ import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 import {
   getUserTypeFromEmail,
+  isAllowedEmail,
   isGoogleAuthUser,
   normalizeEmail
 } from '@/lib/auth/domain'
@@ -62,7 +63,7 @@ const getCurrentSupabaseUser = cache(async (): Promise<AppUser | null> => {
 
 // Most callers only need the id. getClaims() verifies the session JWT locally
 // against the project's cached JWKS instead of calling the Auth server, and
-// the same domain / Google-provider gate as toAppUser is applied to the
+// the same email / Google-provider gate as toAppUser is applied to the
 // claims so an id is only returned for a user getCurrentUser would accept.
 const getCurrentSupabaseUserId = cache(
   async (): Promise<string | undefined> => {
@@ -75,7 +76,7 @@ const getCurrentSupabaseUserId = cache(
     const claims = data?.claims
     if (
       !claims?.sub ||
-      !getUserTypeFromEmail(claims.email) ||
+      !isAllowedEmail(claims.email) ||
       !isGoogleAuthUser({ app_metadata: claims.app_metadata })
     ) {
       return undefined
