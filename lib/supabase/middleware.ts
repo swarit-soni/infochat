@@ -61,19 +61,25 @@ export async function updateSession(request: NextRequest) {
   )
 
   // Do not run code between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
+  // supabase.auth.getClaims(). A simple mistake could make it very hard to
+  // debug issues with users being randomly logged out.
 
-  // IMPORTANT: DO NOT REMOVE auth.getUser()
-
-  const {
-    data: { user }
-  } = await supabase.auth.getUser()
+  // IMPORTANT: DO NOT REMOVE auth.getClaims()
+  // getClaims() refreshes an expired session (writing the new cookies through
+  // setAll above) and verifies the JWT locally against the project's cached
+  // JWKS, so it costs no Auth server round trip per request the way getUser()
+  // does. With a legacy symmetric JWT secret it falls back to getUser().
+  const { data } = await supabase.auth.getClaims()
+  const user = data?.claims ?? null
 
   const pathname = request.nextUrl.pathname
 
   // Reject and sign out sessions from disallowed domains or non-Google providers.
-  if (user && (!isAllowedEmail(user.email) || !isGoogleAuthUser(user))) {
+  if (
+    user &&
+    (!isAllowedEmail(user.email) ||
+      !isGoogleAuthUser({ app_metadata: user.app_metadata }))
+  ) {
     await supabase.auth.signOut()
     const loginUrl = request.nextUrl.clone()
     loginUrl.pathname = '/auth/login'
