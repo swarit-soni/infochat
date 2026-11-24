@@ -38,7 +38,14 @@ describe('updateSession', () => {
       options: typeof cookieHandlers
     ) => {
       cookieHandlers = options
-      return { auth: { getUser, signOut } } as never
+      // updateSession reads the session through getClaims(); the tests
+      // describe users the way getUser() returns them.
+      const getClaims = async () => {
+        const result = await getUser()
+        const user = result?.data?.user
+        return { data: user ? { claims: user } : null, error: null }
+      }
+      return { auth: { getClaims, signOut } } as never
     }) as never)
   })
 

@@ -470,6 +470,12 @@ export function ChatPanel({
       <form
         {...hiddenBySettings}
         onSubmit={e => {
+          // The input stays editable while Sera answers so the next message
+          // can be drafted, but it is only sent once the answer is done.
+          if (isLoading || isToolInvocationInProgress()) {
+            e.preventDefault()
+            return
+          }
           // Pasted attachments (content cards / URL chips) are sent as
           // structured data parts alongside the instruction text part — no
           // in-band markers. The server maps them to the model prompt.
@@ -788,7 +794,7 @@ export function ChatPanel({
             placeholder={messages.length > 0 ? 'Reply...' : 'Ask anything...'}
             spellCheck={false}
             value={input}
-            disabled={disabled || isLoading || isToolInvocationInProgress()}
+            disabled={disabled}
             className="resize-none w-full min-h-12 bg-transparent border-0 p-3 md:p-4 text-sm placeholder:text-muted-foreground focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
             onChange={handleInputChange}
             onPaste={e => {
@@ -826,7 +832,11 @@ export function ChatPanel({
 
               // Plain Enter (no modifiers) → submit
               if (!e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey) {
-                if (!hasPendingInput) {
+                if (
+                  !hasPendingInput ||
+                  isLoading ||
+                  isToolInvocationInProgress()
+                ) {
                   e.preventDefault()
                   return
                 }
