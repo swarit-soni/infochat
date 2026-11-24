@@ -62,15 +62,13 @@ function wrapSearchToolForQuickMode<
       } else {
         // Fallback for non-streaming (shouldn't happen with new implementation)
         const finalResult = await result
-        yield (
-          finalResult || {
-            state: 'complete' as const,
-            results: [],
-            images: [],
-            query: params.query,
-            number_of_results: 0
-          }
-        )
+        yield finalResult || {
+          state: 'complete' as const,
+          results: [],
+          images: [],
+          query: params.query,
+          number_of_results: 0
+        }
       }
     }
   }) as T

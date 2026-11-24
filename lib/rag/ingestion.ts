@@ -729,7 +729,10 @@ export async function resolveUnansweredQuery(
         resolvedAt: status === 'open' ? null : new Date()
       })
       .where(
-        and(eq(unansweredQueries.id, id), eq(unansweredQueries.college, college))
+        and(
+          eq(unansweredQueries.id, id),
+          eq(unansweredQueries.college, college)
+        )
       )
       .returning()
 

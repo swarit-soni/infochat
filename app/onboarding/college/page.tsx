@@ -22,16 +22,18 @@ export const dynamic = 'force-dynamic'
  * are not enrolled anywhere (e.g. admission seekers) get every college's.
  */
 export default async function EnrolledCollegePage(props: {
-  searchParams: Promise<{ next?: string }>
+  searchParams: Promise<{ next?: string; change?: string }>
 }) {
-  const { next } = await props.searchParams
+  const { next, change } = await props.searchParams
   const destination = safeRedirectPath(next)
 
   const user = await getCurrentUser()
   if (!user) {
     redirect(`/auth/login?next=${encodeURIComponent('/onboarding/college')}`)
   }
-  if (user.collegeOnboarded) {
+  // Already answered (unless changing it), or verified from a college
+  // email domain (userType is only set for college-domain accounts).
+  if ((user.collegeOnboarded && change !== '1') || user.userType) {
     redirect(destination)
   }
 

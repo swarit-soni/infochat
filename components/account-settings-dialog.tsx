@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 import {
@@ -16,6 +17,7 @@ import { signOut } from '@/lib/actions/auth'
 import { USER_TYPE_LABELS } from '@/lib/auth/domain'
 import type { AppUser } from '@/lib/auth/types'
 import { chatStore } from '@/lib/chat-store'
+import { getCollege } from '@/lib/colleges/registry'
 import { useAuthCapabilities } from '@/lib/contexts/app-user-context'
 
 import {
@@ -129,6 +131,29 @@ export function AccountSettingsDialog({
                 <p className="truncate">{user.email}</p>
               </div>
             </div>
+            {user.collegeOnboarded !== undefined && (
+              <div className="flex items-center justify-between gap-2 text-sm">
+                <div className="min-w-0">
+                  <p className="font-medium">College</p>
+                  <p className="truncate text-muted-foreground">
+                    {user.college
+                      ? getCollege(user.college).name
+                      : 'Not enrolled'}
+                  </p>
+                </div>
+                {/* A college verified from the email domain can't change. */}
+                {!user.userType && (
+                  <Button asChild variant="outline" size="sm">
+                    <Link
+                      href="/onboarding/college?change=1"
+                      onClick={() => onOpenChange(false)}
+                    >
+                      Change
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            )}
           </section>
 
           <Separator />

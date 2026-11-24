@@ -138,8 +138,7 @@ export function createCampusRagTools(options?: {
   )
 
   const searchCampusKnowledge = tool({
-    description:
-      `ALWAYS call this FIRST for ${collegeNames} campus questions (admissions, fees, examinations, timetables, curriculum, assessments, mentorship guides, notices, and urgent WhatsApp/GChat updates). Uses hybrid semantic + full-text Postgres retrieval with source precedence and expiry filtering.`,
+    description: `ALWAYS call this FIRST for ${collegeNames} campus questions (admissions, fees, examinations, timetables, curriculum, assessments, mentorship guides, notices, and urgent WhatsApp/GChat updates). Uses hybrid semantic + full-text Postgres retrieval with source precedence and expiry filtering.`,
     inputSchema: z.object({
       query: z
         .string()
@@ -320,8 +319,7 @@ export function createCampusRagTools(options?: {
   })
 
   const getOfficialPortalLinks = tool({
-    description:
-      `Deterministic lookup from the verified official_portals registry of ${collegeNames} (ERP/student logins, results, notices, support desks, dashboards). Use whenever a student asks for personal records (attendance, grades, fee balance, dashboard progress) or official portal navigation steps.`,
+    description: `Deterministic lookup from the verified official_portals registry of ${collegeNames} (ERP/student logins, results, notices, support desks, dashboards). Use whenever a student asks for personal records (attendance, grades, fee balance, dashboard progress) or official portal navigation steps.`,
     inputSchema: z.object({
       query: z
         .string()
@@ -392,8 +390,7 @@ export function createCampusRagTools(options?: {
   })
 
   const searchOfficialWeb = tool({
-    description:
-      `Controlled live web fallback restricted strictly to official domains (${officialDomains.join(', ')}). Only call AFTER searchCampusKnowledge if no verified campus document covered the query.`,
+    description: `Controlled live web fallback restricted strictly to official domains (${officialDomains.join(', ')}). Only call AFTER searchCampusKnowledge if no verified campus document covered the query.`,
     inputSchema: z.object({
       query: z.string().describe('Official web fallback query'),
       max_results: z.number().int().min(1).max(15).optional().default(8),
@@ -491,8 +488,7 @@ export function createCampusRagTools(options?: {
   })
 
   const logUnansweredQuery = tool({
-    description:
-      `Log a campus query gap when verified campus knowledge is missing, expired, or contradictory so ${college ? COLLEGES[college].shortName : "that college's"} mentors can curate an authoritative answer. Always call before abstaining.`,
+    description: `Log a campus query gap when verified campus knowledge is missing, expired, or contradictory so ${college ? COLLEGES[college].shortName : "that college's"} mentors can curate an authoritative answer. Always call before abstaining.`,
     inputSchema: z.object({
       college: z
         .enum(visibleColleges as [CollegeSlug, ...CollegeSlug[]])
