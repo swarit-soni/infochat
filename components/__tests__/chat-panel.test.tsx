@@ -180,13 +180,13 @@ describe('ChatPanel', () => {
     expect(event.defaultPrevented).toBe(true)
     expect(onNewChat).toHaveBeenCalledOnce()
     expect(
-      screen.queryByRole('heading', { name: 'What would you like to know?' })
+      screen.queryByRole('heading', { name: "Curious? Let's get into it." })
     ).not.toBeInTheDocument()
     expect(screen.queryByTestId('suggestions')).not.toBeInTheDocument()
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
     view.rerender(<ChatPanel {...props} />)
     expect(
-      screen.getByRole('heading', { name: 'What would you like to know?' })
+      screen.getByRole('heading', { name: "Curious? Let's get into it." })
     ).toBeInTheDocument()
     expect(screen.getByTestId('suggestions')).toBeInTheDocument()
     expect(screen.getByRole('textbox')).toBeInTheDocument()

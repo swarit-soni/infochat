@@ -73,7 +73,7 @@ vi.mock('../chat-panel', () => ({
     return (
       <div>
         {!isHistoryPending && messages.length === 0 && (
-          <h1>What would you like to know?</h1>
+          <h1>Curious? Let's get into it.</h1>
         )}
         <button disabled={disabled} onClick={() => append({ text: 'hello' })}>
           Send
@@ -421,7 +421,7 @@ describe('Chat client cache', () => {
       screen.getByRole('status', { name: 'Loading chat' })
     ).toBeInTheDocument()
     expect(
-      screen.queryByRole('heading', { name: 'What would you like to know?' })
+      screen.queryByRole('heading', { name: "Curious? Let's get into it." })
     ).not.toBeInTheDocument()
     expect(screen.getByTestId('full-chat')).not.toHaveClass('justify-center')
     await act(async () => {
@@ -429,11 +429,11 @@ describe('Chat client cache', () => {
     })
     expect(screen.getByRole('alert')).toHaveTextContent('Failed to load chat')
     expect(
-      screen.queryByRole('heading', { name: 'What would you like to know?' })
+      screen.queryByRole('heading', { name: "Curious? Let's get into it." })
     ).not.toBeInTheDocument()
     fireEvent.click(screen.getByText('New'))
     expect(
-      screen.getByRole('heading', { name: 'What would you like to know?' })
+      screen.getByRole('heading', { name: "Curious? Let's get into it." })
     ).toBeInTheDocument()
   })
 
@@ -442,7 +442,7 @@ describe('Chat client cache', () => {
     props => {
       render(<Chat {...props} />)
       expect(
-        screen.getByRole('heading', { name: 'What would you like to know?' })
+        screen.getByRole('heading', { name: "Curious? Let's get into it." })
       ).toBeInTheDocument()
       expect(
         screen.queryByRole('status', { name: 'Loading chat' })

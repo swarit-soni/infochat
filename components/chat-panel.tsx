@@ -458,7 +458,7 @@ export function ChatPanel({
         >
           <SpaceHomeLogo />
           <h1 className="text-xl md:text-2xl font-medium text-foreground">
-            What would you like to know?
+            Curious? Let&apos;s get into it.
           </h1>
         </div>
       )}
