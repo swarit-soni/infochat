@@ -22,6 +22,7 @@ Requests made by your server:
 | Favicon provider (Google by default)                     | The hostname of each cited source                                                                                                                                               | On. Configurable, and can be turned off                           |
 | GitHub releases API                                      | An anonymous request for the latest release of one repo: your server's IP and the repo name. No credentials, no user data                                                       | **On.** Once per 24 h; off with `SERA_UPDATE_CHECK_DISABLED=true` |
 | Slack                                                    | Feedback text and the submitter's email                                                                                                                                         | Off unless `SLACK_WEBHOOK_URL` is set                             |
+| Discord                                                  | Feedback text and the submitter's email                                                                                                                                         | Off unless `DISCORD_FEEDBACK_WEBHOOK_URL` is set                  |
 | PostHog                                                  | Product analytics events. Not the user's query text                                                                                                                             | **Off**                                                           |
 | Langfuse                                                 | Full prompts and completions as traces                                                                                                                                          | **Off**                                                           |
 | Vercel Analytics                                         | Page views                                                                                                                                                                      | **Off**                                                           |
@@ -77,7 +78,7 @@ The provider defaults to Google's favicon service and is configurable through `F
 
 ### Feedback
 
-The site feedback form posts the message text, the submitter's email address, and the page URL to `SLACK_WEBHOOK_URL`. Unset by default, in which case the feedback stays in your database.
+The site feedback form posts the message text, the submitter's email address, and the page URL to `SLACK_WEBHOOK_URL` and `DISCORD_FEEDBACK_WEBHOOK_URL` (as a new forum post). Both are unset by default, in which case the feedback stays in your database.
 
 ## What the browser loads
 
