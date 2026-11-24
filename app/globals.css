@@ -585,31 +585,20 @@ html:active-view-transition-type(space)::view-transition-old(space-keep) {
 /* Soft gradient cloud that sits behind the empty-state chat input. */
 .empty-chat-cloud {
   position: absolute;
-  inset: -3.5rem -2.5rem;
+  inset: -6rem -5rem;
   pointer-events: none;
   border-radius: 9999px;
-  background:
-    radial-gradient(
-      40% 60% at 22% 45%,
-      color-mix(in oklch, var(--chart-1) 55%, transparent),
-      transparent 70%
-    ),
-    radial-gradient(
-      38% 58% at 52% 60%,
-      color-mix(in oklch, var(--chart-1) 45%, transparent),
-      transparent 70%
-    ),
-    radial-gradient(
-      36% 55% at 80% 40%,
-      color-mix(in oklch, var(--chart-1) 55%, transparent),
-      transparent 70%
-    );
-  filter: blur(40px);
-  opacity: 0.45;
+  background: radial-gradient(
+    ellipse closest-side at 50% 50%,
+    color-mix(in oklch, var(--chart-1) 85%, transparent),
+    transparent
+  );
+  filter: blur(48px);
+  opacity: 0.8;
   animation: empty-chat-cloud-drift 18s ease-in-out infinite alternate;
 }
 .dark .empty-chat-cloud {
-  opacity: 0.35;
+  opacity: 0.6;
 }
 @keyframes empty-chat-cloud-drift {
   from {
