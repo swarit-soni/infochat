@@ -247,7 +247,7 @@
   @keyframes blink {
     0%,
     100% {
-      ry: 18;
+      ry: 13;
     }
     50% {
       ry: 0;

@@ -4,8 +4,16 @@ import { useEffect, useRef } from 'react'
 
 import { cn } from '@/lib/utils'
 
+import {
+  OWL_DEFAULT_COLOR,
+  OWL_EYE_RADIUS,
+  OWL_EYES,
+  OwlBody,
+  OwlOutline
+} from './owl-mark'
+
 type LogoProps = React.ComponentProps<'svg'> & {
-  /** Body color; the eyes stay white. */
+  /** Owl color; the body is a lighter gradient of it. */
   bodyColor?: string
 }
 
@@ -19,9 +27,16 @@ function IconLogo({ className, bodyColor, ...props }: LogoProps) {
       className={cn('size-4', className)}
       {...props}
     >
-      <circle cx="128" cy="128" r="128" fill={bodyColor ?? 'black'}></circle>
-      <circle cx="102" cy="128" r="18" fill="white"></circle>
-      <circle cx="154" cy="128" r="18" fill="white"></circle>
+      <OwlBody bodyColor={bodyColor} />
+      {OWL_EYES.map(eye => (
+        <circle
+          key={eye.cx}
+          cx={eye.cx}
+          cy={eye.cy}
+          r={OWL_EYE_RADIUS}
+          style={{ fill: bodyColor ?? OWL_DEFAULT_COLOR }}
+        />
+      ))}
     </svg>
   )
 }
@@ -36,16 +51,18 @@ function IconLogoOutline({ className, ...props }: React.ComponentProps<'svg'>) {
       className={cn('size-4', className)}
       {...props}
     >
-      <circle
-        cx="128"
-        cy="128"
-        r="108"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="24"
-      ></circle>
-      <circle cx="102" cy="128" r="18" fill="currentColor"></circle>
-      <circle cx="154" cy="128" r="18" fill="currentColor"></circle>
+      <OwlOutline />
+      <g transform="translate(128 128) scale(0.9) translate(-128 -128)">
+        {OWL_EYES.map(eye => (
+          <circle
+            key={eye.cx}
+            cx={eye.cx}
+            cy={eye.cy}
+            r={OWL_EYE_RADIUS}
+            fill="currentColor"
+          />
+        ))}
+      </g>
     </svg>
   )
 }
@@ -54,7 +71,9 @@ function IconBlinkingLogo({ className, bodyColor, ...props }: LogoProps) {
   const svgRef = useRef<SVGSVGElement>(null)
 
   useEffect(() => {
-    const blinkElements = document.querySelectorAll('.blink')
+    const svg = svgRef.current
+    if (!svg) return
+    const blinkElements = svg.querySelectorAll('.blink')
     const initialPositions = Array.from(blinkElements).map(el => ({
       cx: parseFloat(el.getAttribute('cx') || '0'),
       cy: parseFloat(el.getAttribute('cy') || '0')
@@ -81,16 +100,31 @@ function IconBlinkingLogo({ className, bodyColor, ...props }: LogoProps) {
 
     const handleMove = (clientX: number, clientY: number) => {
       if (svgRef.current) {
-        const rect = svgRef.current.getBoundingClientRect()
-        const mouseX = clientX - rect.left - rect.width / 2 - 256
-        const mouseY = clientY - rect.top - rect.height / 2
+        // Map the pointer into the SVG's viewBox units so it shares a
+        // coordinate space with the eye centers.
+        const ctm = svgRef.current.getScreenCTM()
+        if (!ctm) return
+        const pointer = new DOMPoint(clientX, clientY).matrixTransform(
+          ctm.inverse()
+        )
 
-        const maxMove = 60
+        // How far the eyes may shift, and the pointer distance (in viewBox
+        // units) at which they reach it.
+        const maxMove = 4
+        const reach = 96
 
         blinkElements.forEach((el, index) => {
           const { cx, cy } = initialPositions[index]
-          const targetDx = Math.min((mouseX - cx) * 0.1, maxMove)
-          const targetDy = Math.min((mouseY - cy) * 0.1, maxMove)
+          const vx = pointer.x - cx
+          const vy = pointer.y - cy
+          const distance = Math.hypot(vx, vy)
+          // Point toward the cursor, easing in until it is `reach` away.
+          const factor =
+            distance === 0
+              ? 0
+              : (maxMove * Math.min(distance, reach)) / reach / distance
+          const targetDx = vx * factor
+          const targetDy = vy * factor
 
           let velocityX = 0
           let velocityY = 0
@@ -149,23 +183,18 @@ function IconBlinkingLogo({ className, bodyColor, ...props }: LogoProps) {
       className={cn('size-4', className)}
       {...props}
     >
-      <circle cx="128" cy="128" r="128" fill={bodyColor ?? '#222'}></circle>
-      <ellipse
-        cx="102"
-        cy="128"
-        rx="18"
-        ry="18"
-        fill="white"
-        className="blink"
-      ></ellipse>
-      <ellipse
-        cx="154"
-        cy="128"
-        rx="18"
-        ry="18"
-        fill="white"
-        className="blink"
-      ></ellipse>
+      <OwlBody bodyColor={bodyColor} />
+      {OWL_EYES.map(eye => (
+        <ellipse
+          key={eye.cx}
+          cx={eye.cx}
+          cy={eye.cy}
+          rx={OWL_EYE_RADIUS}
+          ry={OWL_EYE_RADIUS}
+          style={{ fill: bodyColor ?? OWL_DEFAULT_COLOR }}
+          className="blink"
+        />
+      ))}
     </svg>
   )
 }

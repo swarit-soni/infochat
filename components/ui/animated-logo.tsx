@@ -4,6 +4,13 @@ import { useEffect, useState } from 'react'
 
 import { cn } from '@/lib/utils'
 
+import {
+  OWL_DEFAULT_COLOR,
+  OWL_EYE_RADIUS,
+  OWL_EYES,
+  OwlBody
+} from './owl-mark'
+
 export function AnimatedLogo({
   animate = true,
   className,
@@ -11,7 +18,7 @@ export function AnimatedLogo({
   ...props
 }: React.ComponentProps<'svg'> & {
   animate?: boolean
-  /** Body color; the eyes stay white. */
+  /** Owl color; the body is a lighter gradient of it. */
   bodyColor?: string
 }) {
   const [isBlinking, setIsBlinking] = useState(false)
@@ -56,7 +63,7 @@ export function AnimatedLogo({
       className={cn('size-8', className)}
       {...props}
     >
-      <circle cx="128" cy="128" r="128" fill={bodyColor ?? 'black'}></circle>
+      <OwlBody bodyColor={bodyColor} />
       <g
         className={cn(
           'origin-center',
@@ -64,22 +71,17 @@ export function AnimatedLogo({
             'animate-[lookAround_2.8s_var(--motion-ease-in-out)_infinite] will-change-transform motion-reduce:animate-none motion-reduce:will-change-auto'
         )}
       >
-        <ellipse
-          cx="102"
-          cy="128"
-          rx="18"
-          ry="18"
-          fill="white"
-          className={cn(!animate && isBlinking && 'animate-blink')}
-        ></ellipse>
-        <ellipse
-          cx="154"
-          cy="128"
-          rx="18"
-          ry="18"
-          fill="white"
-          className={cn(!animate && isBlinking && 'animate-blink')}
-        ></ellipse>
+        {OWL_EYES.map(eye => (
+          <ellipse
+            key={eye.cx}
+            cx={eye.cx}
+            cy={eye.cy}
+            rx={OWL_EYE_RADIUS}
+            ry={OWL_EYE_RADIUS}
+            style={{ fill: bodyColor ?? OWL_DEFAULT_COLOR }}
+            className={cn(!animate && isBlinking && 'animate-blink')}
+          />
+        ))}
       </g>
     </svg>
   )
