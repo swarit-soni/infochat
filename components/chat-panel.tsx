@@ -454,7 +454,7 @@ export function ChatPanel({
     >
       {messages.length === 0 && (
         <div
-          className="mb-6 md:mb-10 flex flex-col items-center gap-2 md:gap-4"
+          className="relative z-10 mb-6 md:mb-10 flex flex-col items-center gap-2 md:gap-4"
           {...hiddenBySettings}
         >
           <SpaceHomeLogo />
