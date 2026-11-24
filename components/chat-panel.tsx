@@ -67,13 +67,11 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from './ui/tooltip'
-import { ActionButtons } from './action-buttons'
 import { MessageNavigationDots } from './message-navigation-dots'
 import { SearchModeSelector } from './search-mode-selector'
 import { UploadedFileList } from './uploaded-file-list'
 
 // Constants for timing delays
-const INPUT_UPDATE_DELAY_MS = 10 // Delay to ensure input value is updated before form submission
 // Only paste events at/over this size become a content card, so short/normal
 // pastes stay inline. Sized by chars, not lines — a line-count trigger carded
 // short, many-line pastes that read fine inline and were mostly reverted.
@@ -969,35 +967,6 @@ export function ChatPanel({
             </div>
           </div>
         </div>
-
-        {/* Action buttons for prompt suggestions */}
-        {messages.length === 0 && (
-          <ActionButtons
-            onSelectPrompt={message => {
-              // Set the input value and submit
-              handleInputChange({
-                target: { value: message }
-              } as React.ChangeEvent<HTMLTextAreaElement>)
-              // Submit the form after a small delay to ensure the input is updated
-              setTimeout(() => {
-                inputRef.current?.form?.requestSubmit()
-                // Reset focus state after action button submission
-                setIsInputFocused(false)
-                inputRef.current?.blur()
-              }, INPUT_UPDATE_DELAY_MS)
-            }}
-            onCategoryClick={category => {
-              // Set the category in the input
-              handleInputChange({
-                target: { value: category }
-              } as React.ChangeEvent<HTMLTextAreaElement>)
-              // Focus the input
-              inputRef.current?.focus()
-            }}
-            inputRef={inputRef}
-            className="mt-2 hidden md:block"
-          />
-        )}
       </form>
       <LibraryPickerDialog
         open={isLibraryPickerOpen}
