@@ -40,6 +40,7 @@ import {
   isToolTypePart
 } from '@/lib/types/dynamic-tools'
 import { cn } from '@/lib/utils'
+import { buildChatSections } from '@/lib/utils/chat-sections'
 import { getCookie } from '@/lib/utils/cookies'
 import { getTextFromParts } from '@/lib/utils/message-utils'
 
@@ -57,13 +58,6 @@ import { DefaultSkeleton } from './default-skeleton'
 import { DragOverlay } from './drag-overlay'
 import { ErrorModal } from './error-modal'
 import { UsageBudgetWarning, useUsageBudget } from './usage-budget-provider'
-
-// Define section structure
-interface ChatSection {
-  id: string // User message ID
-  userMessage: UIMessage
-  assistantMessages: UIMessage[]
-}
 
 export function Chat({
   id: providedId,
@@ -441,40 +435,8 @@ export function Chat({
     [setQuotedContexts]
   )
 
-  // Convert messages array to sections array.
-  // Deduplicate by message.id — @ai-sdk/react useChat can occasionally
-  // surface the same assistant message twice during stream finalization,
-  // which would otherwise produce React 'duplicate key' warnings in
-  // chat-messages.tsx (one warning per re-render).
-  const sections = useMemo<ChatSection[]>(() => {
-    const result: ChatSection[] = []
-    const seenIds = new Set<string>()
-    let currentSection: ChatSection | null = null
-
-    for (const message of messages) {
-      if (seenIds.has(message.id)) continue
-      seenIds.add(message.id)
-
-      if (message.role === 'user') {
-        if (currentSection) {
-          result.push(currentSection)
-        }
-        currentSection = {
-          id: message.id,
-          userMessage: message,
-          assistantMessages: []
-        }
-      } else if (currentSection && message.role === 'assistant') {
-        currentSection.assistantMessages.push(message)
-      }
-    }
-
-    if (currentSection) {
-      result.push(currentSection)
-    }
-
-    return result
-  }, [messages])
+  // Convert messages array to sections array (latest copy of each id wins).
+  const sections = useMemo(() => buildChatSections(messages), [messages])
 
   // Listen for copy message shortcut
   // Uses ref to avoid re-registering listener on every messages change.
