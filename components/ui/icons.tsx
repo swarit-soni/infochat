@@ -100,17 +100,31 @@ function IconBlinkingLogo({ className, bodyColor, ...props }: LogoProps) {
 
     const handleMove = (clientX: number, clientY: number) => {
       if (svgRef.current) {
-        const rect = svgRef.current.getBoundingClientRect()
-        const mouseX = clientX - rect.left - rect.width / 2 - 256
-        const mouseY = clientY - rect.top - rect.height / 2
+        // Map the pointer into the SVG's viewBox units so it shares a
+        // coordinate space with the eye centers.
+        const ctm = svgRef.current.getScreenCTM()
+        if (!ctm) return
+        const pointer = new DOMPoint(clientX, clientY).matrixTransform(
+          ctm.inverse()
+        )
 
+        // How far the eyes may shift, and the pointer distance (in viewBox
+        // units) at which they reach it.
         const maxMove = 4
+        const reach = 96
 
         blinkElements.forEach((el, index) => {
           const { cx, cy } = initialPositions[index]
-          const clamp = (v: number) => Math.max(-maxMove, Math.min(v, maxMove))
-          const targetDx = clamp((mouseX - cx) * 0.1)
-          const targetDy = clamp((mouseY - cy) * 0.1)
+          const vx = pointer.x - cx
+          const vy = pointer.y - cy
+          const distance = Math.hypot(vx, vy)
+          // Point toward the cursor, easing in until it is `reach` away.
+          const factor =
+            distance === 0
+              ? 0
+              : (maxMove * Math.min(distance, reach)) / reach / distance
+          const targetDx = vx * factor
+          const targetDy = vy * factor
 
           let velocityX = 0
           let velocityY = 0
