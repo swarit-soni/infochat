@@ -2,7 +2,7 @@ import { cache } from 'react'
 import { notFound, redirect } from 'next/navigation'
 
 import { getChatMeta } from '@/lib/actions/chat'
-import { getCurrentUserId } from '@/lib/auth/get-current-user'
+import { getCurrentUser } from '@/lib/auth/get-current-user'
 import { isAnonymousMode } from '@/lib/auth/provider'
 import { FIXED_MODEL } from '@/lib/config/default-model'
 import { isProviderEnabled } from '@/lib/utils/registry'
@@ -18,7 +18,7 @@ export async function generateMetadata(props: {
   params: Promise<{ id: string }>
 }) {
   const { id } = await props.params
-  const userId = await getCurrentUserId()
+  const userId = (await getCurrentUser())?.id
 
   const chat = await getChat(id, userId)
 
@@ -31,13 +31,23 @@ export async function generateMetadata(props: {
   }
 }
 
+/**
+ * Global chat URL, kept for shared links (`/search/<id>` is what the share
+ * dialog copies). The chat's owner is moved into their college's area;
+ * anyone else views a public chat here.
+ */
 export default async function SearchPage(props: {
   params: Promise<{ id: string }>
 }) {
   const { id } = await props.params
-  const userId = await getCurrentUserId()
+  const user = await getCurrentUser()
+  const userId = user?.id
 
   const chat = await getChat(id, userId)
+
+  if (chat && userId && chat.userId === userId && user?.college) {
+    redirect(`/${user.college}/search/${id}`)
+  }
 
   if (!chat) {
     // A logged-out visitor cannot tell a private chat from a missing one:
@@ -46,13 +56,13 @@ export default async function SearchPage(props: {
     // instead of a dead-end 404; public chats render above without a
     // login bounce. The ?next= carries the chat back through the login.
     if (!userId) {
-      redirect(`/auth/login?next=${encodeURIComponent(`/search/${id}`)}`)
+      redirect(`/?next=${encodeURIComponent(`/search/${id}`)}`)
     }
     notFound()
   }
 
   if (chat.visibility === 'private' && !userId) {
-    redirect(`/auth/login?next=${encodeURIComponent(`/search/${id}`)}`)
+    redirect(`/?next=${encodeURIComponent(`/search/${id}`)}`)
   }
 
   const isCloudDeployment = process.env.SERA_CLOUD_DEPLOYMENT === 'true'

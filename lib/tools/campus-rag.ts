@@ -2,6 +2,12 @@ import { type JSONValue, tool } from 'ai'
 import { z } from 'zod'
 
 import {
+  COLLEGES,
+  type CollegeSlug,
+  getOfficialWebDomains,
+  getVisibleColleges
+} from '@/lib/colleges/registry'
+import {
   CAMPUS_EVENT_STATUSES,
   KNOWLEDGE_AUTHORITIES,
   KNOWLEDGE_DOMAINS
@@ -23,10 +29,9 @@ import {
 
 import { createSearchTool } from './search'
 
-export const OFFICIAL_WEB_DOMAINS = [
-  'jecrcuniversity.edu.in',
-  'kalvium.com'
-] as const
+/** Official domains for the default (Kalvium) tenant; see getOfficialWebDomains. */
+export const OFFICIAL_WEB_DOMAINS: readonly string[] =
+  getOfficialWebDomains('kalvium')
 
 export const RAG_MODEL_CONTENT_MAX_CHARACTERS = 1800
 
@@ -80,10 +85,11 @@ function toJsonValue(value: unknown): JSONValue {
 }
 
 export function filterOfficialDomains(
-  requestedDomains?: string[] | null
+  requestedDomains?: string[] | null,
+  officialDomains: readonly string[] = OFFICIAL_WEB_DOMAINS
 ): string[] {
   if (!requestedDomains || requestedDomains.length === 0) {
-    return [...OFFICIAL_WEB_DOMAINS]
+    return [...officialDomains]
   }
 
   const allowed = requestedDomains
@@ -94,19 +100,33 @@ export function filterOfficialDomains(
         .replace(/^www\./, '')
     )
     .filter(domain =>
-      OFFICIAL_WEB_DOMAINS.some(
+      officialDomains.some(
         official => domain === official || domain.endsWith(`.${official}`)
       )
     )
 
-  return allowed.length > 0 ? allowed : [...OFFICIAL_WEB_DOMAINS]
+  return allowed.length > 0 ? allowed : [...officialDomains]
 }
 
 export function createCampusRagTools(options?: {
   labelAllocator?: CitationLabelAllocator
   labelSeed?: number
   model?: string
+  /**
+   * The asking user's college. Tools only read that college's and its
+   * partner colleges' records, and only search their official domains.
+   */
+  college?: CollegeSlug
+  /** Attributed on logged knowledge gaps. */
+  userId?: string | null
+  chatId?: string | null
 }) {
+  const college = options?.college ?? 'kalvium'
+  const visibleColleges = getVisibleColleges(college)
+  const collegeNames = visibleColleges
+    .map(slug => COLLEGES[slug].shortName)
+    .join(' & ')
+  const officialDomains = getOfficialWebDomains(college)
   const labelAllocator =
     options?.labelAllocator ??
     createCitationLabelAllocator(options?.labelSeed ?? 1)
@@ -117,7 +137,7 @@ export function createCampusRagTools(options?: {
 
   const searchCampusKnowledge = tool({
     description:
-      'ALWAYS call this FIRST for Kalvium X JECRC campus questions (admissions, fees, examinations, timetables, curriculum, assessments, mentorship guides, E-Notices, and urgent WhatsApp/GChat updates). Uses hybrid semantic + full-text Postgres retrieval with source precedence and expiry filtering.',
+      `ALWAYS call this FIRST for ${collegeNames} campus questions (admissions, fees, examinations, timetables, curriculum, assessments, mentorship guides, notices, and urgent WhatsApp/GChat updates). Uses hybrid semantic + full-text Postgres retrieval with source precedence and expiry filtering.`,
     inputSchema: z.object({
       query: z
         .string()
@@ -131,7 +151,9 @@ export function createCampusRagTools(options?: {
       authority: z
         .enum(KNOWLEDGE_AUTHORITIES)
         .optional()
-        .describe('Optional entity filter: kalvium, jecrc, or joint'),
+        .describe(
+          `Optional issuing-authority filter: ${[...visibleColleges, 'joint'].join(', ')}`
+        ),
       program: z
         .string()
         .optional()
@@ -140,7 +162,10 @@ export function createCampusRagTools(options?: {
         .string()
         .optional()
         .describe('Optional semester filter (e.g. 3)'),
-      squad: z.string().optional().describe('Optional Kalvium squad filter'),
+      squad: z
+        .string()
+        .optional()
+        .describe('Optional squad / batch / section filter'),
       residency: z
         .string()
         .optional()
@@ -175,6 +200,7 @@ export function createCampusRagTools(options?: {
       }
 
       const hits = await retrieveCampusKnowledge({
+        colleges: visibleColleges,
         query,
         domain,
         authority,
@@ -235,6 +261,7 @@ export function createCampusRagTools(options?: {
       }
 
       const events = await retrieveCampusEvents({
+        colleges: visibleColleges,
         query: query.trim() || undefined,
         status,
         includeCompleted: status === 'all' || status === 'completed',
@@ -292,24 +319,26 @@ export function createCampusRagTools(options?: {
 
   const getOfficialPortalLinks = tool({
     description:
-      'Deterministic lookup from the verified official_portals registry for JECRC ERP, E-Notice, Result, Student Support, Parent Portal, and Kalvium Student Dashboard. Use whenever a student asks for personal records (attendance, grades, fee balance, dashboard progress) or official portal navigation steps.',
+      `Deterministic lookup from the verified official_portals registry of ${collegeNames} (ERP/student logins, results, notices, support desks, dashboards). Use whenever a student asks for personal records (attendance, grades, fee balance, dashboard progress) or official portal navigation steps.`,
     inputSchema: z.object({
       query: z
         .string()
         .optional()
         .describe(
-          'Student task or portal topic (e.g. "personal attendance", "exam results", "kalvium dashboard")'
+          'Student task or portal topic (e.g. "personal attendance", "exam results", "fee payment")'
         ),
       portalKey: z
         .string()
         .optional()
         .describe(
-          'Optional exact portal key (jecrc_erp, jecrc_enotice, jecrc_result, jecrc_support, jecrc_parent, kalvium_dashboard)'
+          'Optional exact portal key from a previous lookup (e.g. jecrc_erp, kalvium_dashboard, bkbirla_results)'
         ),
       authority: z
         .enum(KNOWLEDGE_AUTHORITIES)
         .optional()
-        .describe('Optional authority filter (kalvium, jecrc, or joint)')
+        .describe(
+          `Optional authority filter (${[...visibleColleges, 'joint'].join(', ')})`
+        )
     }),
     async *execute({ query = '', portalKey, authority }, context) {
       const displayQuery =
@@ -320,6 +349,7 @@ export function createCampusRagTools(options?: {
       }
 
       const portals = await retrieveOfficialPortals({
+        colleges: visibleColleges,
         query: query.trim() || undefined,
         portalKey,
         authority
@@ -361,7 +391,7 @@ export function createCampusRagTools(options?: {
 
   const searchOfficialWeb = tool({
     description:
-      'Controlled live web fallback restricted strictly to official domains (jecrcuniversity.edu.in and kalvium.com). Only call AFTER searchCampusKnowledge if no verified campus document covered the query.',
+      `Controlled live web fallback restricted strictly to official domains (${officialDomains.join(', ')}). Only call AFTER searchCampusKnowledge if no verified campus document covered the query.`,
     inputSchema: z.object({
       query: z.string().describe('Official web fallback query'),
       max_results: z.number().int().min(1).max(15).optional().default(8),
@@ -373,7 +403,10 @@ export function createCampusRagTools(options?: {
         )
     }),
     async *execute({ query, max_results = 8, include_domains }, context) {
-      const allowlistedDomains = filterOfficialDomains(include_domains)
+      const allowlistedDomains = filterOfficialDomains(
+        include_domains,
+        officialDomains
+      )
       const executeFn = officialSearchTool.execute
       if (!executeFn) {
         yield {
@@ -457,7 +490,7 @@ export function createCampusRagTools(options?: {
 
   const logUnansweredQuery = tool({
     description:
-      'Log a campus query gap when verified campus knowledge is missing, expired, or contradictory so Kalvium mentors can curate an authoritative answer. Always call before abstaining.',
+      `Log a campus query gap when verified campus knowledge is missing, expired, or contradictory so ${COLLEGES[college].shortName} mentors can curate an authoritative answer. Always call before abstaining.`,
     inputSchema: z.object({
       query: z
         .string()
@@ -478,6 +511,9 @@ export function createCampusRagTools(options?: {
     }),
     async execute({ query, domain = 'general', cohort, reason }) {
       const inserted = await recordUnansweredQuery({
+        college,
+        userId: options?.userId ?? null,
+        chatId: options?.chatId ?? null,
         query,
         domain,
         cohort: cohort ?? null,

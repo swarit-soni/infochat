@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 import {
-  getUserTypeFromEmail,
+  getCollegeIdentityFromEmail,
   isGoogleAuthUser,
   normalizeEmail
 } from '@/lib/auth/domain'
@@ -28,10 +28,11 @@ function metaString(
 }
 
 export function toAppUser(user: SupabaseUser): AppUser | null {
-  const userType = getUserTypeFromEmail(user.email)
-  if (!userType || !isGoogleAuthUser(user)) {
+  const identity = getCollegeIdentityFromEmail(user.email)
+  if (!identity || !isGoogleAuthUser(user)) {
     return null
   }
+  const { userType, college } = identity
 
   const metadata = (user.user_metadata ?? {}) as Record<string, unknown>
   return {
@@ -41,7 +42,8 @@ export function toAppUser(user: SupabaseUser): AppUser | null {
     image: metaString(metadata, 'avatar_url', 'picture'),
     createdAt: user.created_at ?? null,
     userType,
-    role: userType
+    role: userType,
+    college
   }
 }
 

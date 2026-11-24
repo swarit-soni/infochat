@@ -91,6 +91,7 @@ export async function createChatStreamResponse(
     isNewChat,
     searchMode,
     spaceColor,
+    college,
     onZeroPartError
   } = config
 
@@ -259,6 +260,8 @@ export async function createChatStreamResponse(
         citationLabelSeed: nextCitationLabelNumber(messagesToModel),
         currentDraft,
         spaceInstructions,
+        college,
+        userId,
         alternativesOnly: isReviseAlternativesTurn(
           messagesToModel.findLast(m => m.role === 'user') ?? { role: '' }
         )

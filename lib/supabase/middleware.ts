@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { type CookieOptions, createServerClient } from '@supabase/ssr'
 
 import { isAllowedEmail, isGoogleAuthUser } from '@/lib/auth/domain'
+import { collegePath, getCollegeFromPathname } from '@/lib/colleges/registry'
 
 import { getSupabasePublishableKey } from './keys'
 
@@ -12,17 +13,42 @@ function matchesPathPrefix(pathname: string, prefix: string): boolean {
 
 function isPublicPath(pathname: string): boolean {
   if (
+    pathname === '/' ||
     matchesPathPrefix(pathname, '/auth') ||
     matchesPathPrefix(pathname, '/api')
   ) {
     return true
   }
 
+  const college = getCollegeFromPathname(pathname)
+  if (college && matchesPathPrefix(pathname, `/${college}/auth`)) {
+    return true
+  }
+
   if (process.env.ENABLE_GUEST_CHAT === 'true') {
-    return pathname === '/' || matchesPathPrefix(pathname, '/share')
+    return (
+      (college !== null && pathname === `/${college}`) ||
+      matchesPathPrefix(pathname, '/share')
+    )
   }
 
   return false
+}
+
+/** Where an unauthenticated visitor to `pathname` should sign in. */
+function loginPathFor(pathname: string): string {
+  const college = getCollegeFromPathname(pathname)
+  if (!college) {
+    // Outside any college area there is no login to pick: show the
+    // college picker, which carries ?next= into the chosen login.
+    return '/'
+  }
+  return collegePath(
+    college,
+    matchesPathPrefix(pathname, `/${college}/mentor`)
+      ? '/auth/mentor'
+      : '/auth/student'
+  )
 }
 
 export async function updateSession(request: NextRequest) {
@@ -76,7 +102,8 @@ export async function updateSession(request: NextRequest) {
   if (user && (!isAllowedEmail(user.email) || !isGoogleAuthUser(user))) {
     await supabase.auth.signOut()
     const loginUrl = request.nextUrl.clone()
-    loginUrl.pathname = '/auth/login'
+    const college = getCollegeFromPathname(pathname)
+    loginUrl.pathname = college ? collegePath(college, '/auth/student') : '/'
     loginUrl.search = ''
     loginUrl.searchParams.set('error', 'unauthorized_domain')
     const redirectResponse = NextResponse.redirect(loginUrl)
@@ -89,11 +116,10 @@ export async function updateSession(request: NextRequest) {
   // Redirect to login if the user is not authenticated and the path is not public.
   if (!user && !isPublicPath(pathname)) {
     const loginUrl = request.nextUrl.clone()
-    loginUrl.pathname = matchesPathPrefix(pathname, '/mentor')
-      ? '/auth/mentor'
-      : '/auth/login'
+    loginUrl.pathname = loginPathFor(pathname)
     loginUrl.search = ''
-    if (pathname !== '/') {
+    const college = getCollegeFromPathname(pathname)
+    if (!college || pathname !== `/${college}`) {
       loginUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
     }
     return NextResponse.redirect(loginUrl)

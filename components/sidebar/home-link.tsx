@@ -3,6 +3,7 @@
 import type { ComponentProps, MouseEvent } from 'react'
 import Link from 'next/link'
 
+import { useCollegeHref } from '@/lib/colleges/use-college'
 import { SHORTCUT_EVENTS } from '@/lib/keyboard-shortcuts'
 
 // A chat started on the home page only rewrites the URL, so navigating to "/"
@@ -28,5 +29,6 @@ function handleHomeClick(event: MouseEvent<HTMLAnchorElement>) {
 export function HomeLink(
   props: Omit<ComponentProps<typeof Link>, 'href' | 'onClick'>
 ) {
-  return <Link {...props} href="/" onClick={handleHomeClick} />
+  const collegeHref = useCollegeHref()
+  return <Link {...props} href={collegeHref('/')} onClick={handleHomeClick} />
 }

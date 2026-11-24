@@ -26,6 +26,7 @@ import {
 import { toast } from 'sonner'
 
 import { captureClient } from '@/lib/analytics/posthog-client'
+import { useCollegeHref } from '@/lib/colleges/use-college'
 import { SHORTCUT_EVENTS } from '@/lib/keyboard-shortcuts'
 import {
   isAdaptiveModeAuthBlocked,
@@ -150,6 +151,7 @@ export function ChatPanel({
   sections = []
 }: ChatPanelProps) {
   const router = useRouter()
+  const collegeHref = useCollegeHref()
   const { editor: spaceEditor } = useSpaces()
   // Space settings cover the home; keep what is underneath out of reach.
   const hiddenBySettings = (
@@ -227,8 +229,8 @@ export function ChatPanel({
     inputRef.current?.blur()
     // Reset chatId in parent component
     onNewChat?.()
-    router.push('/')
-  }, [setMessages, closeArtifact, onNewChat, router])
+    router.push(collegeHref('/'))
+  }, [setMessages, closeArtifact, onNewChat, router, collegeHref])
 
   // Listen for keyboard shortcut events
   // Uses defaultPrevented to prevent duplicate handling

@@ -10,6 +10,8 @@ import {
 import { getCurrentUser, getCurrentUserId } from '@/lib/auth/get-current-user'
 import { isAnonymousMode } from '@/lib/auth/provider'
 import { rejectIfBot } from '@/lib/bot-protection'
+import { getDefaultCollege } from '@/lib/colleges/access'
+import { type CollegeSlug, isCollegeSlug } from '@/lib/colleges/registry'
 import { getUserMessageIds } from '@/lib/db/actions'
 import { generateId } from '@/lib/db/schema'
 import { checkAndEnforceAdaptiveLimit } from '@/lib/rate-limit/adaptive-limit'
@@ -122,6 +124,11 @@ export async function POST(req: Request) {
 
     const guestChatEnabled = process.env.ENABLE_GUEST_CHAT === 'true'
     const isGuest = !userId
+    // Signed-in users always use their own college; only guests (and
+    // providers without college sign-in) fall back to the page's college.
+    const college: CollegeSlug =
+      currentUser?.college ??
+      (isCollegeSlug(body.college) ? body.college : getDefaultCollege())
 
     if (exceedsAttachmentLimit({ isGuest, trigger, message, messages })) {
       return new Response(
@@ -444,7 +451,8 @@ export async function POST(req: Request) {
         model: selectedModel,
         abortSignal,
         searchMode,
-        chatId
+        chatId,
+        college
       })
     } else {
       try {
@@ -459,6 +467,7 @@ export async function POST(req: Request) {
           isNewChat,
           searchMode,
           spaceColor,
+          college,
           onZeroPartError: refundUsageOnce
         })
       } catch (error) {

@@ -14,6 +14,7 @@ import {
 } from 'drizzle-orm'
 
 import { normalizeEmail } from '@/lib/auth/domain'
+import type { CollegeSlug } from '@/lib/colleges/registry'
 import { HL_START, HL_STOP } from '@/lib/render/highlight-markers'
 import type { UIMessage } from '@/lib/types/ai'
 import type { PersistableUIMessage } from '@/lib/types/message-persistence'
@@ -1209,12 +1210,14 @@ export async function upsertUserProfile({
   id,
   email,
   userType,
+  college,
   name = null,
   avatarUrl = null
 }: {
   id: string
   email: string
   userType: UserType
+  college: CollegeSlug
   name?: string | null
   avatarUrl?: string | null
 }): Promise<UserProfile> {
@@ -1226,6 +1229,7 @@ export async function upsertUserProfile({
         id,
         email: normalizedEmail,
         userType,
+        college,
         name,
         avatarUrl
       })
@@ -1234,6 +1238,7 @@ export async function upsertUserProfile({
         set: {
           email: normalizedEmail,
           userType,
+          college,
           name,
           avatarUrl,
           updatedAt: new Date()

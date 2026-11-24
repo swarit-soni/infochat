@@ -11,6 +11,7 @@ import { toast } from 'sonner'
 
 import { clearChats } from '@/lib/actions/chat'
 import { chatStore } from '@/lib/chat-store'
+import { useCollegeHref } from '@/lib/colleges/use-college'
 
 import {
   AlertDialog,
@@ -41,6 +42,7 @@ export function ClearHistoryAction({ empty }: ClearHistoryActionProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isAlertOpen, setIsAlertOpen] = useState(false)
   const router = useRouter()
+  const collegeHref = useCollegeHref()
 
   const handleClearAction = useCallback(() => {
     startTransition(async () => {
@@ -48,7 +50,7 @@ export function ClearHistoryAction({ empty }: ClearHistoryActionProps) {
       if (res?.success) {
         chatStore.clear()
         toast.success('History cleared')
-        router.push('/')
+        router.push(collegeHref('/'))
       } else if (res?.error) {
         toast.error(res.error)
       }
@@ -56,7 +58,7 @@ export function ClearHistoryAction({ empty }: ClearHistoryActionProps) {
       setIsMenuOpen(false)
       window.dispatchEvent(new CustomEvent('chat-history-updated'))
     })
-  }, [startTransition, router])
+  }, [startTransition, router, collegeHref])
 
   const handleAlertOpenChange = useCallback(
     (open: boolean) => {

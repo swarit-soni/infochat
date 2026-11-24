@@ -1,6 +1,7 @@
 import type { NextRequest, NextResponse } from 'next/server'
 
 import type { UserType } from '@/lib/auth/domain'
+import type { CollegeSlug } from '@/lib/colleges/registry'
 import type { db } from '@/lib/db'
 
 export type AuthProviderName = 'supabase' | 'better-auth' | 'none'
@@ -15,10 +16,15 @@ export interface AppUser {
   name?: string | null
   image?: string | null
   createdAt?: Date | string | null
-  /** Kalvium classification derived from verified email domain. */
+  /** Role at the user's college, derived from the verified email. */
   userType?: UserType | null
-  /** Kalvium role when the provider resolves one (`mentor` | `student`). */
+  /** Role when the provider resolves one (`mentor` | `student`). */
   role?: string | null
+  /**
+   * The college (tenant) the account belongs to. Every account belongs to
+   * exactly one college and may only use that college's area of the app.
+   */
+  college?: CollegeSlug | null
 }
 
 /**

@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 
 import { deleteChat } from '@/lib/actions/chat'
 import { chatStore } from '@/lib/chat-store'
+import { useCollegeHref } from '@/lib/colleges/use-college'
 import { Chat as DBChat } from '@/lib/db/schema'
 
 import {
@@ -82,7 +83,8 @@ const formatDateWithTime = (date: Date | string) => {
 
 export function ChatMenuItem({ chat }: ChatMenuItemProps) {
   const pathname = usePathname()
-  const path = `/search/${chat.id}`
+  const collegeHref = useCollegeHref()
+  const path = collegeHref(`/search/${chat.id}`)
   const isActive = pathname === path
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -102,7 +104,7 @@ export function ChatMenuItem({ chat }: ChatMenuItemProps) {
         chatStore.remove(chat.id)
         toast.success('Chat deleted')
         if (isActive) {
-          router.push('/')
+          router.push(collegeHref('/'))
         }
         window.dispatchEvent(new CustomEvent('chat-history-updated'))
       } else if (result?.error) {
@@ -111,7 +113,7 @@ export function ChatMenuItem({ chat }: ChatMenuItemProps) {
         toast.error('An unexpected error occurred while deleting the chat.')
       }
     })
-  }, [chat.id, isActive, router, startTransition])
+  }, [chat.id, collegeHref, isActive, router, startTransition])
   const handleMenuOpenChange = useCallback((open: boolean) => {
     setIsMenuOpen(open)
   }, [])

@@ -18,6 +18,7 @@ import { toast } from 'sonner'
 import { summarizeGenui } from '@/lib/analytics/genui-summary'
 import { captureClient } from '@/lib/analytics/posthog-client'
 import { type ChatHandlers, ChatStore, chatStore } from '@/lib/chat-store'
+import { isChatHomePath, useCollegeHref } from '@/lib/colleges/use-college'
 import { useAppUser } from '@/lib/contexts/app-user-context'
 import { ChatProvider } from '@/lib/contexts/chat-context'
 import { generateId } from '@/lib/db/schema'
@@ -83,6 +84,7 @@ export function Chat({
   hasAvailableModels?: boolean
 }) {
   const router = useRouter()
+  const collegeHref = useCollegeHref()
   const {
     enabled: usageBudgetEnabled,
     costs: usageCosts,
@@ -611,8 +613,8 @@ export function Chat({
   useEffect(() => {
     // Only scroll if this chat is currently visible in the URL
     const isCurrentChat =
-      window.location.pathname === `/search/${chatId}` ||
-      (window.location.pathname === '/' && sections.length > 0)
+      window.location.pathname === collegeHref(`/search/${chatId}`) ||
+      (isChatHomePath(window.location.pathname) && sections.length > 0)
 
     if (isCurrentChat && sections.length > 0) {
       const lastMessage = messages[messages.length - 1]
@@ -625,7 +627,7 @@ export function Chat({
         })
       }
     }
-  }, [sections, messages, chatId])
+  }, [sections, messages, chatId, collegeHref])
 
   const handleUpdateAndReloadMessage = async (
     editedMessageId: string,
@@ -719,8 +721,8 @@ export function Chat({
 
       // Push URL state immediately after sending message (for new chats)
       // Check if we're on the root path (new chat)
-      if (!isGuest && window.location.pathname === '/') {
-        window.history.pushState({}, '', `/search/${chatId}`)
+      if (!isGuest && isChatHomePath(window.location.pathname)) {
+        window.history.pushState({}, '', collegeHref(`/search/${chatId}`))
       }
     }
   }
@@ -899,7 +901,7 @@ export function Chat({
           onAuthClose={() => {
             // Clear messages and navigate to root
             setMessages([])
-            router.push('/')
+            router.push(collegeHref('/'))
           }}
         />
       </div>

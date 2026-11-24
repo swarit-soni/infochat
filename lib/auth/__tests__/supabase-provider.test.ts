@@ -82,7 +82,8 @@ describe('supabase provider', () => {
         image: 'https://img.example/1.png',
         createdAt: '2026-01-01T00:00:00Z',
         userType: 'mentor',
-        role: 'mentor'
+        role: 'mentor',
+        college: 'kalvium'
       })
     })
 
@@ -104,7 +105,8 @@ describe('supabase provider', () => {
         image: 'https://img.example/2.png',
         createdAt: null,
         userType: 'student',
-        role: 'student'
+        role: 'student',
+        college: 'kalvium'
       })
     })
 

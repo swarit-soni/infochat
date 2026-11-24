@@ -6,11 +6,17 @@ import {
   eq,
   gt,
   ilike,
+  inArray,
   isNull,
   or,
   sql
 } from 'drizzle-orm'
 
+import {
+  COLLEGES,
+  type CollegeSlug,
+  isCollegeSlug
+} from '@/lib/colleges/registry'
 import { db } from '@/lib/db'
 import {
   campusEvents,
@@ -80,6 +86,11 @@ export interface RankedKnowledgeHit extends RetrievalCandidate {
 
 export interface RetrieveCampusKnowledgeParams {
   query: string
+  /**
+   * Colleges whose documents are visible to the asker (their college plus
+   * its partners). Omit only in tests; production callers always scope.
+   */
+  colleges?: CollegeSlug[]
   domain?: KnowledgeDomain
   authority?: KnowledgeAuthority
   cohort?: CohortFilter
@@ -89,6 +100,7 @@ export interface RetrieveCampusKnowledgeParams {
 
 export interface RetrieveCampusEventsParams {
   query?: string
+  colleges?: CollegeSlug[]
   status?: CampusEventStatus | 'all'
   includeCompleted?: boolean
   limit?: number
@@ -127,7 +139,11 @@ export const SOURCE_PRECEDENCE_WEIGHTS: Record<KnowledgeSourceSystem, number> =
     kalvium_guide: 0.18,
     eventum: 0.1,
     jecrc_web: 0.05,
-    kalvium_web: 0.05
+    kalvium_web: 0.05,
+    bkbirla_notice: 0.25,
+    official_document: 0.2,
+    bkbirla_web: 0.05,
+    official_website: 0.05
   }
 
 const RRF_K = 60
@@ -145,27 +161,25 @@ function isValidHttpUrl(url: string | null | undefined): url is string {
 export function buildCanonicalKnowledgeUrl(
   documentId: string,
   authority: KnowledgeAuthority,
-  sourceUrl?: string | null
+  sourceUrl?: string | null,
+  college: CollegeSlug = 'kalvium'
 ): string {
   if (isValidHttpUrl(sourceUrl)) {
     return sourceUrl
   }
-  if (authority === 'jecrc') {
-    return `https://jecrcuniversity.edu.in/#sera-kb-${encodeURIComponent(documentId)}`
-  }
-  return `https://kalvium.com/#sera-kb-${encodeURIComponent(documentId)}`
+  const website = isCollegeSlug(authority)
+    ? COLLEGES[authority].website
+    : COLLEGES[college].website
+  return `${website}/#sera-kb-${encodeURIComponent(documentId)}`
 }
 
 export function formatAuthorityLabel(authority: KnowledgeAuthority): string {
-  switch (authority) {
-    case 'kalvium':
-      return 'Kalvium'
-    case 'jecrc':
-      return 'JECRC University'
-    case 'joint':
-    default:
-      return 'Kalvium X JECRC'
+  if (isCollegeSlug(authority)) {
+    return COLLEGES[authority].shortName === 'JECRC'
+      ? 'JECRC University'
+      : COLLEGES[authority].shortName
   }
+  return 'Joint notice'
 }
 
 export function formatProvenanceBadge(candidate: {
@@ -200,7 +214,11 @@ export function formatProvenanceBadge(candidate: {
     whatsapp_forward: 'WhatsApp Forward',
     eventum: 'Eventum',
     jecrc_web: 'JECRC Official Website',
-    kalvium_web: 'Kalvium Official Website'
+    kalvium_web: 'Kalvium Official Website',
+    bkbirla_notice: 'B.K. Birla College Notice',
+    bkbirla_web: 'B.K. Birla College Official Website',
+    official_website: 'Official Website',
+    official_document: 'Official Document'
   }
 
   return `${sourceLabels[candidate.sourceSystem]} · ${dateText}`
@@ -341,6 +359,14 @@ function buildDocumentFilters(
       gt(knowledgeDocuments.expiresAt, now)
     )
   ]
+
+  if (params.colleges) {
+    conditions.push(
+      params.colleges.length > 0
+        ? inArray(knowledgeDocuments.college, params.colleges)
+        : sql`false`
+    )
+  }
 
   if (params.domain) {
     conditions.push(eq(knowledgeDocuments.domain, params.domain))
@@ -643,6 +669,13 @@ export async function retrieveCampusEvents(
 
   try {
     const conditions = []
+    if (params.colleges) {
+      conditions.push(
+        params.colleges.length > 0
+          ? inArray(campusEvents.college, params.colleges)
+          : sql`false`
+      )
+    }
     if (params.status && params.status !== 'all') {
       conditions.push(eq(campusEvents.status, params.status))
     } else if (!params.includeCompleted) {
@@ -693,12 +726,15 @@ export async function retrieveOfficialPortals(
     query?: string
     authority?: KnowledgeAuthority
     portalKey?: string
+    colleges?: CollegeSlug[]
   } = {}
 ): Promise<OfficialPortalRecord[]> {
+  const colleges = options.colleges
   try {
     const rows = await db
       .select({
         id: officialPortals.id,
+        college: officialPortals.college,
         portalKey: officialPortals.portalKey,
         name: officialPortals.name,
         authority: officialPortals.authority,
@@ -710,6 +746,13 @@ export async function retrieveOfficialPortals(
         lastVerifiedAt: officialPortals.lastVerifiedAt
       })
       .from(officialPortals)
+      .where(
+        colleges
+          ? colleges.length > 0
+            ? inArray(officialPortals.college, colleges)
+            : sql`false`
+          : undefined
+      )
       .orderBy(asc(officialPortals.portalKey))
 
     if (rows.length > 0) {
@@ -722,5 +765,10 @@ export async function retrieveOfficialPortals(
     )
   }
 
-  return matchPortalsFromList(DEFAULT_OFFICIAL_PORTALS, options)
+  return matchPortalsFromList(
+    colleges
+      ? DEFAULT_OFFICIAL_PORTALS.filter(p => colleges.includes(p.college))
+      : DEFAULT_OFFICIAL_PORTALS,
+    options
+  )
 }

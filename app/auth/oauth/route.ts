@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import {
-  getUserTypeFromEmail,
+  getCollegeIdentityFromEmail,
   isGoogleAuthUser,
-  isKalviumDomainEmail,
   normalizeEmail
 } from '@/lib/auth/domain'
 import { safeRedirectPath } from '@/lib/auth/redirect-target'
+import {
+  AUTH_COLLEGE_COOKIE,
+  collegePath,
+  type CollegeSlug,
+  getCollegeFromPathname,
+  isCollegeSlug
+} from '@/lib/colleges/registry'
 import { upsertUserProfile } from '@/lib/db/actions'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
@@ -24,7 +30,7 @@ function buildRedirectUrl(request: NextRequest, pathWithQuery: string): string {
   return `${origin}${pathWithQuery}`
 }
 
-function redirectAndClearNext(
+function redirectAndClearCookies(
   request: NextRequest,
   pathWithQuery: string
 ): NextResponse {
@@ -32,7 +38,20 @@ function redirectAndClearNext(
     buildRedirectUrl(request, pathWithQuery)
   )
   response.cookies.delete('auth_next')
+  response.cookies.delete(AUTH_COLLEGE_COOKIE)
   return response
+}
+
+/** The login page to send a failed sign-in back to. */
+function loginErrorPath(
+  college: CollegeSlug | null,
+  error: string,
+  extra: Record<string, string> = {}
+): string {
+  const params = new URLSearchParams({ error, ...extra })
+  return college
+    ? `${collegePath(college, '/auth/student')}?${params}`
+    : `/?${params}`
 }
 
 function isDomainRejectionMessage(
@@ -41,6 +60,7 @@ function isDomainRejectionMessage(
 ): boolean {
   const combined = `${error ?? ''} ${errorDescription ?? ''}`.toLowerCase()
   return (
+    combined.includes('college') ||
     combined.includes('kalvium') ||
     combined.includes('domain') ||
     combined.includes('hook') ||
@@ -66,6 +86,20 @@ export async function GET(request: NextRequest) {
   const oauthError = searchParams.get('error')
   const oauthErrorDescription = searchParams.get('error_description')
 
+  // Same-origin paths only, so a crafted ?next= cannot bounce the
+  // signed-in user off-site.
+  const next = safeRedirectPath(
+    searchParams.get('next') ??
+      request.cookies.get('auth_next')?.value ??
+      undefined
+  )
+  const cookieCollege = request.cookies.get(AUTH_COLLEGE_COOKIE)?.value
+  // The college this sign-in was started for: set by the login action, or
+  // inferred from the destination for older in-flight sign-ins.
+  const requestedCollege: CollegeSlug | null = isCollegeSlug(cookieCollege)
+    ? cookieCollege
+    : getCollegeFromPathname(next)
+
   if (oauthError || oauthErrorDescription) {
     const errorCode = isDomainRejectionMessage(
       oauthError,
@@ -73,37 +107,42 @@ export async function GET(request: NextRequest) {
     )
       ? 'unauthorized_domain'
       : 'oauth_failed'
-    return redirectAndClearNext(request, `/auth/login?error=${errorCode}`)
+    return redirectAndClearCookies(
+      request,
+      loginErrorPath(requestedCollege, errorCode)
+    )
   }
 
   const code = searchParams.get('code')
-  // If "next" is in param, use it as the redirect URL (same-origin paths
-  // only, so a crafted ?next= cannot bounce the signed-in user off-site).
-  const next = safeRedirectPath(
-    searchParams.get('next') ??
-      request.cookies.get('auth_next')?.value ??
-      undefined
-  )
-
   if (!code) {
-    return redirectAndClearNext(request, '/auth/login?error=oauth_failed')
+    return redirectAndClearCookies(
+      request,
+      loginErrorPath(requestedCollege, 'oauth_failed')
+    )
   }
 
   const supabase = await createClient()
   const { error: exchangeError } =
     await supabase.auth.exchangeCodeForSession(code)
   if (exchangeError) {
-    return redirectAndClearNext(request, '/auth/login?error=oauth_failed')
+    return redirectAndClearCookies(
+      request,
+      loginErrorPath(requestedCollege, 'oauth_failed')
+    )
   }
 
   const { data: userData, error: userError } = await supabase.auth.getUser()
   const user = userData?.user
   if (userError || !user) {
-    return redirectAndClearNext(request, '/auth/login?error=oauth_failed')
+    return redirectAndClearCookies(
+      request,
+      loginErrorPath(requestedCollege, 'oauth_failed')
+    )
   }
 
-  const userType = getUserTypeFromEmail(user.email)
-  if (!userType || !isGoogleAuthUser(user)) {
+  const identity = getCollegeIdentityFromEmail(user.email)
+  if (!identity || !isGoogleAuthUser(user)) {
+    // The account belongs to no college: remove the auth user it created.
     await supabase.auth.signOut()
     try {
       const adminClient = createAdminClient()
@@ -111,20 +150,33 @@ export async function GET(request: NextRequest) {
     } catch (deleteError) {
       console.error('Failed to delete unauthorized auth user:', deleteError)
     }
-    return redirectAndClearNext(
+    return redirectAndClearCookies(
       request,
-      '/auth/login?error=unauthorized_domain'
+      loginErrorPath(requestedCollege, 'unauthorized_domain')
+    )
+  }
+
+  if (requestedCollege && identity.college !== requestedCollege) {
+    // A valid account of another college: logins are disconnected, so it
+    // cannot sign in here. Keep the account; just end this session.
+    await supabase.auth.signOut()
+    return redirectAndClearCookies(
+      request,
+      loginErrorPath(requestedCollege, 'wrong_college', {
+        college: identity.college
+      })
     )
   }
 
   const normalizedEmail = normalizeEmail(user.email)
-  if (normalizedEmail && isKalviumDomainEmail(normalizedEmail)) {
+  if (normalizedEmail) {
     const metadata = (user.user_metadata ?? {}) as Record<string, unknown>
     try {
       await upsertUserProfile({
         id: user.id,
         email: normalizedEmail,
-        userType,
+        userType: identity.userType,
+        college: identity.college,
         name: extractMetadataString(metadata, 'full_name', 'name'),
         avatarUrl: extractMetadataString(metadata, 'avatar_url', 'picture')
       })
@@ -133,5 +185,10 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return redirectAndClearNext(request, next)
+  // Never land in another college's area, even through a stale ?next=.
+  const destination =
+    getCollegeFromPathname(next) === identity.college
+      ? next
+      : collegePath(identity.college)
+  return redirectAndClearCookies(request, destination)
 }

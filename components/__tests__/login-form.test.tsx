@@ -33,8 +33,12 @@ function renderForm(
       capabilities={{ ...capabilities, ...override }}
     >
       <LoginForm
+        college="kalvium"
         mode={mode}
         next={next}
+        loginDomains={
+          mode === 'mentor' ? ['kalvium.com'] : ['kalvium.community']
+        }
         initialError={initialError}
         isBeta={isBeta}
       />
@@ -60,7 +64,7 @@ describe('LoginForm', () => {
     ).toBeInTheDocument()
 
     const mentorLink = screen.getByRole('link', { name: 'Mentor login' })
-    expect(mentorLink).toHaveAttribute('href', '/auth/mentor')
+    expect(mentorLink).toHaveAttribute('href', '/kalvium/auth/mentor')
 
     expect(screen.queryByLabelText(/email/i)).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument()
@@ -73,7 +77,7 @@ describe('LoginForm', () => {
   })
 
   it('renders mentor sign-in card in mentor mode with link back to student login and preserves next', () => {
-    renderForm({}, '/mentor', null, false, 'mentor')
+    renderForm({}, '/kalvium/mentor', null, false, 'mentor')
 
     expect(screen.getByText('Mentor sign in')).toBeInTheDocument()
     expect(screen.getByText('@kalvium.com')).toBeInTheDocument()
@@ -81,10 +85,13 @@ describe('LoginForm', () => {
     expect(screen.queryByText('@kalvium.community')).not.toBeInTheDocument()
 
     const studentLink = screen.getByRole('link', { name: 'Student login' })
-    expect(studentLink).toHaveAttribute('href', '/auth/login?next=%2Fmentor')
+    expect(studentLink).toHaveAttribute(
+      'href',
+      '/kalvium/auth/student?next=%2Fkalvium%2Fmentor'
+    )
   })
 
-  it('calls signInWithGoogle with mentor mode and defaults redirect to /mentor', async () => {
+  it('calls signInWithGoogle with the college and mentor mode and defaults redirect to the mentor dashboard', async () => {
     const originalLocation = window.location
     Object.defineProperty(window, 'location', {
       configurable: true,
@@ -100,9 +107,9 @@ describe('LoginForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign In with Google' }))
 
     await waitFor(() => {
-      expect(signInWithGoogle).toHaveBeenCalledWith('mentor')
+      expect(signInWithGoogle).toHaveBeenCalledWith('kalvium', 'mentor')
     })
-    expect(document.cookie).toContain('auth_next=%2Fmentor')
+    expect(document.cookie).toContain('auth_next=%2Fkalvium%2Fmentor')
 
     Object.defineProperty(window, 'location', {
       configurable: true,
@@ -139,7 +146,7 @@ describe('LoginForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign In with Google' }))
 
     await waitFor(() => {
-      expect(signInWithGoogle).toHaveBeenCalledWith('student')
+      expect(signInWithGoogle).toHaveBeenCalledWith('kalvium', 'student')
       expect(window.location.href).toBe('https://accounts.google.com/authorize')
     })
 
@@ -177,14 +184,14 @@ describe('LoginForm', () => {
       success: true,
       redirectTo: 'https://accounts.google.com/authorize'
     })
-    renderForm({}, '/search/abc123')
+    renderForm({}, '/kalvium/search/abc123')
 
     fireEvent.click(screen.getByRole('button', { name: 'Sign In with Google' }))
 
     await waitFor(() => {
       expect(signInWithGoogle).toHaveBeenCalled()
     })
-    expect(document.cookie).toContain('auth_next=%2Fsearch%2Fabc123')
+    expect(document.cookie).toContain('auth_next=%2Fkalvium%2Fsearch%2Fabc123')
 
     Object.defineProperty(window, 'location', {
       configurable: true,
@@ -221,7 +228,7 @@ describe('LoginForm', () => {
     })
   })
 
-  it('clears a stale next cookie when the later login has no destination', async () => {
+  it('replaces a stale next cookie with the college home when the later login has no destination', async () => {
     const originalLocation = window.location
     Object.defineProperty(window, 'location', {
       configurable: true,
@@ -240,7 +247,8 @@ describe('LoginForm', () => {
     await waitFor(() => {
       expect(signInWithGoogle).toHaveBeenCalled()
     })
-    expect(document.cookie).not.toContain('auth_next')
+    expect(document.cookie).toContain('auth_next=%2Fkalvium')
+    expect(document.cookie).not.toContain('stale')
 
     Object.defineProperty(window, 'location', {
       configurable: true,
@@ -262,9 +270,29 @@ describe('LoginForm', () => {
 
     rerender(
       <AppUserProvider user={null} capabilities={capabilities}>
-        <LoginForm isBeta />
+        <LoginForm
+          college="kalvium"
+          loginDomains={['kalvium.community']}
+          isBeta
+        />
       </AppUserProvider>
     )
     expect(screen.getByText('Beta')).toBeInTheDocument()
+  })
+
+  it('explains that sign-in is not set up when a college has no login domains', () => {
+    render(
+      <AppUserProvider user={null} capabilities={capabilities}>
+        <LoginForm college="bkbirla" loginDomains={[]} />
+      </AppUserProvider>
+    )
+    expect(screen.getByText('Sign-in not set up yet')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Sign In with Google' })
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Mentor login' })).toHaveAttribute(
+      'href',
+      '/bkbirla/auth/mentor'
+    )
   })
 })

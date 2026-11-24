@@ -5,6 +5,7 @@ import React, { useState } from 'react'
 import { usePathname } from 'next/navigation'
 
 import type { AppUser } from '@/lib/auth/types'
+import { isChatHomePath } from '@/lib/colleges/use-college'
 import { cn } from '@/lib/utils'
 
 import { useSidebar } from '@/components/ui/sidebar'
@@ -22,7 +23,7 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
   const { open } = useSidebar()
   const pathname = usePathname()
   const [feedbackOpen, setFeedbackOpen] = useState(false)
-  const isRootPage = pathname === '/'
+  const isRootPage = isChatHomePath(pathname)
 
   return (
     <>
