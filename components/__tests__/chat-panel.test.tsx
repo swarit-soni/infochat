@@ -26,10 +26,6 @@ vi.mock('../artifact/artifact-context', () => ({
   useArtifact: () => ({ close: vi.fn() })
 }))
 
-vi.mock('../action-buttons', () => ({
-  ActionButtons: () => <div data-testid="suggestions" />
-}))
-
 vi.mock('../library/library-context', () => ({
   useLibrary: () => ({
     upsertCachedFile: vi.fn()
@@ -182,13 +178,11 @@ describe('ChatPanel', () => {
     expect(
       screen.queryByRole('heading', { name: "Curious? Let's get into it." })
     ).not.toBeInTheDocument()
-    expect(screen.queryByTestId('suggestions')).not.toBeInTheDocument()
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
     view.rerender(<ChatPanel {...props} />)
     expect(
       screen.getByRole('heading', { name: "Curious? Let's get into it." })
     ).toBeInTheDocument()
-    expect(screen.getByTestId('suggestions')).toBeInTheDocument()
     expect(screen.getByRole('textbox')).toBeInTheDocument()
   })
 
