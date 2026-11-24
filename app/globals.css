@@ -12,38 +12,38 @@
   --space-pink: #e27a98;
   --space-red: #d4484f;
   --space-orange: #ec6f35;
-  --background: #f5fafd; /* surface */
-  --foreground: #171c1f; /* on_surface */
-  --card: #f0f4f7; /* surface_container_low */
-  --card-foreground: #171c1f; /* on_surface */
-  --popover: #eaeef2; /* surface_container */
-  --popover-foreground: #171c1f; /* on_surface */
-  --primary: #09677f; /* primary */
-  --primary-foreground: #ffffff; /* on_primary */
-  --secondary: #dee3e6; /* surface_container_highest */
-  --secondary-foreground: #171c1f; /* on_surface */
-  --muted: #e4e9ec; /* surface_container_high */
-  --muted-foreground: #40484c; /* on_surface_variant */
-  --accent: #cfe6f1; /* secondary_container */
-  --accent-foreground: #071e26; /* on_secondary_container */
-  --destructive: #ba1a1a; /* error */
-  --destructive-foreground: #ffffff; /* on_error */
-  --border: #bfc8cc; /* outline_variant */
-  --input: #bfc8cc; /* outline_variant */
-  --ring: #09677f; /* primary */
-  --chart-1: #09677f; /* primary */
-  --chart-2: #5b5b7e; /* tertiary */
-  --chart-3: #4c626b; /* secondary */
-  --chart-4: #88d1ec; /* primary_fixed_dim */
-  --chart-5: #c3c3eb; /* tertiary_fixed_dim */
-  --sidebar: #eaeef2; /* surface_container */
-  --sidebar-foreground: #171c1f; /* on_surface */
-  --sidebar-primary: #09677f; /* primary */
-  --sidebar-primary-foreground: #ffffff; /* on_primary */
-  --sidebar-accent: #cfe6f1; /* secondary_container */
-  --sidebar-accent-foreground: #071e26; /* on_secondary_container */
-  --sidebar-border: #bfc8cc; /* outline_variant */
-  --sidebar-ring: #09677f; /* primary */
+  --background: #f5fafd; /* surface @ contrast 0.25 */
+  --foreground: #171c1f; /* on_surface @ contrast 0.25 */
+  --card: #eff4f7; /* surface_container_low @ contrast 0.25 */
+  --card-foreground: #171c1f; /* on_surface @ contrast 0.25 */
+  --popover: #e7ecef; /* surface_container @ contrast 0.25 */
+  --popover-foreground: #171c1f; /* on_surface @ contrast 0.25 */
+  --primary: #005064; /* primary @ contrast 0.25 */
+  --primary-foreground: #ffffff; /* on_primary @ contrast 0.25 */
+  --secondary: #d6dbde; /* surface_container_highest @ contrast 0.25 */
+  --secondary-foreground: #171c1f; /* on_surface @ contrast 0.25 */
+  --muted: #dee3e6; /* surface_container_high @ contrast 0.25 */
+  --muted-foreground: #40484c; /* on_surface_variant @ contrast 0.25 */
+  --accent: #cfe6f1; /* secondary_container @ contrast 0 */
+  --accent-foreground: #071e26; /* on_secondary_container @ contrast 0 */
+  --destructive: #98000a; /* error @ contrast 0.25 */
+  --destructive-foreground: #ffffff; /* on_error @ contrast 0.25 */
+  --border: #8b9397; /* outline_variant @ contrast 0.25 */
+  --input: #8b9397; /* outline_variant @ contrast 0.25 */
+  --ring: #005064; /* primary @ contrast 0.25 */
+  --chart-1: #07677f; /* primary @ contrast 0 */
+  --chart-2: #5a5c7e; /* tertiary @ contrast 0 */
+  --chart-3: #4c626a; /* secondary @ contrast 0 */
+  --chart-4: #88d1ec; /* primary_fixed_dim @ contrast 0 */
+  --chart-5: #c3c3eb; /* tertiary_fixed_dim @ contrast 0 */
+  --sidebar: #e7ecef; /* surface_container @ contrast 0.25 */
+  --sidebar-foreground: #171c1f; /* on_surface @ contrast 0.25 */
+  --sidebar-primary: #005064; /* primary @ contrast 0.25 */
+  --sidebar-primary-foreground: #ffffff; /* on_primary @ contrast 0.25 */
+  --sidebar-accent: #cfe6f1; /* secondary_container @ contrast 0 */
+  --sidebar-accent-foreground: #071e26; /* on_secondary_container @ contrast 0 */
+  --sidebar-border: #8b9397; /* outline_variant @ contrast 0.25 */
+  --sidebar-ring: #005064; /* primary @ contrast 0.25 */
   --font-sans: Geist, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: Geist Mono, monospace;
@@ -69,38 +69,38 @@
 }
 
 .dark {
-  --background: #0f1416; /* surface */
-  --foreground: #dee3e6; /* on_surface */
-  --card: #171c1f; /* surface_container_low */
-  --card-foreground: #dee3e6; /* on_surface */
-  --popover: #1b2023; /* surface_container */
-  --popover-foreground: #dee3e6; /* on_surface */
-  --primary: #88d1ec; /* primary */
-  --primary-foreground: #003543; /* on_primary */
-  --secondary: #303638; /* surface_container_highest */
-  --secondary-foreground: #dee3e6; /* on_surface */
-  --muted: #252b2d; /* surface_container_high */
-  --muted-foreground: #bfc8cc; /* on_surface_variant */
-  --accent: #344a52; /* secondary_container */
-  --accent-foreground: #cfe6f1; /* on_secondary_container */
-  --destructive: #ffb4ab; /* error */
-  --destructive-foreground: #690005; /* on_error */
-  --border: #40484c; /* outline_variant */
-  --input: #40484c; /* outline_variant */
-  --ring: #88d1ec; /* primary */
-  --chart-1: #88d1ec; /* primary */
-  --chart-2: #c3c3eb; /* tertiary */
-  --chart-3: #b3cad4; /* secondary */
-  --chart-4: #004e61; /* primary_container */
-  --chart-5: #424465; /* tertiary_container */
-  --sidebar: #1b2023; /* surface_container */
-  --sidebar-foreground: #dee3e6; /* on_surface */
-  --sidebar-primary: #88d1ec; /* primary */
-  --sidebar-primary-foreground: #003543; /* on_primary */
-  --sidebar-accent: #344a52; /* secondary_container */
-  --sidebar-accent-foreground: #cfe6f1; /* on_secondary_container */
-  --sidebar-border: #40484c; /* outline_variant */
-  --sidebar-ring: #88d1ec; /* primary */
+  --background: #0f1416; /* surface @ contrast 0.25 */
+  --foreground: #eaeef1; /* on_surface @ contrast 0.25 */
+  --card: #181d20; /* surface_container_low @ contrast 0.25 */
+  --card-foreground: #eaeef1; /* on_surface @ contrast 0.25 */
+  --popover: #1f2427; /* surface_container @ contrast 0.25 */
+  --popover-foreground: #eaeef1; /* on_surface @ contrast 0.25 */
+  --primary: #88d1ec; /* primary @ contrast 0.25 */
+  --primary-foreground: #002834; /* on_primary @ contrast 0.25 */
+  --secondary: #353a3c; /* surface_container_highest @ contrast 0.25 */
+  --secondary-foreground: #eaeef1; /* on_surface @ contrast 0.25 */
+  --muted: #2a2f31; /* surface_container_high @ contrast 0.25 */
+  --muted-foreground: #bfc8cc; /* on_surface_variant @ contrast 0.25 */
+  --accent: #344a52; /* secondary_container @ contrast 0 */
+  --accent-foreground: #cfe6f1; /* on_secondary_container @ contrast 0 */
+  --destructive: #ffb4ab; /* error @ contrast 0.25 */
+  --destructive-foreground: #520003; /* on_error @ contrast 0.25 */
+  --border: #666e72; /* outline_variant @ contrast 0.25 */
+  --input: #666e72; /* outline_variant @ contrast 0.25 */
+  --ring: #88d1ec; /* primary @ contrast 0.25 */
+  --chart-1: #88d1ec; /* primary @ contrast 0 */
+  --chart-2: #c3c3eb; /* tertiary @ contrast 0 */
+  --chart-3: #b3cad4; /* secondary @ contrast 0 */
+  --chart-4: #004e61; /* primary_container @ contrast 0 */
+  --chart-5: #424465; /* tertiary_container @ contrast 0 */
+  --sidebar: #1f2427; /* surface_container @ contrast 0.25 */
+  --sidebar-foreground: #eaeef1; /* on_surface @ contrast 0.25 */
+  --sidebar-primary: #88d1ec; /* primary @ contrast 0.25 */
+  --sidebar-primary-foreground: #002834; /* on_primary @ contrast 0.25 */
+  --sidebar-accent: #344a52; /* secondary_container @ contrast 0 */
+  --sidebar-accent-foreground: #cfe6f1; /* on_secondary_container @ contrast 0 */
+  --sidebar-border: #666e72; /* outline_variant @ contrast 0.25 */
+  --sidebar-ring: #88d1ec; /* primary @ contrast 0.25 */
   --font-sans: Geist, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: Geist Mono, monospace;
