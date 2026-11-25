@@ -129,6 +129,7 @@
   },
   "overrides": {
     "@ai-sdk/otel": "^1.0.152",
+    "@radix-ui/react-dismissable-layer": "1.1.11",
     "katex": "^0.18.2"
   }
 }
