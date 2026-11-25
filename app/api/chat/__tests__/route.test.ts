@@ -8,6 +8,9 @@ import { selectModel } from '@/lib/utils/model-selection'
 
 import { POST } from '../route'
 
+vi.mock('@/lib/colleges/store', async () =>
+  (await import('@/lib/colleges/testing')).collegeStoreMock()
+)
 vi.mock('next/headers', () => ({
   cookies: vi.fn(async () => ({ get: vi.fn() }))
 }))
@@ -175,7 +178,7 @@ describe('POST /api/chat guest message validation', () => {
       abortSignal: expect.any(AbortSignal),
       searchMode: 'quick',
       chatId: undefined,
-      college: null,
+      campusScope: expect.objectContaining({ college: null, campus: null }),
       audienceRole: 'guest'
     })
   })

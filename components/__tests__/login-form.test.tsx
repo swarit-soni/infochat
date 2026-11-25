@@ -34,6 +34,7 @@ function renderForm(
     >
       <LoginForm
         mentorCollege={mode === 'mentor' ? 'kalvium' : undefined}
+        mentorCollegeName={mode === 'mentor' ? 'Kalvium' : undefined}
         mentorDomains={mode === 'mentor' ? ['kalvium.com'] : []}
         next={next}
         initialError={initialError}

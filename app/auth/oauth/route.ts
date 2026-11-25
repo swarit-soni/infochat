@@ -10,8 +10,10 @@ import {
   AUTH_COLLEGE_COOKIE,
   collegePath,
   type CollegeSlug,
+  getPartnerCampuses,
   isCollegeSlug
 } from '@/lib/colleges/registry'
+import { getCollegeDirectory } from '@/lib/colleges/store'
 import { getUserProfile, upsertUserProfile } from '@/lib/db/actions'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
@@ -59,8 +61,9 @@ function isDomainRejectionMessage(
 ): boolean {
   const combined = `${error ?? ''} ${errorDescription ?? ''}`.toLowerCase()
   return (
-    combined.includes('kalvium') ||
     combined.includes('domain') ||
+    combined.includes('signup') ||
+    combined.includes('google account') ||
     combined.includes('hook') ||
     combined.includes('unauthorized_domain')
   )
@@ -86,7 +89,11 @@ export async function GET(request: NextRequest) {
 
   // Set by a college's mentor login; absent for the open student login.
   const cookieCollege = request.cookies.get(AUTH_COLLEGE_COOKIE)?.value
-  const mentorCollege: CollegeSlug | null = isCollegeSlug(cookieCollege)
+  const directory = await getCollegeDirectory()
+  const mentorCollege: CollegeSlug | null = isCollegeSlug(
+    directory,
+    cookieCollege
+  )
     ? cookieCollege
     : null
 
@@ -155,7 +162,7 @@ export async function GET(request: NextRequest) {
 
   // Any Google account may sign in. A college email domain decides mentor
   // access and, for students on a college domain, their college.
-  const identity = getCollegeIdentityFromEmail(normalizedEmail)
+  const identity = getCollegeIdentityFromEmail(normalizedEmail, directory)
 
   if (mentorCollege) {
     // Each college's mentor login only admits that college's mentors. The
@@ -189,9 +196,15 @@ export async function GET(request: NextRequest) {
       name: extractMetadataString(metadata, 'full_name', 'name'),
       avatarUrl: extractMetadataString(metadata, 'avatar_url', 'picture')
     })
-    if (!collegeOnboarded) {
-      collegeOnboarded = Boolean((await getUserProfile(user.id))?.onboardedAt)
-    }
+    const profile = await getUserProfile(user.id)
+    const answered = collegeOnboarded || Boolean(profile?.onboardedAt)
+    // Students of a college with partner campuses also say which campus.
+    const needsCampus =
+      identity?.userType !== 'mentor' &&
+      !profile?.campus &&
+      getPartnerCampuses(directory, identity?.college ?? profile?.college)
+        .length > 0
+    collegeOnboarded = answered && !needsCampus
   } catch (profileError) {
     console.error('Failed to upsert user profile:', profileError)
     // Don't trap the user in onboarding when profiles are unavailable.

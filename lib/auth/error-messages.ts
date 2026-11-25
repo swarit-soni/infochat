@@ -1,9 +1,8 @@
 import { UNAUTHORIZED_DOMAIN_ERROR } from '@/lib/auth/domain'
-import { COLLEGES, isCollegeSlug } from '@/lib/colleges/registry'
 
 export function getAuthErrorMessage(
   error: string | undefined,
-  context: { college?: string } = {}
+  context: { collegeName?: string } = {}
 ): string | null {
   if (!error) {
     return null
@@ -13,9 +12,7 @@ export function getAuthErrorMessage(
     case 'unauthorized_domain':
       return UNAUTHORIZED_DOMAIN_ERROR
     case 'wrong_college': {
-      const owner = isCollegeSlug(context.college)
-        ? COLLEGES[context.college].shortName
-        : 'another college'
+      const owner = context.collegeName ?? 'another college'
       return `That Google account is a mentor at ${owner}. Each college has its own mentor sign-in: use ${owner}'s mentor login instead.`
     }
     case 'not_mentor':

@@ -2,6 +2,7 @@ import { createId } from '@paralleldrive/cuid2'
 import { InferSelectModel, sql } from 'drizzle-orm'
 import {
   type AnyPgColumn,
+  boolean,
   check,
   customType,
   index,
@@ -11,15 +12,13 @@ import {
   pgEnum,
   pgPolicy,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
   varchar,
   vector
 } from 'drizzle-orm/pg-core'
-
-// Relative import: drizzle-kit loads this file without tsconfig path aliases.
-import { COLLEGE_SLUGS } from '../colleges/registry'
 
 // Constants
 const ID_LENGTH = 191
@@ -600,7 +599,10 @@ export const userProfiles = pgTable(
     // The college the account belongs to: verified from a college email
     // domain, or self-reported by a student at onboarding. Null means not
     // enrolled anywhere (e.g. exploring admissions). See lib/colleges.
-    college: varchar('college', { length: 32, enum: COLLEGE_SLUGS }),
+    college: varchar('college', { length: 32 }),
+    // Partner campus for colleges with several (a partner college's slug,
+    // 'none' for a campus not on Sera, null when not answered yet).
+    campus: varchar('campus', { length: 32 }),
     // When the student answered the enrolled-college question (or the college
     // was set from a verified college email). Null: not asked yet.
     onboardedAt: timestamp('onboarded_at', { withTimezone: true }),
@@ -648,6 +650,97 @@ export type UserProfile = InferSelectModel<typeof userProfiles>
 export type NewUserProfile = typeof userProfiles.$inferInsert
 
 // ---------------------------------------------------------------------------
+// Colleges (tenants), managed by platform admins at /admin/colleges
+// ---------------------------------------------------------------------------
+
+/** Writes come only from the platform-admin server actions. */
+const platformWriteCondition = sql`(select current_setting('app.platform_write', true)) = 'true'`
+
+const textArray = (name: string) =>
+  text(name)
+    .array()
+    .notNull()
+    .default(sql`'{}'::text[]`)
+
+export const colleges = pgTable(
+  'colleges',
+  {
+    slug: varchar('slug', { length: 32 }).primaryKey(),
+    name: text('name').notNull(),
+    shortName: text('short_name').notNull(),
+    location: text('location').notNull().default(''),
+    website: text('website').notNull().default(''),
+    officialWebDomains: textArray('official_web_domains'),
+    partnerColleges: textArray('partner_colleges'),
+    mentorDomains: textArray('mentor_domains'),
+    studentDomains: textArray('student_domains'),
+    mentorRequiresAllowlist: boolean('mentor_requires_allowlist')
+      .notNull()
+      .default(false),
+    aliases: textArray('aliases'),
+    squadLabel: text('squad_label'),
+    residencyLabel: text('residency_label'),
+    eventsLabel: text('events_label').notNull().default('Events'),
+    gchatSpaces: textArray('gchat_spaces'),
+    enabled: boolean('enabled').notNull().default(true),
+    sortOrder: integer('sort_order').notNull().default(0),
+    updatedBy: varchar('updated_by', { length: USER_ID_LENGTH }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+  },
+  () => [
+    pgPolicy('colleges_public_select', {
+      as: 'permissive',
+      for: 'select',
+      to: 'public',
+      using: sql`true`
+    }),
+    pgPolicy('colleges_platform_write', {
+      as: 'permissive',
+      for: 'all',
+      to: 'public',
+      using: platformWriteCondition,
+      withCheck: platformWriteCondition
+    })
+  ]
+).enableRLS()
+
+export type CollegeRow = InferSelectModel<typeof colleges>
+export type NewCollegeRow = typeof colleges.$inferInsert
+
+/**
+ * Mentors of colleges whose mentors and students share an email domain.
+ * Private: never readable through the public API.
+ */
+export const collegeMentorAllowlist = pgTable(
+  'college_mentor_allowlist',
+  {
+    college: varchar('college', { length: 32 })
+      .notNull()
+      .references(() => colleges.slug, { onDelete: 'cascade' }),
+    email: varchar('email', { length: 320 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+  },
+  table => [
+    primaryKey({ columns: [table.college, table.email] }),
+    index('college_mentor_allowlist_email_idx').on(table.email),
+    pgPolicy('college_mentor_allowlist_platform_access', {
+      as: 'permissive',
+      for: 'all',
+      to: 'public',
+      using: sql`(select current_setting('app.platform_write', true)) = 'true' OR (select current_setting('app.college_directory_read', true)) = 'true'`,
+      withCheck: platformWriteCondition
+    })
+  ]
+).enableRLS()
+
+// ---------------------------------------------------------------------------
 // SERA RAG & Campus Knowledge Base Tables
 // ---------------------------------------------------------------------------
 
@@ -662,25 +755,63 @@ export const KNOWLEDGE_DOMAINS = [
 ] as const
 export type KnowledgeDomain = (typeof KNOWLEDGE_DOMAINS)[number]
 
+/**
+ * Where a document came from. Generic across colleges: the issuing college is
+ * the document's `authority`, so labels read e.g. "JECRC notice".
+ */
 export const KNOWLEDGE_SOURCE_SYSTEMS = [
-  'jecrc_web',
-  'jecrc_enotice',
-  'jecrc_portal_guide',
-  'kalvium_web',
-  'kalvium_guide',
-  'whatsapp_forward',
-  'gchat_space',
-  'eventum',
-  'bkbirla_web',
-  'bkbirla_notice',
+  'official_notice',
+  'official_guide',
+  'portal_guide',
   'official_website',
-  'official_document'
+  'official_document',
+  'campus_events',
+  'whatsapp_forward',
+  'gchat_space'
 ] as const
 export type KnowledgeSourceSystem = (typeof KNOWLEDGE_SOURCE_SYSTEMS)[number]
 
-/** Issuing authority of a document: a college, or `joint` for co-issued. */
-export const KNOWLEDGE_AUTHORITIES = [...COLLEGE_SLUGS, 'joint'] as const
-export type KnowledgeAuthority = (typeof KNOWLEDGE_AUTHORITIES)[number]
+export const KNOWLEDGE_SOURCE_LABELS: Readonly<
+  Record<KnowledgeSourceSystem, string>
+> = {
+  official_notice: 'Official notice',
+  official_guide: 'Official guide',
+  portal_guide: 'Portal guide',
+  official_website: 'Official website',
+  official_document: 'Official document',
+  campus_events: 'Campus events',
+  whatsapp_forward: 'WhatsApp forward',
+  gchat_space: 'Google Chat space'
+}
+
+/**
+ * Source systems written before they became college-agnostic, mapped to their
+ * generic equivalent. Rows may still carry these until they are rewritten.
+ */
+export const LEGACY_SOURCE_SYSTEMS: Readonly<
+  Record<string, KnowledgeSourceSystem>
+> = {
+  jecrc_enotice: 'official_notice',
+  bkbirla_notice: 'official_notice',
+  kalvium_guide: 'official_guide',
+  jecrc_portal_guide: 'portal_guide',
+  jecrc_web: 'official_website',
+  kalvium_web: 'official_website',
+  bkbirla_web: 'official_website',
+  eventum: 'campus_events'
+}
+
+/** Normalise a stored source system (generic or legacy) to a generic one. */
+export function toSourceSystem(value: string): KnowledgeSourceSystem {
+  if ((KNOWLEDGE_SOURCE_SYSTEMS as readonly string[]).includes(value)) {
+    return value as KnowledgeSourceSystem
+  }
+  return LEGACY_SOURCE_SYSTEMS[value] ?? 'official_document'
+}
+
+/** Issuing authority of a document: a college slug, or `joint` for co-issued. */
+export type KnowledgeAuthority = string
+export const JOINT_AUTHORITY = 'joint'
 
 export const KNOWLEDGE_PRIORITIES = ['standard', 'urgent'] as const
 export type KnowledgePriority = (typeof KNOWLEDGE_PRIORITIES)[number]
@@ -748,10 +879,9 @@ function collegeMentorOrSystemWriteCondition(collegeColumn: AnyPgColumn) {
 )`
 }
 
-const collegeColumn = () =>
-  varchar('college', { length: 32, enum: COLLEGE_SLUGS })
-    .notNull()
-    .default('kalvium')
+// Every insert sets the college explicitly. (The database still has a
+// 'kalvium' default from 0024 until 0025's follow-up drops it.)
+const collegeColumn = () => varchar('college', { length: 32 }).notNull()
 
 // Knowledge documents (official notices, guides, web crawls, and urgent updates)
 export const knowledgeDocuments = pgTable(
@@ -775,8 +905,7 @@ export const knowledgeDocuments = pgTable(
       enum: KNOWLEDGE_SOURCE_SYSTEMS
     }).notNull(),
     authority: varchar('authority', {
-      length: 32,
-      enum: KNOWLEDGE_AUTHORITIES
+      length: 32
     })
       .notNull()
       .default('joint'),
@@ -927,8 +1056,7 @@ export const campusEvents = pgTable(
     title: text('title').notNull(),
     organizer: text('organizer').notNull(),
     authority: varchar('authority', {
-      length: 32,
-      enum: KNOWLEDGE_AUTHORITIES
+      length: 32
     })
       .notNull()
       .default('joint'),
@@ -997,8 +1125,7 @@ export const officialPortals = pgTable(
     portalKey: varchar('portal_key', { length: 64 }).notNull(),
     name: text('name').notNull(),
     authority: varchar('authority', {
-      length: 32,
-      enum: KNOWLEDGE_AUTHORITIES
+      length: 32
     }).notNull(),
     url: text('url').notNull(),
     requiresLogin: integer('requires_login').notNull().default(1),

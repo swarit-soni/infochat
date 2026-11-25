@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 
 import { getCurrentUser } from '@/lib/auth/get-current-user'
 import { safeRedirectPath } from '@/lib/auth/redirect-target'
+import { getPartnerCampuses } from '@/lib/colleges/registry'
+import { getCollegeDirectory } from '@/lib/colleges/store'
 
 import {
   Card,
@@ -31,9 +33,27 @@ export default async function EnrolledCollegePage(props: {
   if (!user) {
     redirect(`/auth/login?next=${encodeURIComponent('/onboarding/college')}`)
   }
-  // Already answered (unless changing it), or verified from a college
-  // email domain (userType is only set for college-domain accounts).
-  if ((user.collegeOnboarded && change !== '1') || user.userType) {
+  // Already answered (unless changing it). Mentors never onboard here.
+  if ((user.collegeOnboarded && change !== '1') || user.userType === 'mentor') {
+    redirect(destination)
+  }
+
+  const directory = await getCollegeDirectory()
+  const colleges = directory.list.map(college => ({
+    value: college.slug,
+    label: college.name,
+    description: college.location,
+    campuses: getPartnerCampuses(directory, college.slug).map(campus => ({
+      value: campus.slug,
+      label: campus.name
+    }))
+  }))
+  // A college verified from the email domain is fixed; only ask the campus.
+  const lockedCollege = user.collegeVerified ? user.college : null
+  if (
+    lockedCollege &&
+    getPartnerCampuses(directory, lockedCollege).length === 0
+  ) {
     redirect(destination)
   }
 
@@ -43,7 +63,9 @@ export default async function EnrolledCollegePage(props: {
         <CardHeader className="text-center">
           <CardTitle className="flex flex-col items-center gap-4 text-2xl">
             <IconLogo className="size-12" />
-            Which college are you enrolled in?
+            {lockedCollege
+              ? `Which ${user.collegeName ?? 'college'} campus are you on?`
+              : 'Which college are you enrolled in?'}
           </CardTitle>
           <CardDescription>
             Sera answers questions about fees, exams, notices and campus life
@@ -51,7 +73,12 @@ export default async function EnrolledCollegePage(props: {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <EnrolledCollegeForm next={destination} />
+          <EnrolledCollegeForm
+            next={destination}
+            colleges={colleges}
+            lockedCollege={lockedCollege}
+            initialCampus={user.campus}
+          />
         </CardContent>
       </Card>
     </div>

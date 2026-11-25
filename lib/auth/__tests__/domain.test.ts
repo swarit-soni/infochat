@@ -15,6 +15,10 @@ import {
   getLoginHintDomain,
   getNonProdMentorOverrides
 } from '@/lib/colleges/access'
+import { DEFAULT_COLLEGE_DIRECTORY as DIR } from '@/lib/colleges/defaults'
+import { getCollege } from '@/lib/colleges/registry'
+
+const KALVIUM = getCollege(DIR, 'kalvium')!
 
 describe('auth domain rules', () => {
   it('defines mentor and student user types', () => {
@@ -62,14 +66,20 @@ describe('auth domain rules', () => {
 
   describe('getUserTypeFromEmail & isAllowedEmail', () => {
     it('classifies @kalvium.com as mentor', () => {
-      expect(getUserTypeFromEmail('mentor@kalvium.com')).toBe('mentor')
-      expect(getUserTypeFromEmail('  MENTOR+tag@KALVIUM.COM ')).toBe('mentor')
+      expect(getUserTypeFromEmail('mentor@kalvium.com', DIR)).toBe('mentor')
+      expect(getUserTypeFromEmail('  MENTOR+tag@KALVIUM.COM ', DIR)).toBe(
+        'mentor'
+      )
       expect(isAllowedEmail('mentor@kalvium.com')).toBe(true)
     })
 
     it('classifies @kalvium.community as student', () => {
-      expect(getUserTypeFromEmail('student@kalvium.community')).toBe('student')
-      expect(getUserTypeFromEmail('Student@Kalvium.Community')).toBe('student')
+      expect(getUserTypeFromEmail('student@kalvium.community', DIR)).toBe(
+        'student'
+      )
+      expect(getUserTypeFromEmail('Student@Kalvium.Community', DIR)).toBe(
+        'student'
+      )
       expect(isAllowedEmail('student@kalvium.community')).toBe(true)
     })
 
@@ -94,10 +104,10 @@ describe('auth domain rules', () => {
 
       for (const email of rejected) {
         if (email === 'toString@kalvium.com') {
-          expect(getUserTypeFromEmail(email)).toBe('mentor')
+          expect(getUserTypeFromEmail(email, DIR)).toBe('mentor')
           continue
         }
-        expect(getUserTypeFromEmail(email)).toBeNull()
+        expect(getUserTypeFromEmail(email, DIR)).toBeNull()
       }
     })
 
@@ -151,7 +161,8 @@ describe('auth domain rules', () => {
       const previewEnv = {
         VERCEL_ENV: 'preview',
         NODE_ENV: 'production',
-        SERA_MENTOR_EMAILS: ' Tester@Gmail.com , second@example.com '
+        SERA_MENTOR_EMAILS:
+          ' kalvium:Tester@Gmail.com , kalvium:second@example.com '
       }
 
       expect(isNonProductionStage(previewEnv)).toBe(true)
@@ -159,17 +170,17 @@ describe('auth domain rules', () => {
         ['tester@gmail.com', 'kalvium'],
         ['second@example.com', 'kalvium']
       ])
-      expect(getUserTypeFromEmail('tester@gmail.com', previewEnv)).toBe(
+      expect(getUserTypeFromEmail('tester@gmail.com', DIR, previewEnv)).toBe(
         'mentor'
       )
       expect(
-        getCollegeIdentityFromEmail('tester@gmail.com', previewEnv)
+        getCollegeIdentityFromEmail('tester@gmail.com', DIR, previewEnv)
       ).toEqual({ college: 'kalvium', userType: 'mentor' })
       // Test mentors may use any domain, so Google must not filter the picker.
+      expect(getLoginHintDomain(KALVIUM, 'mentor', previewEnv)).toBeUndefined()
       expect(
-        getLoginHintDomain('kalvium', 'mentor', previewEnv)
-      ).toBeUndefined()
-      expect(getUserTypeFromEmail('other@gmail.com', previewEnv)).toBeNull()
+        getUserTypeFromEmail('other@gmail.com', DIR, previewEnv)
+      ).toBeNull()
     })
 
     it('strictly ignores SERA_MENTOR_EMAILS in production stages', () => {
@@ -186,11 +197,13 @@ describe('auth domain rules', () => {
       for (const prodEnv of [vercelProdEnv, selfHostedProdEnv]) {
         expect(isNonProductionStage(prodEnv)).toBe(false)
         expect(getNonProdMentorOverrides(prodEnv).size).toBe(0)
-        expect(getLoginHintDomain('kalvium', 'mentor', prodEnv)).toBe(
+        expect(getLoginHintDomain(KALVIUM, 'mentor', prodEnv)).toBe(
           'kalvium.com'
         )
-        expect(getUserTypeFromEmail('tester@gmail.com', prodEnv)).toBeNull()
-        expect(getUserTypeFromEmail('mentor@kalvium.com', prodEnv)).toBe(
+        expect(
+          getUserTypeFromEmail('tester@gmail.com', DIR, prodEnv)
+        ).toBeNull()
+        expect(getUserTypeFromEmail('mentor@kalvium.com', DIR, prodEnv)).toBe(
           'mentor'
         )
       }

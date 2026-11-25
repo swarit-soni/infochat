@@ -1264,14 +1264,20 @@ export async function upsertUserProfile({
  * Save the student's answer to "Which college are you enrolled in?".
  * `null` records that they are not enrolled (e.g. exploring admissions).
  */
+/**
+ * Save a student's onboarding answers: their college (null when not enrolled
+ * anywhere) and, for colleges with partner campuses, which campus they are on
+ * (a partner slug or `none`).
+ */
 export async function setUserProfileCollege(
   userId: string,
-  college: CollegeSlug | null
+  college: CollegeSlug | null,
+  campus: string | null = null
 ): Promise<UserProfile | null> {
   return withRLS(userId, async tx => {
     const [profile] = await tx
       .update(userProfiles)
-      .set({ college, onboardedAt: new Date(), updatedAt: new Date() })
+      .set({ college, campus, onboardedAt: new Date(), updatedAt: new Date() })
       .where(eq(userProfiles.id, userId))
       .returning()
     return profile ?? null

@@ -4,7 +4,8 @@ import { redirect } from 'next/navigation'
 import { getAuthErrorMessage } from '@/lib/auth/error-messages'
 import { getCurrentUser } from '@/lib/auth/get-current-user'
 import { isCollegeRoleEnabled } from '@/lib/colleges/access'
-import { COLLEGE_SLUGS, collegePath, getCollege } from '@/lib/colleges/registry'
+import { collegePath } from '@/lib/colleges/registry'
+import { getCollegeDirectory } from '@/lib/colleges/store'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -31,6 +32,7 @@ export default async function MentorCollegePickerPage(props: {
     redirect(collegePath(user.college, '/mentor'))
   }
   const errorMessage = getAuthErrorMessage(error)
+  const { list: colleges } = await getCollegeDirectory()
 
   return (
     <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
@@ -53,10 +55,10 @@ export default async function MentorCollegePickerPage(props: {
           </p>
         )}
 
-        <div className="grid w-full gap-4 sm:grid-cols-3">
-          {COLLEGE_SLUGS.map(slug => {
-            const college = getCollege(slug)
-            const enabled = isCollegeRoleEnabled(slug, 'mentor')
+        <div className="grid w-full gap-4 sm:grid-cols-2 md:grid-cols-3">
+          {colleges.map(college => {
+            const slug = college.slug
+            const enabled = isCollegeRoleEnabled(college, 'mentor')
             return (
               <Card key={slug} className="flex flex-col">
                 <CardHeader>

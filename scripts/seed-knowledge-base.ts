@@ -9,6 +9,7 @@
  * chunks get Gemini embeddings; without it they are full-text searchable only.
  * Re-running is safe: documents are de-duplicated per college by content hash.
  */
+import { DEFAULT_COLLEGE_DIRECTORY } from '@/lib/colleges/defaults'
 import { isCollegeSlug } from '@/lib/colleges/registry'
 import { ingestKnowledgeDocument } from '@/lib/rag/ingestion'
 import { KNOWLEDGE_SEED } from '@/lib/rag/knowledge-seed'
@@ -18,7 +19,7 @@ async function main() {
   const dryRun = args.includes('--dry-run')
   const colleges = args.filter(arg => !arg.startsWith('--'))
   for (const college of colleges) {
-    if (!isCollegeSlug(college)) {
+    if (!isCollegeSlug(DEFAULT_COLLEGE_DIRECTORY, college)) {
       throw new Error(`Unknown college "${college}".`)
     }
   }

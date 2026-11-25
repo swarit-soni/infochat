@@ -39,7 +39,7 @@ const fontSans = FontSans({
 
 const title = 'Sera'
 const description =
-  'Sera — AI-powered campus assistant for Kalvium students and mentors.'
+  'Sera — AI-powered campus assistant for college students, mentors and admission seekers.'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://sera-info.vercel.app'),
@@ -83,10 +83,10 @@ export default async function RootLayout({
   const isCloudDeployment = process.env.SERA_CLOUD_DEPLOYMENT === 'true'
   const usageBudgetEnabled = Boolean(
     user &&
-    isCloudDeployment &&
-    isUsageBudgetAvailable() &&
-    ENFORCEMENT === 'on' &&
-    UI_ENABLED
+      isCloudDeployment &&
+      isUsageBudgetAvailable() &&
+      ENFORCEMENT === 'on' &&
+      UI_ENABLED
   )
   const usageSnapshot =
     usageBudgetEnabled && user

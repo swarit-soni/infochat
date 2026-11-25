@@ -1,17 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
-import { COLLEGE_SLUGS, isCollegeSlug } from '@/lib/colleges/registry'
-import {
-  KNOWLEDGE_AUTHORITIES,
-  KNOWLEDGE_DOMAINS,
-  KNOWLEDGE_SOURCE_SYSTEMS
-} from '@/lib/db/schema'
+import { DEFAULT_COLLEGE_DIRECTORY as DIR } from '@/lib/colleges/defaults'
+import { getVisibleCollegesFor, isCollegeSlug } from '@/lib/colleges/registry'
+import { KNOWLEDGE_DOMAINS, KNOWLEDGE_SOURCE_SYSTEMS } from '@/lib/db/schema'
 
 import { KNOWLEDGE_SEED } from '..'
 
 describe('knowledge base seed', () => {
   it('covers every college', () => {
-    for (const college of COLLEGE_SLUGS) {
+    for (const { slug: college } of DIR.list) {
       expect(KNOWLEDGE_SEED.some(doc => doc.college === college)).toBe(true)
     }
   })
@@ -24,9 +21,8 @@ describe('knowledge base seed', () => {
   it.each(KNOWLEDGE_SEED.map(doc => [doc.title, doc] as const))(
     '%s is well formed',
     (_title, doc) => {
-      expect(isCollegeSlug(doc.college)).toBe(true)
+      expect(isCollegeSlug(DIR, doc.college)).toBe(true)
       expect(KNOWLEDGE_DOMAINS).toContain(doc.domain)
-      expect(KNOWLEDGE_AUTHORITIES).toContain(doc.authority)
       expect(KNOWLEDGE_SOURCE_SYSTEMS).toContain(doc.sourceSystem)
       expect(new URL(doc.sourceUrl).protocol).toBe('https:')
       expect(Number.isNaN(Date.parse(doc.effectiveDate))).toBe(false)
@@ -38,7 +34,7 @@ describe('knowledge base seed', () => {
       expect(doc.content.trim().length).toBeGreaterThan(200)
       // Authorities other than the owning college are only partner or joint.
       if (doc.authority !== 'joint') {
-        expect([doc.college, 'jecrc']).toContain(doc.authority)
+        expect(getVisibleCollegesFor(DIR, doc.college)).toContain(doc.authority)
       }
     }
   )

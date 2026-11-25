@@ -1,6 +1,8 @@
+import { defaultCampusScope } from '@/lib/colleges/defaults'
 import {
-  COLLEGES,
-  type CollegeSlug,
+  type CampusScope,
+  collegeShortName,
+  getCollege,
   getOfficialWebDomains,
   getVisibleCollegesFor
 } from '@/lib/colleges/registry'
@@ -43,33 +45,30 @@ Sera is the campus assistant for college students, mentors and admission seekers
 }
 
 function getAudienceGuidance(
-  college: CollegeSlug | null,
+  scope: CampusScope,
   role: SeraAudienceRole
 ): string {
-  const visible = getVisibleCollegesFor(college)
-  const names = visible.map(slug => COLLEGES[slug].name)
+  const { directory, college, campus } = scope
+  const self = getCollege(directory, college)
+  const visible = getVisibleCollegesFor(directory, college, campus)
+  const names = visible.map(slug => getCollege(directory, slug)?.name ?? slug)
 
   let collegeLine: string
-  if (!college) {
+  if (!self) {
     collegeLine =
       role === 'guest'
         ? `They are not signed in, so you don't know their college. Campus tools cover every college on Sera: ${names.join(', ')}.`
         : `They are not enrolled at a college on Sera (for example, they are exploring admissions). Campus tools cover every college on Sera: ${names.join(', ')}.`
   } else {
-    const self = COLLEGES[college]
-    const partners = visible.filter(slug => slug !== college)
-    // Kalvium's location ("partner university campuses across India") adds
-    // nothing in a sentence, so only physical campuses are named.
-    const where = self.location.startsWith('Partner')
-      ? ''
-      : ` (${self.location})`
+    const partners = visible.filter(slug => slug !== self.slug)
+    const where = self.location ? ` (${self.location})` : ''
     collegeLine = `They belong to **${self.name}**${where}. Campus tools return only ${names.join(' and ')} records.${
       partners.length > 0
         ? ` ${partners
-            .map(slug => COLLEGES[slug].name)
+            .map(slug => getCollege(directory, slug)?.name ?? slug)
             .join(
               ' and '
-            )} is ${self.shortName}'s partner campus on Sera: for ${self.shortName} students enrolled there, its rules (attendance, exams, fees, hostel) apply alongside ${self.shortName}'s own.`
+            )} ${partners.length > 1 ? 'are' : 'is'} ${self.shortName}'s partner campus${partners.length > 1 ? 'es' : ''} on Sera${campus && campus !== 'none' ? ", and this student's campus" : ''}: for ${self.shortName} students enrolled there, its rules (attendance, exams, fees, hostel) apply alongside ${self.shortName}'s own.`
         : ''
     }`
   }
@@ -86,14 +85,15 @@ function getAudienceGuidance(
 - ${roleLine}`
 }
 
-function getPrinciplesGuidance(college: CollegeSlug | null): string {
-  const visible = getVisibleCollegesFor(college)
+function getPrinciplesGuidance(scope: CampusScope): string {
+  const { directory, college, campus } = scope
+  const visible = getVisibleCollegesFor(directory, college, campus)
   const multiCollege = visible.length > 1
   const collegeRule = !college
     ? `Always say which college each fee, date, rule or contact belongs to. Colleges differ, so never blend their policies. If the user hasn't said which college they mean and the answer differs, answer per college or ask.`
     : multiCollege
-      ? `When ${visible.map(slug => COLLEGES[slug].shortName).join(' and ')} rules differ (attendance cutoffs, exam registration, calendars, fees), present each authority separately and say which one governs what. Never blend them.`
-      : `Never apply another college's rules, fees or dates to ${COLLEGES[college].shortName} students.`
+      ? `When ${visible.map(slug => collegeShortName(directory, slug)).join(' and ')} rules differ (attendance cutoffs, exam registration, calendars, fees), present each authority separately and say which one governs what. Never blend them.`
+      : `Never apply another college's rules, fees or dates to ${collegeShortName(directory, college)} students.`
 
   return `## Principles (in priority order)
 1. **Verified over helpful.** Campus facts (dates, deadlines, fees, percentages, rules, contacts, URLs) must come from a tool result in this turn and be cited. Never fill a gap from memory or general knowledge: rules differ between colleges and change every year, and a wrong fee or deadline costs students money and marks.
@@ -103,8 +103,12 @@ function getPrinciplesGuidance(college: CollegeSlug | null): string {
 5. **Honest when unsure.** If verified information is missing, expired or contradictory, say exactly what you couldn't confirm, give the official portal or office to check with, and log the gap. A clear "I couldn't verify this" is better than a confident guess.`
 }
 
-function getToolRoutingGuidance(college: CollegeSlug | null): string {
-  const domains = getOfficialWebDomains(college)
+function getToolRoutingGuidance(scope: CampusScope): string {
+  const domains = getOfficialWebDomains(
+    scope.directory,
+    scope.college,
+    scope.campus
+  )
     .map(domain => `\`${domain}\``)
     .join(', ')
 
@@ -154,14 +158,14 @@ Format: [number](#label), e.g. [1](#S3), [1](#S7), [1](#S12)
 }
 
 function getSeraCoreGuidance(
-  college: CollegeSlug | null,
+  scope: CampusScope,
   role: SeraAudienceRole
 ): string {
   return [
     getIdentityGuidance(),
-    getAudienceGuidance(college, role),
-    getPrinciplesGuidance(college),
-    getToolRoutingGuidance(college),
+    getAudienceGuidance(scope, role),
+    getPrinciplesGuidance(scope),
+    getToolRoutingGuidance(scope),
     getAnswerStyleGuidance(),
     getCitationGuidance()
   ].join('\n\n')
@@ -187,13 +191,13 @@ export const LANGUAGE_RULE = `- Respond in the user's language by default.
 - Exception: if the Space instructions at the end of this prompt set a language for content you write (articles, reports, drafts), write that content in that language and keep the rest of the reply in the user's language, unless they clearly ask for the whole conversation in that language.`
 
 export function getQuickModePrompt(
-  college: CollegeSlug | null = null,
+  scope: CampusScope = defaultCampusScope(),
   role: SeraAudienceRole = 'student'
 ): string {
   const hasGeneralProvider = isGeneralSearchProviderAvailable()
 
   return `
-${getSeraCoreGuidance(college, role)}
+${getSeraCoreGuidance(scope, role)}
 
 ## Quick mode
 Answer fast with the fewest tool calls.
@@ -232,11 +236,11 @@ ${getFollowUpSuggestionsSpecPrompt()}
 }
 
 export function getAdaptiveModePrompt(
-  college: CollegeSlug | null = null,
+  scope: CampusScope = defaultCampusScope(),
   role: SeraAudienceRole = 'student'
 ): string {
   return `
-${getSeraCoreGuidance(college, role)}
+${getSeraCoreGuidance(scope, role)}
 
 ## Adaptive mode
 Research as deeply as the question needs, then stop.
@@ -261,17 +265,17 @@ ${getPdfFetchGuidance()}
 Rule precedence: the verified-facts principle and citations override brevity and speed.
 
 Flexible example (illustrative only: real answers take every fact from this turn's tool results):
-User: "I'm choosing between JECRC and B.K. Birla for BCA. How do fees and refunds compare?"
+User: "I'm choosing between College A and College B for BCA. How do fees and refunds compare?"
 Answer:
-## BCA at JECRC vs B.K. Birla: fees and refunds
+## BCA at College A vs College B: fees and refunds
 ### Fees
-| | JECRC University | B.K. Birla College |
+| | College A | College B |
 | --- | --- | --- |
 | Where fees are published | Information Brochure 2026 [1](#S3) | Fee structure PDF 2026-27 [1](#S7) |
 
 ### Refunds
-- **JECRC:** full refund until 30 September; at most ₹1,000 deducted until 31 October; none after. [1](#S3)
-- **B.K. Birla:** ₹500 before term starts, rising to 100% after 30 September. [1](#S12)
+- **College A:** full refund until 30 September; at most ₹1,000 deducted until 31 October; none after. [1](#S3)
+- **College B:** ₹500 before term starts, rising to 100% after 30 September. [1](#S12)
 
 **Next step:** confirm the current year's figures with each admissions office before paying.
 

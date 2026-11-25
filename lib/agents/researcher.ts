@@ -8,7 +8,8 @@ import type {
 } from '@/lib/types/agent'
 import { type Model } from '@/lib/types/models'
 
-import type { CollegeSlug } from '../colleges/registry'
+import { defaultCampusScope } from '../colleges/defaults'
+import type { CampusScope } from '../colleges/registry'
 import { createCampusRagTools } from '../tools/campus-rag'
 import { createDraftTools } from '../tools/draft'
 import { createFetchTool } from '../tools/fetch'
@@ -106,7 +107,7 @@ export function createResearcher({
   currentDraft = null,
   alternativesOnly = false,
   spaceInstructions = '',
-  college = null,
+  campusScope = defaultCampusScope(),
   userId = null,
   audienceRole = 'student'
 }: {
@@ -119,10 +120,10 @@ export function createResearcher({
   alternativesOnly?: boolean
   spaceInstructions?: string
   /**
-   * The asking user's college: scopes campus tools and the system prompt.
-   * Null: not enrolled anywhere (e.g. admission seekers), all colleges.
+   * The asking user's college and campus: scopes campus tools and the
+   * system prompt. Defaults to every built-in college (admission seekers).
    */
-  college?: CollegeSlug | null
+  campusScope?: CampusScope
   userId?: string | null
   /** Who is asking: tailors the system prompt (mentor, student or guest). */
   audienceRole?: SeraAudienceRole
@@ -152,7 +153,7 @@ export function createResearcher({
     const campusRagTools = createCampusRagTools({
       labelAllocator,
       model,
-      college,
+      campusScope,
       userId,
       chatId
     })
@@ -168,7 +169,7 @@ export function createResearcher({
         console.log(
           '[Researcher] Quick mode: maxSteps=20, tools=[searchCampusKnowledge, queryEvents, getOfficialPortalLinks, searchOfficialWeb, logUnansweredQuery, search, fetch, editDraft]'
         )
-        systemPrompt = getQuickModePrompt(college, audienceRole)
+        systemPrompt = getQuickModePrompt(campusScope, audienceRole)
         activeToolsList = [
           'searchCampusKnowledge',
           'queryEvents',
@@ -185,7 +186,7 @@ export function createResearcher({
 
       case 'adaptive':
       default:
-        systemPrompt = getAdaptiveModePrompt(college, audienceRole)
+        systemPrompt = getAdaptiveModePrompt(campusScope, audienceRole)
         activeToolsList = [
           'searchCampusKnowledge',
           'queryEvents',

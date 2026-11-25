@@ -11,7 +11,8 @@ import {
 import { getCurrentUser, getCurrentUserId } from '@/lib/auth/get-current-user'
 import { isAnonymousMode } from '@/lib/auth/provider'
 import { rejectIfBot } from '@/lib/bot-protection'
-import type { CollegeSlug } from '@/lib/colleges/registry'
+import type { CampusScope } from '@/lib/colleges/registry'
+import { getCollegeDirectory, toPublicDirectory } from '@/lib/colleges/store'
 import { getUserMessageIds } from '@/lib/db/actions'
 import { generateId } from '@/lib/db/schema'
 import { checkAndEnforceAdaptiveLimit } from '@/lib/rate-limit/adaptive-limit'
@@ -126,7 +127,11 @@ export async function POST(req: Request) {
     const isGuest = !userId
     // The user's college scopes campus knowledge. Null (guests, students
     // not enrolled anywhere) means every college, for admission seekers.
-    const college: CollegeSlug | null = currentUser?.college ?? null
+    const campusScope: CampusScope = {
+      directory: toPublicDirectory(await getCollegeDirectory()),
+      college: currentUser?.college ?? null,
+      campus: currentUser?.campus ?? null
+    }
     const audienceRole: SeraAudienceRole = !currentUser
       ? 'guest'
       : currentUser.userType === 'mentor'
@@ -455,7 +460,7 @@ export async function POST(req: Request) {
         abortSignal,
         searchMode,
         chatId,
-        college,
+        campusScope,
         audienceRole
       })
     } else {
@@ -471,7 +476,7 @@ export async function POST(req: Request) {
           isNewChat,
           searchMode,
           spaceColor,
-          college,
+          campusScope,
           audienceRole,
           onZeroPartError: refundUsageOnce
         })

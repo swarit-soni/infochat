@@ -31,7 +31,15 @@ vi.mock('../search', () => ({
   }))
 }))
 
+import {
+  DEFAULT_COLLEGE_DIRECTORY,
+  defaultCampusScope
+} from '@/lib/colleges/defaults'
+import { getOfficialWebDomains } from '@/lib/colleges/registry'
+
 import { createCampusRagTools, filterOfficialDomains } from '../campus-rag'
+
+const OFFICIAL = getOfficialWebDomains(DEFAULT_COLLEGE_DIRECTORY, 'kalvium')
 
 async function collectGeneratorResult<T = any>(
   value: AsyncIterable<T> | Promise<T>
@@ -48,13 +56,15 @@ async function collectGeneratorResult<T = any>(
 
 describe('filterOfficialDomains', () => {
   it('strips non-official domains and falls back to official allowlist', () => {
-    expect(filterOfficialDomains(['collegedunia.com', 'shiksha.com'])).toEqual([
-      'kalvium.com',
-      'jecrcuniversity.edu.in'
-    ])
+    expect(
+      filterOfficialDomains(['collegedunia.com', 'shiksha.com'], OFFICIAL)
+    ).toEqual(['kalvium.com', 'jecrcuniversity.edu.in'])
 
     expect(
-      filterOfficialDomains(['admissions.jecrcuniversity.edu.in', 'reddit.com'])
+      filterOfficialDomains(
+        ['admissions.jecrcuniversity.edu.in', 'reddit.com'],
+        OFFICIAL
+      )
     ).toEqual(['admissions.jecrcuniversity.edu.in'])
   })
 })
@@ -205,7 +215,10 @@ describe('createCampusRagTools', () => {
 
   it('logs abstention gaps via logUnansweredQuery', async () => {
     mocks.recordUnansweredQuery.mockResolvedValue({ id: 'uq-1' })
-    const tools = createCampusRagTools({ college: 'kalvium', userId: 'u-1' })
+    const tools = createCampusRagTools({
+      campusScope: defaultCampusScope('kalvium'),
+      userId: 'u-1'
+    })
     const result = await tools.logUnansweredQuery.execute!(
       {
         query: 'When is Squad 99 industrial visit?',
@@ -258,15 +271,19 @@ describe('createCampusRagTools', () => {
     const context = { toolCallId: 'tc', messages: [], context: {} }
 
     await collectGeneratorResult(
-      createCampusRagTools({ college: 'kalvium' }).searchCampusKnowledge
-        .execute!({ query: 'fees', max_results: 3 }, context) as never
+      createCampusRagTools({ campusScope: defaultCampusScope('kalvium') })
+        .searchCampusKnowledge.execute!(
+        { query: 'fees', max_results: 3 },
+        context
+      ) as never
     )
     expect(mocks.retrieveCampusKnowledge).toHaveBeenLastCalledWith(
       expect.objectContaining({ colleges: ['kalvium', 'jecrc'] })
     )
 
     await collectGeneratorResult(
-      createCampusRagTools({ college: 'jecrc' }).searchCampusKnowledge.execute!(
+      createCampusRagTools({ campusScope: defaultCampusScope('jecrc') })
+        .searchCampusKnowledge.execute!(
         { query: 'fees', max_results: 3 },
         context
       ) as never
@@ -282,7 +299,9 @@ describe('createCampusRagTools', () => {
       ) as never
     )
     expect(mocks.retrieveCampusKnowledge).toHaveBeenLastCalledWith(
-      expect.objectContaining({ colleges: ['kalvium', 'jecrc', 'bkbirla'] })
+      expect.objectContaining({
+        colleges: DEFAULT_COLLEGE_DIRECTORY.list.map(c => c.slug)
+      })
     )
   })
 })

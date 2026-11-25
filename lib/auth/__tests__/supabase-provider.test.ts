@@ -3,8 +3,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { supabaseAuthProvider, toAppUser } from '@/lib/auth/providers/supabase'
+import { DEFAULT_COLLEGE_DIRECTORY } from '@/lib/colleges/defaults'
 import { createClient } from '@/lib/supabase/server'
 
+vi.mock('@/lib/colleges/store', async () =>
+  (await import('@/lib/colleges/testing')).collegeStoreMock()
+)
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn()
 }))
@@ -90,15 +94,18 @@ describe('supabase provider', () => {
     })
 
     it('maps @kalvium.community Google users as student', () => {
-      const user = toAppUser({
-        id: 'u-2',
-        email: 'student@kalvium.community',
-        app_metadata: { providers: ['google'] },
-        user_metadata: {
-          name: 'Student Name',
-          picture: 'https://img.example/2.png'
-        }
-      } as never)
+      const user = toAppUser(
+        {
+          id: 'u-2',
+          email: 'student@kalvium.community',
+          app_metadata: { providers: ['google'] },
+          user_metadata: {
+            name: 'Student Name',
+            picture: 'https://img.example/2.png'
+          }
+        } as never,
+        DEFAULT_COLLEGE_DIRECTORY
+      )
 
       expect(user).toEqual({
         id: 'u-2',

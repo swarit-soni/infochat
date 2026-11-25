@@ -4,29 +4,97 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { saveEnrolledCollege } from '@/lib/actions/onboarding'
-import { COLLEGE_SLUGS, getCollege } from '@/lib/colleges/registry'
 import { cn } from '@/lib/utils/index'
 
 import { Button } from '@/components/ui/button'
 
-const OPTIONS = [
-  ...COLLEGE_SLUGS.map(slug => ({
-    value: slug as string,
-    label: getCollege(slug).name,
-    description: getCollege(slug).location
-  })),
-  {
-    value: 'none',
-    label: 'Not enrolled yet',
-    description: "I'm exploring colleges or applying for admission"
-  }
-]
+export interface CollegeOption {
+  value: string
+  label: string
+  description: string
+  /** Partner campuses a student of this college can be on. */
+  campuses: { value: string; label: string }[]
+}
 
-export function EnrolledCollegeForm({ next }: { next: string }) {
+const NOT_ENROLLED: CollegeOption = {
+  value: 'none',
+  label: 'Not enrolled yet',
+  description: "I'm exploring colleges or applying for admission",
+  campuses: []
+}
+
+function OptionList({
+  name,
+  legend,
+  options,
+  value,
+  onChange
+}: {
+  name: string
+  legend: string
+  options: { value: string; label: string; description?: string }[]
+  value: string | null
+  onChange: (value: string) => void
+}) {
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mb-1 text-sm font-medium">{legend}</legend>
+      {options.map(option => (
+        <label
+          key={option.value}
+          className={cn(
+            'flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm transition-colors hover:bg-accent',
+            value === option.value && 'border-primary bg-accent'
+          )}
+        >
+          <input
+            type="radio"
+            name={name}
+            value={option.value}
+            checked={value === option.value}
+            onChange={() => onChange(option.value)}
+            className="mt-1"
+          />
+          <span>
+            <span className="block font-medium">{option.label}</span>
+            {option.description && (
+              <span className="block text-xs text-muted-foreground">
+                {option.description}
+              </span>
+            )}
+          </span>
+        </label>
+      ))}
+    </fieldset>
+  )
+}
+
+/**
+ * Student sign-up questions. `lockedCollege` is set when the college is
+ * verified from the student's email domain: only the campus is asked.
+ */
+export function EnrolledCollegeForm({
+  next,
+  colleges,
+  lockedCollege = null,
+  initialCampus = null
+}: {
+  next: string
+  colleges: CollegeOption[]
+  lockedCollege?: string | null
+  initialCampus?: string | null
+}) {
   const router = useRouter()
-  const [answer, setAnswer] = useState<string | null>(null)
+  const [answer, setAnswer] = useState<string | null>(lockedCollege)
+  const [campus, setCampus] = useState<string | null>(initialCampus)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  const options = [...colleges, NOT_ENROLLED]
+  const selected = options.find(option => option.value === answer) ?? null
+  const campusOptions = selected?.campuses.length
+    ? [...selected.campuses, { value: 'none', label: `${selected.label} only` }]
+    : []
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
@@ -34,9 +102,16 @@ export function EnrolledCollegeForm({ next }: { next: string }) {
       setError('Please choose an option.')
       return
     }
+    if (campusOptions.length > 0 && !campus) {
+      setError('Please choose your campus.')
+      return
+    }
     setError(null)
     startTransition(async () => {
-      const result = await saveEnrolledCollege(answer)
+      const result = await saveEnrolledCollege(
+        answer,
+        campusOptions.length > 0 ? campus : null
+      )
       if (!result.success) {
         setError(result.error ?? 'Could not save your answer.')
         return
@@ -48,33 +123,30 @@ export function EnrolledCollegeForm({ next }: { next: string }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <fieldset className="flex flex-col gap-2">
-        <legend className="sr-only">Which college are you enrolled in?</legend>
-        {OPTIONS.map(option => (
-          <label
-            key={option.value}
-            className={cn(
-              'flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm transition-colors hover:bg-accent',
-              answer === option.value && 'border-primary bg-accent'
-            )}
-          >
-            <input
-              type="radio"
-              name="enrolled-college"
-              value={option.value}
-              checked={answer === option.value}
-              onChange={() => setAnswer(option.value)}
-              className="mt-1"
-            />
-            <span>
-              <span className="block font-medium">{option.label}</span>
-              <span className="block text-xs text-muted-foreground">
-                {option.description}
-              </span>
-            </span>
-          </label>
-        ))}
-      </fieldset>
+      {!lockedCollege && (
+        <div className="max-h-[50vh] overflow-y-auto pr-1">
+          <OptionList
+            name="enrolled-college"
+            legend="Which college are you enrolled in?"
+            options={options}
+            value={answer}
+            onChange={value => {
+              setAnswer(value)
+              setCampus(null)
+            }}
+          />
+        </div>
+      )}
+
+      {campusOptions.length > 0 && (
+        <OptionList
+          name="campus"
+          legend="Which campus are you on?"
+          options={campusOptions}
+          value={campus}
+          onChange={setCampus}
+        />
+      )}
 
       {error && (
         <p

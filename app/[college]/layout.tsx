@@ -1,25 +1,22 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 
-import {
-  COLLEGE_SLUGS,
-  getCollege,
-  isCollegeSlug
-} from '@/lib/colleges/registry'
+import { getCollege } from '@/lib/colleges/registry'
+import { getCollegeDirectory } from '@/lib/colleges/store'
 
-export function generateStaticParams() {
-  return COLLEGE_SLUGS.map(college => ({ college }))
-}
+// Colleges are data (managed at /admin/colleges), so these routes are dynamic.
+export const dynamic = 'force-dynamic'
 
 export async function generateMetadata(props: {
   params: Promise<{ college: string }>
 }): Promise<Metadata> {
   const { college } = await props.params
-  if (!isCollegeSlug(college)) return {}
+  const config = getCollege(await getCollegeDirectory(), college)
+  if (!config) return {}
   return {
     title: {
-      default: `Sera · ${getCollege(college).shortName}`,
-      template: `%s · Sera · ${getCollege(college).shortName}`
+      default: `Sera · ${config.shortName}`,
+      template: `%s · Sera · ${config.shortName}`
     }
   }
 }
@@ -29,7 +26,7 @@ export default async function CollegeLayout(props: {
   params: Promise<{ college: string }>
 }) {
   const { college } = await props.params
-  if (!isCollegeSlug(college)) {
+  if (!getCollege(await getCollegeDirectory(), college)) {
     notFound()
   }
   return props.children

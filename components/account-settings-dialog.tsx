@@ -17,7 +17,6 @@ import { signOut } from '@/lib/actions/auth'
 import { USER_TYPE_LABELS } from '@/lib/auth/domain'
 import type { AppUser } from '@/lib/auth/types'
 import { chatStore } from '@/lib/chat-store'
-import { getCollege } from '@/lib/colleges/registry'
 import { useAuthCapabilities } from '@/lib/contexts/app-user-context'
 
 import {
@@ -137,12 +136,14 @@ export function AccountSettingsDialog({
                   <p className="font-medium">College</p>
                   <p className="truncate text-muted-foreground">
                     {user.college
-                      ? getCollege(user.college).name
+                      ? (user.collegeName ?? user.college)
                       : 'Not enrolled'}
+                    {user.campusName ? ` · ${user.campusName} campus` : ''}
                   </p>
                 </div>
-                {/* A college verified from the email domain can't change. */}
-                {!user.userType && (
+                {/* A verified college can't change, but its students can
+                    still change their partner campus. */}
+                {user.userType !== 'mentor' && (
                   <Button asChild variant="outline" size="sm">
                     <Link
                       href="/onboarding/college?change=1"

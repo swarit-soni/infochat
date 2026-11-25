@@ -6,11 +6,7 @@ import Link from 'next/link'
 import { signInWithGoogle } from '@/lib/actions/auth'
 import { USER_TYPE_LABELS } from '@/lib/auth/domain'
 import { safeRedirectPath } from '@/lib/auth/redirect-target'
-import {
-  collegePath,
-  type CollegeSlug,
-  getCollege
-} from '@/lib/colleges/registry'
+import { collegePath, type CollegeSlug } from '@/lib/colleges/registry'
 import { useAuthCapabilities } from '@/lib/contexts/app-user-context'
 import { cn } from '@/lib/utils/index'
 
@@ -56,6 +52,7 @@ function GoogleIcon() {
 export function LoginForm({
   className,
   mentorCollege,
+  mentorCollegeName,
   mentorDomains = [],
   next,
   initialError = null,
@@ -67,6 +64,8 @@ export function LoginForm({
    * the regular login, which any Google account may use.
    */
   mentorCollege?: CollegeSlug
+  /** Short display name of `mentorCollege`. */
+  mentorCollegeName?: string
   /** Email domains accepted as mentors of `mentorCollege` (empty: not set up). */
   mentorDomains?: string[]
   next?: string
@@ -78,7 +77,10 @@ export function LoginForm({
   const capabilities = useAuthCapabilities()
 
   const isMentor = mentorCollege !== undefined
-  const college = mentorCollege ? getCollege(mentorCollege) : null
+  const college =
+    mentorCollege !== undefined
+      ? { shortName: mentorCollegeName ?? mentorCollege }
+      : null
   const isEnabled = !isMentor || mentorDomains.length > 0
   const safeNext = next ? safeRedirectPath(next) : null
   const nextQuery =

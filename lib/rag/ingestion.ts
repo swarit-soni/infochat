@@ -1,12 +1,13 @@
 import { and, desc, eq, ilike, inArray, ne, or, sql } from 'drizzle-orm'
 import { parse as parseHtml } from 'node-html-parser'
 
+import { DEFAULT_COLLEGE_DIRECTORY } from '@/lib/colleges/defaults'
 import {
-  COLLEGE_SLUGS,
-  COLLEGES,
+  type CollegeDirectory,
   type CollegeSlug,
   getOfficialWebDomains
 } from '@/lib/colleges/registry'
+import { getCollegeDirectory } from '@/lib/colleges/store'
 import { db } from '@/lib/db'
 import {
   type CampusEvent,
@@ -43,10 +44,12 @@ import {
 } from './normalizer'
 import { DEFAULT_OFFICIAL_PORTALS } from './portals-seed'
 
-/** Official domains any college may crawl (each college: its own + partners). */
-export const ALLOWED_OFFICIAL_CRAWL_DOMAINS: readonly string[] = [
-  ...new Set(COLLEGE_SLUGS.flatMap(slug => getOfficialWebDomains(slug)))
-]
+/** Official domains of every college in the directory. */
+function allOfficialDomains(directory: CollegeDirectory): string[] {
+  return [
+    ...new Set(directory.list.flatMap(college => college.officialWebDomains))
+  ]
+}
 
 export interface IngestKnowledgeDocumentInput {
   /** Owning college (tenant). */
@@ -368,7 +371,10 @@ export async function ingestUrgentUpdate(
   input: NormalizeUrgentUpdateInput & { college: CollegeSlug },
   userId?: string | null
 ): Promise<IngestUrgentUpdateResult> {
-  const normalized = await normalizeUrgentUpdateInput(input)
+  const normalized = await normalizeUrgentUpdateInput({
+    ...input,
+    directory: input.directory ?? (await getCollegeDirectory())
+  })
 
   if (normalized.discarded) {
     return {
@@ -740,13 +746,6 @@ export async function resolveUnansweredQuery(
   })
 }
 
-const WEB_SOURCE_SYSTEM_BY_COLLEGE: Record<CollegeSlug, KnowledgeSourceSystem> =
-  {
-    kalvium: 'kalvium_web',
-    jecrc: 'jecrc_web',
-    bkbirla: 'bkbirla_web'
-  }
-
 function hostMatchesDomain(hostname: string, domain: string): boolean {
   return hostname === domain || hostname.endsWith(`.${domain}`)
 }
@@ -757,7 +756,8 @@ function hostMatchesDomain(hostname: string, domain: string): boolean {
  */
 export function isAllowedOfficialUrl(
   rawUrl: string,
-  college?: CollegeSlug
+  college?: CollegeSlug,
+  directory: CollegeDirectory = DEFAULT_COLLEGE_DIRECTORY
 ): boolean {
   try {
     const parsed = new URL(rawUrl)
@@ -766,8 +766,8 @@ export function isAllowedOfficialUrl(
     }
     const hostname = parsed.hostname.toLowerCase()
     const domains = college
-      ? getOfficialWebDomains(college)
-      : ALLOWED_OFFICIAL_CRAWL_DOMAINS
+      ? getOfficialWebDomains(directory, college)
+      : allOfficialDomains(directory)
     return domains.some(domain => hostMatchesDomain(hostname, domain))
   } catch {
     return false
@@ -849,7 +849,7 @@ export function extractMarkdownFromHtml(
 }
 
 /**
- * Crawl an allowlisted official university or Kalvium URL and ingest its
+ * Crawl an allowlisted official college URL and ingest its
  * structured Markdown & tables into the Postgres KB.
  */
 export async function crawlAndIngestOfficialUrl(
@@ -863,22 +863,23 @@ export async function crawlAndIngestOfficialUrl(
   },
   userId?: string | null
 ): Promise<IngestKnowledgeDocumentResult> {
-  if (!isAllowedOfficialUrl(params.url, params.college)) {
+  const directory = await getCollegeDirectory()
+  if (!isAllowedOfficialUrl(params.url, params.college, directory)) {
     throw new Error(
-      `URL must belong to an official allowlisted domain (${getOfficialWebDomains(params.college).join(', ')}).`
+      `URL must belong to an official allowlisted domain (${getOfficialWebDomains(directory, params.college).join(', ')}).`
     )
   }
 
   const hostname = new URL(params.url).hostname.toLowerCase()
   const hostCollege =
-    COLLEGE_SLUGS.find(slug =>
-      COLLEGES[slug].officialWebDomains.some(domain =>
+    directory.list.find(college =>
+      college.officialWebDomains.some(domain =>
         hostMatchesDomain(hostname, domain)
       )
-    ) ?? params.college
+    )?.slug ?? params.college
   const inferredAuthority: KnowledgeAuthority = params.authority ?? hostCollege
   const inferredSourceSystem: KnowledgeSourceSystem =
-    params.sourceSystem ?? WEB_SOURCE_SYSTEM_BY_COLLEGE[hostCollege]
+    params.sourceSystem ?? 'official_website'
 
   const response = await safeFetch(params.url, {
     headers: {

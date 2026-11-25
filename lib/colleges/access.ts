@@ -1,18 +1,12 @@
-import {
-  COLLEGE_SLUGS,
-  type CollegeRole,
-  COLLEGES,
-  type CollegeSlug
-} from './registry'
+import type { College, CollegeRole, CollegeSlug } from './registry'
 
 type Env = Record<string, string | undefined>
 
-export interface CollegeLoginConfig {
-  mentorDomains: string[]
-  studentDomains: string[]
-  mentorRequiresAllowlist: boolean
-  /** Emails allowed to sign in as mentors when the domain is shared. */
-  mentorEmails: string[]
+/** The parts of the directory identity resolution needs. */
+export interface IdentityDirectory {
+  list: College[]
+  /** Allowlisted mentor emails per college (lowercased). */
+  mentorEmails?: Readonly<Record<CollegeSlug, string[]>>
 }
 
 export interface CollegeIdentity {
@@ -21,7 +15,7 @@ export interface CollegeIdentity {
 }
 
 function envKey(slug: CollegeSlug, suffix: string): string {
-  return `SERA_${slug.toUpperCase()}_${suffix}`
+  return `SERA_${slug.toUpperCase().replace(/-/g, '_')}_${suffix}`
 }
 
 function parseList(value: string | undefined): string[] | null {
@@ -53,62 +47,46 @@ export function isNonProductionStage(env: Env = process.env): boolean {
 }
 
 /**
- * Login rules for a college: registry defaults, overridable per deployment
- * with `SERA_<SLUG>_MENTOR_DOMAINS`, `SERA_<SLUG>_STUDENT_DOMAINS` (comma
- * separated; an empty value disables that role) and `SERA_<SLUG>_MENTOR_EMAILS`.
+ * Per-deployment overrides of a college's login domains:
+ * `SERA_<SLUG>_MENTOR_DOMAINS` / `SERA_<SLUG>_STUDENT_DOMAINS` (comma
+ * separated; an empty value disables that role). Mainly for previews.
  */
-export function getCollegeLoginConfig(
-  slug: CollegeSlug,
+export function applyCollegeEnvOverrides(
+  college: College,
   env: Env = process.env
-): CollegeLoginConfig {
-  const defaults = COLLEGES[slug].login
+): College {
   return {
-    mentorDomains: parseList(env[envKey(slug, 'MENTOR_DOMAINS')]) ?? [
-      ...defaults.mentorDomains
-    ],
-    studentDomains: parseList(env[envKey(slug, 'STUDENT_DOMAINS')]) ?? [
-      ...defaults.studentDomains
-    ],
-    mentorRequiresAllowlist: defaults.mentorRequiresAllowlist,
-    mentorEmails: (parseList(env[envKey(slug, 'MENTOR_EMAILS')]) ?? [])
-      .map(normalizeEmailValue)
-      .filter((email): email is string => Boolean(email))
+    ...college,
+    mentorDomains:
+      parseList(env[envKey(college.slug, 'MENTOR_DOMAINS')]) ??
+      college.mentorDomains,
+    studentDomains:
+      parseList(env[envKey(college.slug, 'STUDENT_DOMAINS')]) ??
+      college.studentDomains
   }
 }
 
-/** Whether anyone can sign in to this college's area in this deployment. */
-export function isCollegeLoginEnabled(
-  slug: CollegeSlug,
-  env: Env = process.env
-): boolean {
-  const config = getCollegeLoginConfig(slug, env)
-  return config.mentorDomains.length > 0 || config.studentDomains.length > 0
-}
-
-/** Whether a role can sign in to this college in this deployment. */
+/** Whether a role can sign in to this college. */
 export function isCollegeRoleEnabled(
-  slug: CollegeSlug,
-  role: CollegeRole,
-  env: Env = process.env
+  college: College,
+  role: CollegeRole
 ): boolean {
-  const config = getCollegeLoginConfig(slug, env)
   return role === 'mentor'
-    ? config.mentorDomains.length > 0
-    : config.studentDomains.length > 0
+    ? college.mentorDomains.length > 0
+    : college.studentDomains.length > 0
 }
 
 /**
- * The single domain Google should pre-filter the account picker to, or
- * undefined when the role accepts several domains (or none).
+ * The single domain Google should pre-filter the mentor account picker to,
+ * or undefined when several (or none) are accepted.
  */
 export function getLoginHintDomain(
-  slug: CollegeSlug,
+  college: College,
   role: CollegeRole,
   env: Env = process.env
 ): string | undefined {
-  const config = getCollegeLoginConfig(slug, env)
   const domains =
-    role === 'mentor' ? config.mentorDomains : config.studentDomains
+    role === 'mentor' ? college.mentorDomains : college.studentDomains
   if (role === 'mentor' && getNonProdMentorOverrides(env).size > 0) {
     // Test mentors may use other domains; do not hide them in the picker.
     return undefined
@@ -117,9 +95,8 @@ export function getLoginHintDomain(
 }
 
 /**
- * Strictly non-production test mentors (`SERA_MENTOR_EMAILS`), mapped to the
- * college they act as mentors for. `SERA_MENTOR_EMAILS` entries may be
- * written `college:email`; bare emails default to Kalvium for compatibility.
+ * Strictly non-production test mentors (`SERA_MENTOR_EMAILS`), as
+ * `college:email` entries, mapped to the college they mentor.
  */
 export function getNonProdMentorOverrides(
   env: Env = process.env
@@ -130,73 +107,55 @@ export function getNonProdMentorOverrides(
   }
   for (const rawEntry of env.SERA_MENTOR_EMAILS.split(',')) {
     const entry = rawEntry.trim()
-    if (!entry) continue
     const separator = entry.indexOf(':')
-    const prefix = separator > 0 ? entry.slice(0, separator).trim() : null
-    const college = prefix && isSlug(prefix) ? prefix : 'kalvium'
-    const email = normalizeEmailValue(
-      prefix && isSlug(prefix) ? entry.slice(separator + 1) : entry
-    )
-    if (email) {
+    if (separator <= 0) continue
+    const college = entry.slice(0, separator).trim().toLowerCase()
+    const email = normalizeEmailValue(entry.slice(separator + 1))
+    if (college && email) {
       overrides.set(email, college)
     }
   }
   return overrides
 }
 
-function isSlug(value: string): value is CollegeSlug {
-  return (COLLEGE_SLUGS as readonly string[]).includes(value)
-}
-
 /**
- * Resolve which college a Google account belongs to and its role there, or
- * null when the account belongs to no configured college.
+ * Resolve which college a Google account is verified for, and its role there,
+ * from the colleges' email domains. Null when the email is on no college's
+ * domain (such accounts can still sign in as students and pick a college).
  *
- * Each account belongs to exactly one college. Domains are expected not to
- * overlap between colleges; if a misconfiguration makes them overlap, the
- * first college in registry order wins.
+ * Domains are expected not to overlap between colleges; if they do, the first
+ * college in display order wins.
  */
 export function resolveCollegeIdentity(
   email: string | null | undefined,
+  directory: IdentityDirectory,
   env: Env = process.env
 ): CollegeIdentity | null {
   const normalized = normalizeEmailValue(email)
   if (!normalized) return null
 
   const override = getNonProdMentorOverrides(env).get(normalized)
-  if (override) {
+  if (override && directory.list.some(c => c.slug === override)) {
     return { college: override, userType: 'mentor' }
   }
 
   const domain = normalized.slice(normalized.indexOf('@') + 1)
-  for (const slug of COLLEGE_SLUGS) {
-    const config = getCollegeLoginConfig(slug, env)
-    const mentorDomain = config.mentorDomains.includes(domain)
-    const studentDomain = config.studentDomains.includes(domain)
+  for (const college of directory.list) {
+    const mentorDomain = college.mentorDomains.includes(domain)
+    const studentDomain = college.studentDomains.includes(domain)
     if (!mentorDomain && !studentDomain) continue
 
-    if (
-      mentorDomain &&
-      (!config.mentorRequiresAllowlist ||
-        config.mentorEmails.includes(normalized))
-    ) {
-      return { college: slug, userType: 'mentor' }
+    const allowlisted =
+      directory.mentorEmails?.[college.slug]?.includes(normalized) ?? false
+    if (mentorDomain && (!college.mentorRequiresAllowlist || allowlisted)) {
+      return { college: college.slug, userType: 'mentor' }
     }
     if (studentDomain) {
-      return { college: slug, userType: 'student' }
+      return { college: college.slug, userType: 'student' }
     }
-    // A mentor-only domain without allowlist membership is not accepted.
+    // A mentor-only domain without allowlist membership is not a college identity.
     return null
   }
 
   return null
-}
-
-/**
- * The college used for users whose identity does not come from a college
- * email (anonymous mode, Better Auth, guests without a college in the URL).
- */
-export function getDefaultCollege(env: Env = process.env): CollegeSlug {
-  const configured = env.SERA_DEFAULT_COLLEGE?.trim().toLowerCase()
-  return configured && isSlug(configured) ? configured : 'kalvium'
 }

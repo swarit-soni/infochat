@@ -5,6 +5,9 @@ import { setUserProfileCollege } from '@/lib/db/actions'
 
 import { saveEnrolledCollege } from '../onboarding'
 
+vi.mock('@/lib/colleges/store', async () =>
+  (await import('@/lib/colleges/testing')).collegeStoreMock()
+)
 vi.mock('@/lib/auth/get-current-user', () => ({
   getCurrentUser: vi.fn()
 }))
@@ -34,10 +37,14 @@ describe('saveEnrolledCollege', () => {
     })
 
     expect(await saveEnrolledCollege('bkbirla')).toEqual({ success: true })
-    expect(setUserProfileCollege).toHaveBeenLastCalledWith('u1', 'bkbirla')
+    expect(setUserProfileCollege).toHaveBeenLastCalledWith(
+      'u1',
+      'bkbirla',
+      null
+    )
 
     expect(await saveEnrolledCollege('none')).toEqual({ success: true })
-    expect(setUserProfileCollege).toHaveBeenLastCalledWith('u1', null)
+    expect(setUserProfileCollege).toHaveBeenLastCalledWith('u1', null, null)
   })
 
   it('rejects unknown answers', async () => {
@@ -51,12 +58,44 @@ describe('saveEnrolledCollege', () => {
     expect(setUserProfileCollege).not.toHaveBeenCalled()
   })
 
+  it('asks Kalvium students for their partner campus', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      id: 'u1',
+      email: 'someone@gmail.com'
+    })
+    expect(await saveEnrolledCollege('kalvium')).toMatchObject({
+      success: false,
+      error: 'Please choose your campus.'
+    })
+    expect(await saveEnrolledCollege('kalvium', 'bkbirla')).toMatchObject({
+      success: false
+    })
+    expect(await saveEnrolledCollege('kalvium', 'jecrc')).toEqual({
+      success: true
+    })
+    expect(setUserProfileCollege).toHaveBeenLastCalledWith(
+      'u1',
+      'kalvium',
+      'jecrc'
+    )
+  })
+
   it('keeps a college verified from a college email domain', async () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'u2',
-      email: 'student@kalvium.community'
+      email: 'student@kalvium.community',
+      college: 'kalvium',
+      collegeVerified: true
+    } as never)
+    // The answer can't move the student to another college; only the
+    // campus is saved.
+    expect(await saveEnrolledCollege('jecrc', 'none')).toEqual({
+      success: true
     })
-    expect(await saveEnrolledCollege('jecrc')).toEqual({ success: true })
-    expect(setUserProfileCollege).not.toHaveBeenCalled()
+    expect(setUserProfileCollege).toHaveBeenLastCalledWith(
+      'u2',
+      'kalvium',
+      'none'
+    )
   })
 })

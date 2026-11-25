@@ -55,7 +55,7 @@ import { langfuseSpanProcessor } from '@/instrumentation'
 
 type EphemeralStreamConfig = Pick<
   BaseStreamConfig,
-  'model' | 'abortSignal' | 'searchMode' | 'college' | 'audienceRole'
+  'model' | 'abortSignal' | 'searchMode' | 'campusScope' | 'audienceRole'
 > & {
   messages: UIMessage[]
   chatId?: string
@@ -70,7 +70,7 @@ export async function createEphemeralChatStreamResponse(
     abortSignal,
     searchMode,
     chatId,
-    college,
+    campusScope,
     audienceRole
   } = config
 
@@ -202,7 +202,7 @@ export async function createEphemeralChatStreamResponse(
         searchMode,
         citationLabelSeed: nextCitationLabelNumber(messages),
         currentDraft,
-        college,
+        campusScope,
         audienceRole,
         alternativesOnly: isReviseAlternativesTurn(
           messages.findLast(m => m.role === 'user') ?? { role: '' }

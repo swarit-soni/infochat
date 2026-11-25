@@ -19,7 +19,7 @@ function makeCandidate(
     containsTable: 0,
     title: 'Default Title',
     domain: 'examinations',
-    sourceSystem: 'jecrc_web',
+    sourceSystem: 'official_website',
     authority: 'jecrc',
     program: null,
     semester: null,
@@ -46,14 +46,14 @@ describe('fuseAndRankChunks', () => {
       chunkId: 'c-web',
       documentId: 'd-web',
       title: 'Old Website Page',
-      sourceSystem: 'jecrc_web',
+      sourceSystem: 'official_website',
       priority: 'standard'
     })
     const enoticeDoc = makeCandidate({
       chunkId: 'c-notice',
       documentId: 'd-notice',
       title: 'Official Exam Circular',
-      sourceSystem: 'jecrc_enotice',
+      sourceSystem: 'official_notice',
       priority: 'standard'
     })
     const urgentDoc = makeCandidate({
@@ -110,14 +110,14 @@ describe('fuseAndRankChunks', () => {
     const generic = makeCandidate({
       chunkId: 'c-generic',
       documentId: 'd-generic',
-      sourceSystem: 'kalvium_guide',
+      sourceSystem: 'official_guide',
       authority: 'kalvium',
       squad: null
     })
     const squadSpecific = makeCandidate({
       chunkId: 'c-squad42',
       documentId: 'd-squad42',
-      sourceSystem: 'kalvium_guide',
+      sourceSystem: 'official_guide',
       authority: 'kalvium',
       squad: 'Squad 42'
     })

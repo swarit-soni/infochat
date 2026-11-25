@@ -12,15 +12,18 @@ import {
   sql
 } from 'drizzle-orm'
 
+import { DEFAULT_COLLEGE_DIRECTORY } from '@/lib/colleges/defaults'
 import {
-  COLLEGES,
+  type CollegeDirectory,
   type CollegeSlug,
-  isCollegeSlug
+  getCollege,
+  JOINT_AUTHORITY_LABEL
 } from '@/lib/colleges/registry'
 import { db } from '@/lib/db'
 import {
   campusEvents,
   type CampusEventStatus,
+  KNOWLEDGE_SOURCE_LABELS,
   type KnowledgeAuthority,
   type KnowledgeChannel,
   knowledgeChunks,
@@ -29,7 +32,8 @@ import {
   type KnowledgePriority,
   type KnowledgeSourceSystem,
   type KnowledgeStatus,
-  officialPortals
+  officialPortals,
+  toSourceSystem
 } from '@/lib/db/schema'
 
 import { generateQueryEmbedding } from './embeddings'
@@ -91,6 +95,8 @@ export interface RetrieveCampusKnowledgeParams {
    * its partners). Omit only in tests; production callers always scope.
    */
   colleges?: CollegeSlug[]
+  /** Resolves college names and websites in results. */
+  directory?: CollegeDirectory
   domain?: KnowledgeDomain
   authority?: KnowledgeAuthority
   cohort?: CohortFilter
@@ -134,15 +140,11 @@ export const SOURCE_PRECEDENCE_WEIGHTS: Record<KnowledgeSourceSystem, number> =
   {
     gchat_space: 0.35,
     whatsapp_forward: 0.35,
-    jecrc_enotice: 0.25,
-    jecrc_portal_guide: 0.25,
-    kalvium_guide: 0.18,
-    eventum: 0.1,
-    jecrc_web: 0.05,
-    kalvium_web: 0.05,
-    bkbirla_notice: 0.25,
+    official_notice: 0.25,
+    portal_guide: 0.25,
     official_document: 0.2,
-    bkbirla_web: 0.05,
+    official_guide: 0.18,
+    campus_events: 0.1,
     official_website: 0.05
   }
 
@@ -162,24 +164,26 @@ export function buildCanonicalKnowledgeUrl(
   documentId: string,
   authority: KnowledgeAuthority,
   sourceUrl?: string | null,
-  college: CollegeSlug = 'kalvium'
+  college: CollegeSlug | null = null,
+  directory: CollegeDirectory = DEFAULT_COLLEGE_DIRECTORY
 ): string {
   if (isValidHttpUrl(sourceUrl)) {
     return sourceUrl
   }
-  const website = isCollegeSlug(authority)
-    ? COLLEGES[authority].website
-    : COLLEGES[college].website
-  return `${website}/#sera-kb-${encodeURIComponent(documentId)}`
+  const website =
+    getCollege(directory, authority)?.website ??
+    getCollege(directory, college)?.website ??
+    'https://sera.invalid'
+  return `${website.replace(/\/+$/, '')}/#sera-kb-${encodeURIComponent(documentId)}`
 }
 
-export function formatAuthorityLabel(authority: KnowledgeAuthority): string {
-  if (isCollegeSlug(authority)) {
-    return COLLEGES[authority].shortName === 'JECRC'
-      ? 'JECRC University'
-      : COLLEGES[authority].shortName
-  }
-  return 'Joint notice'
+/** A document's issuing authority for display: a college's name, or joint. */
+export function formatAuthorityLabel(
+  authority: KnowledgeAuthority,
+  directory: CollegeDirectory = DEFAULT_COLLEGE_DIRECTORY
+): string {
+  if (authority === 'joint') return JOINT_AUTHORITY_LABEL
+  return getCollege(directory, authority)?.shortName ?? authority
 }
 
 export function formatProvenanceBadge(candidate: {
@@ -206,22 +210,12 @@ export function formatProvenanceBadge(candidate: {
     return `Urgent Update · ${channelLabel} · ${dateText}`
   }
 
-  const sourceLabels: Record<KnowledgeSourceSystem, string> = {
-    jecrc_enotice: 'JECRC E-Notice',
-    jecrc_portal_guide: 'JECRC Portal Guide',
-    kalvium_guide: 'Kalvium Guide',
-    gchat_space: 'GChat Announcement',
-    whatsapp_forward: 'WhatsApp Forward',
-    eventum: 'Eventum',
-    jecrc_web: 'JECRC Official Website',
-    kalvium_web: 'Kalvium Official Website',
-    bkbirla_notice: 'B.K. Birla College Notice',
-    bkbirla_web: 'B.K. Birla College Official Website',
-    official_website: 'Official Website',
-    official_document: 'Official Document'
-  }
+  const sourceLabel =
+    candidate.sourceSystem === 'gchat_space'
+      ? 'GChat Announcement'
+      : KNOWLEDGE_SOURCE_LABELS[candidate.sourceSystem]
 
-  return `${sourceLabels[candidate.sourceSystem]} · ${dateText}`
+  return `${sourceLabel} · ${dateText}`
 }
 
 function computeCohortBoost(
@@ -246,8 +240,11 @@ function computeCohortBoost(
   return boost
 }
 
-function formatSnippetContent(candidate: RetrievalCandidate): string {
-  const authorityLabel = formatAuthorityLabel(candidate.authority)
+function formatSnippetContent(
+  candidate: RetrievalCandidate,
+  directory: CollegeDirectory
+): string {
+  const authorityLabel = formatAuthorityLabel(candidate.authority, directory)
   const provenanceBadge = formatProvenanceBadge(candidate)
   const metaParts = [
     `Authority: ${authorityLabel}`,
@@ -276,9 +273,12 @@ export function fuseAndRankChunks(
     cohort?: CohortFilter
     limit?: number
     now?: Date
+    /** Resolves college names and websites; defaults to built-in colleges. */
+    directory?: CollegeDirectory
   } = {}
 ): RankedKnowledgeHit[] {
   const now = options.now ?? new Date()
+  const directory = options.directory ?? DEFAULT_COLLEGE_DIRECTORY
   const limit = Math.max(1, options.limit ?? 6)
 
   const valid = candidates.filter(candidate => {
@@ -309,12 +309,14 @@ export function fuseAndRankChunks(
     const score = Number(
       (relevanceScore + precedenceBoost + urgentBoost + cohortBoost).toFixed(6)
     )
-    const authorityLabel = formatAuthorityLabel(candidate.authority)
+    const authorityLabel = formatAuthorityLabel(candidate.authority, directory)
     const provenanceBadge = formatProvenanceBadge(candidate)
     const citationUrl = buildCanonicalKnowledgeUrl(
       candidate.documentId,
       candidate.authority,
-      candidate.sourceUrl
+      candidate.sourceUrl,
+      null,
+      directory
     )
 
     return {
@@ -324,7 +326,7 @@ export function fuseAndRankChunks(
       authorityLabel,
       citationUrl,
       formattedTitle: `${candidate.title} (${authorityLabel} · ${provenanceBadge})`,
-      formattedContent: formatSnippetContent(candidate)
+      formattedContent: formatSnippetContent(candidate, directory)
     }
   })
 
@@ -451,6 +453,8 @@ function mapJoinedRow(
 ): RetrievalCandidate {
   return {
     ...row,
+    // Rows written before source systems became generic may hold legacy values.
+    sourceSystem: toSourceSystem(row.sourceSystem),
     ...ranks
   }
 }
@@ -593,7 +597,8 @@ export async function retrieveCampusKnowledge(
     return fuseAndRankChunks(Array.from(candidateMap.values()), {
       cohort: params.cohort,
       limit,
-      now
+      now,
+      directory: params.directory
     })
   } catch (error) {
     console.warn(

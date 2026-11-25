@@ -1,5 +1,6 @@
 import {
   type CollegeIdentity,
+  type IdentityDirectory,
   isNonProductionStage,
   resolveCollegeIdentity
 } from '@/lib/colleges/access'
@@ -66,25 +67,24 @@ export function extractEmailDomain(
 }
 
 /**
- * Resolve the college and role for an email, or null if the account does not
- * belong to any configured college. See `resolveCollegeIdentity`.
+ * Resolve the college an email is verified for (from college email domains)
+ * and its role there, or null when it is on no college's domain.
  */
 export function getCollegeIdentityFromEmail(
   email: string | null | undefined,
+  directory: IdentityDirectory,
   env: Record<string, string | undefined> = process.env
 ): CollegeIdentity | null {
-  return resolveCollegeIdentity(email, env)
+  return resolveCollegeIdentity(email, directory, env)
 }
 
-/**
- * Resolve the user type from an email's college login rules, or null if the
- * account belongs to no configured college.
- */
+/** The role an email's college domain grants, or null. */
 export function getUserTypeFromEmail(
   email: string | null | undefined,
+  directory: IdentityDirectory,
   env: Record<string, string | undefined> = process.env
 ): UserType | null {
-  return resolveCollegeIdentity(email, env)?.userType ?? null
+  return resolveCollegeIdentity(email, directory, env)?.userType ?? null
 }
 
 /**

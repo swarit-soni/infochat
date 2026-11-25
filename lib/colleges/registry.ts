@@ -64,6 +64,17 @@ export interface CollegeDirectory {
 export const NO_CAMPUS = 'none'
 
 /**
+ * Whose campus knowledge a request may see: the college directory plus the
+ * asker's college (null: not enrolled anywhere, so every college) and
+ * partner campus (a partner slug, `none`, or null when not asked yet).
+ */
+export interface CampusScope {
+  directory: CollegeDirectory
+  college: CollegeSlug | null
+  campus: string | null
+}
+
+/**
  * Cookie carrying the college a mentor sign-in was started for. The OAuth
  * callback only accepts that college's mentors, which keeps each college's
  * mentor login disconnected from the others.
@@ -200,11 +211,13 @@ export function getCollegeSegment(
   return isValidCollegeSlugFormat(segment) ? segment : null
 }
 
+export const JOINT_AUTHORITY_LABEL = 'Joint notice'
+
 /** Display label for a document's issuing authority (a college slug or `joint`). */
 export function formatAuthority(
   directory: CollegeDirectory,
   authority: string
 ): string {
-  if (authority === 'joint') return 'Joint notice'
-  return getCollege(directory, authority)?.name ?? authority
+  if (authority === 'joint') return JOINT_AUTHORITY_LABEL
+  return getCollege(directory, authority)?.shortName ?? authority
 }

@@ -91,7 +91,7 @@ export async function createChatStreamResponse(
     isNewChat,
     searchMode,
     spaceColor,
-    college,
+    campusScope,
     audienceRole,
     onZeroPartError
   } = config
@@ -261,7 +261,7 @@ export async function createChatStreamResponse(
         citationLabelSeed: nextCitationLabelNumber(messagesToModel),
         currentDraft,
         spaceInstructions,
-        college,
+        campusScope,
         audienceRole,
         userId,
         alternativesOnly: isReviseAlternativesTurn(

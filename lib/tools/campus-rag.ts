@@ -1,17 +1,15 @@
 import { type JSONValue, tool } from 'ai'
 import { z } from 'zod'
 
+import { defaultCampusScope } from '@/lib/colleges/defaults'
 import {
-  COLLEGES,
-  type CollegeSlug,
+  type CampusScope,
+  collegeShortName,
+  getCollege,
   getOfficialWebDomains,
   getVisibleCollegesFor
 } from '@/lib/colleges/registry'
-import {
-  CAMPUS_EVENT_STATUSES,
-  KNOWLEDGE_AUTHORITIES,
-  KNOWLEDGE_DOMAINS
-} from '@/lib/db/schema'
+import { CAMPUS_EVENT_STATUSES, KNOWLEDGE_DOMAINS } from '@/lib/db/schema'
 import { recordUnansweredQuery } from '@/lib/rag/ingestion'
 import {
   formatAuthorityLabel,
@@ -28,10 +26,6 @@ import {
 } from '@/lib/utils/citation'
 
 import { createSearchTool } from './search'
-
-/** Official domains for the default (Kalvium) tenant; see getOfficialWebDomains. */
-export const OFFICIAL_WEB_DOMAINS: readonly string[] =
-  getOfficialWebDomains('kalvium')
 
 export const RAG_MODEL_CONTENT_MAX_CHARACTERS = 1800
 
@@ -85,8 +79,8 @@ function toJsonValue(value: unknown): JSONValue {
 }
 
 export function filterOfficialDomains(
-  requestedDomains?: string[] | null,
-  officialDomains: readonly string[] = OFFICIAL_WEB_DOMAINS
+  requestedDomains: string[] | null | undefined,
+  officialDomains: readonly string[]
 ): string[] {
   if (!requestedDomains || requestedDomains.length === 0) {
     return [...officialDomains]
@@ -113,22 +107,26 @@ export function createCampusRagTools(options?: {
   labelSeed?: number
   model?: string
   /**
-   * The asking user's college. Tools only read that college's and its
-   * partner colleges' records, and only search their official domains.
+   * The asking user's college and campus. Tools only read the records of
+   * the colleges visible to them, and only search their official domains.
+   * Defaults to every built-in college (admission seekers).
    */
-  college?: CollegeSlug | null
+  campusScope?: CampusScope
   /** Attributed on logged knowledge gaps. */
   userId?: string | null
   chatId?: string | null
 }) {
-  // Null: the user is not enrolled anywhere (admission seekers, guests),
-  // so every college's records are visible.
-  const college = options?.college ?? null
-  const visibleColleges = getVisibleCollegesFor(college)
+  // A null college (admission seekers, guests) sees every college.
+  const { directory, college, campus } =
+    options?.campusScope ?? defaultCampusScope()
+  const visibleColleges = getVisibleCollegesFor(directory, college, campus)
   const collegeNames = visibleColleges
-    .map(slug => COLLEGES[slug].shortName)
+    .map(slug => collegeShortName(directory, slug))
     .join(' & ')
-  const officialDomains = getOfficialWebDomains(college)
+  const officialDomains = getOfficialWebDomains(directory, college, campus)
+  const authorityOptions: [string, ...string[]] = ['joint', ...visibleColleges]
+  const authoritySchema = z.enum(authorityOptions)
+  const eventsLabel = getCollege(directory, college)?.eventsLabel || 'campus'
   const labelAllocator =
     options?.labelAllocator ??
     createCitationLabelAllocator(options?.labelSeed ?? 1)
@@ -149,8 +147,7 @@ export function createCampusRagTools(options?: {
         .enum(KNOWLEDGE_DOMAINS)
         .optional()
         .describe('Optional domain filter'),
-      authority: z
-        .enum(KNOWLEDGE_AUTHORITIES)
+      authority: authoritySchema
         .optional()
         .describe(
           `Optional issuing-authority filter: ${[...visibleColleges, 'joint'].join(', ')}`
@@ -202,6 +199,7 @@ export function createCampusRagTools(options?: {
 
       const hits = await retrieveCampusKnowledge({
         colleges: visibleColleges,
+        directory,
         query,
         domain,
         authority,
@@ -231,8 +229,7 @@ export function createCampusRagTools(options?: {
   })
 
   const queryEvents = tool({
-    description:
-      'Query structured Eventum campus events (upcoming hackathons, cultural/tech activities, schedules, venues, eligibility, guidelines, registration deadlines, and published results). Automatically hides expired registration links.',
+    description: `Query structured ${eventsLabel} events (upcoming hackathons, cultural/tech activities, schedules, venues, eligibility, guidelines, registration deadlines, and published results). Automatically hides expired registration links.`,
     inputSchema: z.object({
       query: z
         .string()
@@ -271,7 +268,7 @@ export function createCampusRagTools(options?: {
 
       const rawResults: SearchResultItem[] = events.map(event => {
         const lines = [
-          `Organizer: ${event.organizer} (${formatAuthorityLabel(event.authority)})`,
+          `Organizer: ${event.organizer} (${formatAuthorityLabel(event.authority, directory)})`,
           `Status: ${event.status}`,
           `Starts: ${event.startAt.toISOString()}`
         ]
@@ -296,7 +293,7 @@ export function createCampusRagTools(options?: {
         if (event.resultsUrl) lines.push(`Results URL: ${event.resultsUrl}`)
 
         return {
-          title: `${event.title} (Eventum · ${event.status})`,
+          title: `${event.title} (Event · ${event.status})`,
           url: event.citationUrl,
           content: lines.join('\n')
         }
@@ -331,10 +328,9 @@ export function createCampusRagTools(options?: {
         .string()
         .optional()
         .describe(
-          'Optional exact portal key from a previous lookup (e.g. jecrc_erp, kalvium_dashboard, bkbirla_results)'
+          'Optional exact portal key from a previous lookup (e.g. <college>_erp, <college>_results)'
         ),
-      authority: z
-        .enum(KNOWLEDGE_AUTHORITIES)
+      authority: authoritySchema
         .optional()
         .describe(
           `Optional authority filter (${[...visibleColleges, 'joint'].join(', ')})`
@@ -356,11 +352,11 @@ export function createCampusRagTools(options?: {
       })
 
       const rawResults: SearchResultItem[] = portals.map(portal => ({
-        title: `${portal.name} (${formatAuthorityLabel(portal.authority)})`,
+        title: `${portal.name} (${formatAuthorityLabel(portal.authority, directory)})`,
         url: portal.url,
         content: [
           `Portal Key: ${portal.portalKey}`,
-          `Authority: ${formatAuthorityLabel(portal.authority)}`,
+          `Authority: ${formatAuthorityLabel(portal.authority, directory)}`,
           `Verified URL: ${portal.url}`,
           `Login Required: ${portal.requiresLogin ? 'Yes (sign in directly on the official portal; never share credentials in chat)' : 'No'}`,
           `Capabilities: ${portal.capabilities}`,
@@ -488,10 +484,10 @@ export function createCampusRagTools(options?: {
   })
 
   const logUnansweredQuery = tool({
-    description: `Log a campus query gap when verified campus knowledge is missing, expired, or contradictory so ${college ? COLLEGES[college].shortName : "that college's"} mentors can curate an authoritative answer. Always call before abstaining.`,
+    description: `Log a campus query gap when verified campus knowledge is missing, expired, or contradictory so ${college ? collegeShortName(directory, college) : "that college's"} mentors can curate an authoritative answer. Always call before abstaining.`,
     inputSchema: z.object({
       college: z
-        .enum(visibleColleges as [CollegeSlug, ...CollegeSlug[]])
+        .enum(visibleColleges as [string, ...string[]])
         .optional()
         .describe(
           `Which college the question is about (${visibleColleges.join(', ')}). Defaults to the user's own college.`
@@ -506,7 +502,7 @@ export function createCampusRagTools(options?: {
       cohort: z
         .string()
         .optional()
-        .describe('Optional cohort string (e.g. B.Tech CSE Sem 3 Squad 42)'),
+        .describe('Optional cohort string (e.g. B.Tech CSE Sem 3)'),
       reason: z
         .string()
         .describe(

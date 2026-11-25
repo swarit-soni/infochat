@@ -80,7 +80,7 @@ describe('mentor action role gating', () => {
       title: 'Test Notice',
       content: 'Some valid circular text content here.',
       domain: 'examinations',
-      sourceSystem: 'jecrc_enotice',
+      sourceSystem: 'official_notice',
       authority: 'jecrc',
       priority: 'standard'
     })

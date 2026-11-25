@@ -5,14 +5,15 @@ import { z } from 'zod'
 
 import { getCurrentUser } from '@/lib/auth/get-current-user'
 import type { AppUser } from '@/lib/auth/types'
-import type { CollegeSlug } from '@/lib/colleges/registry'
+import { type CollegeSlug, getPartnerCampuses } from '@/lib/colleges/registry'
+import { getCollegeDirectory } from '@/lib/colleges/store'
 import { db } from '@/lib/db'
 import {
   CAMPUS_EVENT_STATUSES,
   type CampusEvent,
   campusEvents,
   type CampusEventStatus,
-  KNOWLEDGE_AUTHORITIES,
+  JOINT_AUTHORITY,
   KNOWLEDGE_DOMAINS,
   KNOWLEDGE_PRIORITIES,
   KNOWLEDGE_SOURCE_SYSTEMS,
@@ -71,12 +72,33 @@ function parseOptionalDate(value?: string | null): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
+const authoritySchema = z.string().trim().min(1).max(32)
+
+/**
+ * A mentor may attribute records to their own college, one of its partner
+ * campuses, or `joint`; never to an unrelated college.
+ */
+async function isAllowedAuthority(
+  college: CollegeSlug,
+  authority: string
+): Promise<boolean> {
+  if (authority === college || authority === JOINT_AUTHORITY) return true
+  const partners = getPartnerCampuses(await getCollegeDirectory(), college)
+  return partners.some(partner => partner.slug === authority)
+}
+
+const INVALID_AUTHORITY = {
+  success: false as const,
+  error:
+    'Choose your college, a partner campus or a joint notice as the authority.'
+}
+
 const uploadDocumentSchema = z.object({
   title: z.string().trim().min(2, 'Title is required'),
   content: z.string().trim().min(10, 'Document content is required'),
   domain: z.enum(KNOWLEDGE_DOMAINS),
   sourceSystem: z.enum(KNOWLEDGE_SOURCE_SYSTEMS),
-  authority: z.enum(KNOWLEDGE_AUTHORITIES),
+  authority: authoritySchema,
   priority: z.enum(KNOWLEDGE_PRIORITIES).default('standard'),
   program: z.string().optional().nullable(),
   semester: z.string().optional().nullable(),
@@ -103,7 +125,7 @@ const campusEventSchema = z.object({
   id: z.string().optional(),
   title: z.string().trim().min(2, 'Event title is required'),
   organizer: z.string().trim().min(2, 'Organizer is required'),
-  authority: z.enum(KNOWLEDGE_AUTHORITIES).default('joint'),
+  authority: authoritySchema.default(JOINT_AUTHORITY),
   category: z.string().optional().nullable(),
   startAt: z.string().trim().min(1, 'Start date/time is required'),
   endAt: z.string().optional().nullable(),
@@ -123,7 +145,7 @@ const campusEventSchema = z.object({
 const officialPortalSchema = z.object({
   portalKey: z.string().trim().min(2, 'Portal key is required'),
   name: z.string().trim().min(2, 'Portal name is required'),
-  authority: z.enum(KNOWLEDGE_AUTHORITIES),
+  authority: authoritySchema,
   url: z.string().url('Valid portal URL is required'),
   requiresLogin: z.boolean().default(true),
   capabilities: z.string().trim().min(4, 'Capabilities summary is required'),
@@ -219,6 +241,9 @@ export async function uploadKnowledgeDocumentAction(
       success: false,
       error: parsed.error.issues[0]?.message ?? 'Invalid document fields.'
     }
+  }
+  if (!(await isAllowedAuthority(mentor.college, parsed.data.authority))) {
+    return INVALID_AUTHORITY
   }
 
   try {
@@ -384,6 +409,9 @@ export async function saveCampusEventAction(
       error: parsed.error.issues[0]?.message ?? 'Invalid campus event fields.'
     }
   }
+  if (!(await isAllowedAuthority(mentor.college, parsed.data.authority))) {
+    return INVALID_AUTHORITY
+  }
 
   const startAt = parseOptionalDate(parsed.data.startAt)
   if (!startAt) {
@@ -462,6 +490,9 @@ export async function saveOfficialPortalAction(
       success: false,
       error: parsed.error.issues[0]?.message ?? 'Invalid portal fields.'
     }
+  }
+  if (!(await isAllowedAuthority(mentor.college, parsed.data.authority))) {
+    return INVALID_AUTHORITY
   }
 
   try {

@@ -18,17 +18,13 @@ import {
   updateCampusEventStatusAction,
   uploadKnowledgeDocumentAction
 } from '@/lib/actions/mentor'
-import {
-  type CollegeSlug,
-  getCollege,
-  getOfficialWebDomains
-} from '@/lib/colleges/registry'
+import type { College } from '@/lib/colleges/registry'
 import {
   CAMPUS_EVENT_STATUSES,
   type CampusEventStatus,
-  KNOWLEDGE_AUTHORITIES,
   KNOWLEDGE_DOMAINS,
   KNOWLEDGE_PRIORITIES,
+  KNOWLEDGE_SOURCE_LABELS,
   KNOWLEDGE_SOURCE_SYSTEMS,
   type KnowledgeAuthority,
   type KnowledgeDomain,
@@ -63,13 +59,11 @@ type TabKey = 'documents' | 'urgent' | 'events' | 'portals' | 'gaps'
 interface MentorPortalClientProps {
   initialData: MentorPortalOverview
   /** The college this mentor manages; every record is saved under it. */
-  college: CollegeSlug
-}
-
-const DEFAULT_SOURCE_SYSTEM: Record<CollegeSlug, KnowledgeSourceSystem> = {
-  kalvium: 'kalvium_guide',
-  jecrc: 'jecrc_enotice',
-  bkbirla: 'bkbirla_notice'
+  college: College
+  /** Issuing authorities a mentor may pick: their college, partners, joint. */
+  authorities: { value: string; label: string }[]
+  /** Official web domains the crawler accepts for this college. */
+  officialDomains: string[]
 }
 
 function formatTimestamp(value: Date | string | null | undefined): string {
@@ -87,10 +81,12 @@ function formatTimestamp(value: Date | string | null | undefined): string {
 
 export function MentorPortalClient({
   initialData,
-  college
+  college: collegeConfig,
+  authorities,
+  officialDomains
 }: MentorPortalClientProps) {
-  const collegeConfig = getCollege(college)
-  const officialDomains = getOfficialWebDomains(college)
+  const college = collegeConfig.slug
+  const eventsLabel = collegeConfig.eventsLabel || 'Campus events'
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [activeTab, setActiveTab] = useState<TabKey>('documents')
@@ -98,9 +94,8 @@ export function MentorPortalClient({
   // Tab 1: Document upload & crawl state
   const [docTitle, setDocTitle] = useState('')
   const [docDomain, setDocDomain] = useState<KnowledgeDomain>('examinations')
-  const [docSourceSystem, setDocSourceSystem] = useState<KnowledgeSourceSystem>(
-    DEFAULT_SOURCE_SYSTEM[college]
-  )
+  const [docSourceSystem, setDocSourceSystem] =
+    useState<KnowledgeSourceSystem>('official_notice')
   const [docAuthority, setDocAuthority] = useState<KnowledgeAuthority>(college)
   const [docPriority, setDocPriority] = useState<KnowledgePriority>('standard')
   const [docProgram, setDocProgram] = useState('')
@@ -127,7 +122,7 @@ export function MentorPortalClient({
   >('mentor')
   const [urgentThreadContext, setUrgentThreadContext] = useState('')
 
-  // Tab 3: Eventum event state
+  // Tab 3: campus event state
   const [eventTitle, setEventTitle] = useState('')
   const [eventOrganizer, setEventOrganizer] = useState(collegeConfig.shortName)
   const [eventAuthority, setEventAuthority] =
@@ -171,7 +166,7 @@ export function MentorPortalClient({
     },
     {
       key: 'events',
-      label: 'Eventum Events',
+      label: eventsLabel,
       count: initialData.events.length
     },
     {
@@ -340,7 +335,7 @@ export function MentorPortalClient({
         toast.error(res.error ?? 'Failed to save event')
         return
       }
-      toast.success(`Saved Eventum event "${res.event?.title}".`)
+      toast.success(`Saved event "${res.event?.title}".`)
       setEventTitle('')
       setEventVenue('')
       setEventRegUrl('')
@@ -422,7 +417,7 @@ export function MentorPortalClient({
             </CardTitle>
             <CardDescription>
               Run database migrations (`0023_add_rag_pipelines.sql`) with
-              `pgvector` enabled to persist Knowledge Base documents, Eventum
+              `pgvector` enabled to persist Knowledge Base documents, campus
               records, and gap logs. Static default portals are displayed below.
               {initialData.dbError ? ` (${initialData.dbError})` : ''}
             </CardDescription>
@@ -512,7 +507,7 @@ export function MentorPortalClient({
                         <SelectContent>
                           {KNOWLEDGE_SOURCE_SYSTEMS.map(s => (
                             <SelectItem key={s} value={s}>
-                              {s}
+                              {KNOWLEDGE_SOURCE_LABELS[s]}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -530,9 +525,9 @@ export function MentorPortalClient({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {KNOWLEDGE_AUTHORITIES.map(a => (
-                            <SelectItem key={a} value={a}>
-                              {a}
+                          {authorities.map(a => (
+                            <SelectItem key={a.value} value={a.value}>
+                              {a.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -579,17 +574,23 @@ export function MentorPortalClient({
                         placeholder="3"
                       />
                     </div>
+                    {collegeConfig.squadLabel && (
+                      <div className="space-y-1.5">
+                        <Label htmlFor="doc-squad">
+                          {collegeConfig.squadLabel}
+                        </Label>
+                        <Input
+                          id="doc-squad"
+                          value={docSquad}
+                          onChange={e => setDocSquad(e.target.value)}
+                          placeholder={`${collegeConfig.squadLabel} 42`}
+                        />
+                      </div>
+                    )}
                     <div className="space-y-1.5">
-                      <Label htmlFor="doc-squad">Squad</Label>
-                      <Input
-                        id="doc-squad"
-                        value={docSquad}
-                        onChange={e => setDocSquad(e.target.value)}
-                        placeholder="Squad 42"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="doc-residency">Residency</Label>
+                      <Label htmlFor="doc-residency">
+                        {collegeConfig.residencyLabel || 'Residency'}
+                      </Label>
                       <Input
                         id="doc-residency"
                         value={docResidency}
@@ -885,7 +886,7 @@ export function MentorPortalClient({
                     id="urgent-thread"
                     value={urgentThreadContext}
                     onChange={e => setUrgentThreadContext(e.target.value)}
-                    placeholder="e.g. Squad 42 DSA session room update"
+                    placeholder="e.g. DSA session room update"
                   />
                 </div>
 
@@ -896,7 +897,7 @@ export function MentorPortalClient({
                     rows={5}
                     value={urgentText}
                     onChange={e => setUrgentText(e.target.value)}
-                    placeholder="e.g. Today's 2 PM Squad 42 Data Structures session moved from Room B-104 to Lab 3."
+                    placeholder="e.g. Today's 2 PM Data Structures session moved from Room B-104 to Lab 3."
                     required
                   />
                 </div>
@@ -965,9 +966,7 @@ export function MentorPortalClient({
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">
-                Add Eventum Campus Event
-              </CardTitle>
+              <CardTitle className="text-base">Add Campus Event</CardTitle>
               <CardDescription>
                 Stored in structured `campus_events`. Registration links
                 automatically stop surfacing once `registrationDeadline` passes.
@@ -1007,9 +1006,9 @@ export function MentorPortalClient({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {KNOWLEDGE_AUTHORITIES.map(a => (
-                          <SelectItem key={a} value={a}>
-                            {a}
+                        {authorities.map(a => (
+                          <SelectItem key={a.value} value={a.value}>
+                            {a.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1142,13 +1141,13 @@ export function MentorPortalClient({
           <Card>
             <CardHeader>
               <CardTitle className="text-base">
-                Eventum Schedule ({initialData.events.length})
+                {eventsLabel} ({initialData.events.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {initialData.events.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No structured Eventum events published yet.
+                  No structured events published yet.
                 </p>
               ) : (
                 initialData.events.map(event => (
@@ -1256,9 +1255,9 @@ export function MentorPortalClient({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {KNOWLEDGE_AUTHORITIES.map(a => (
-                          <SelectItem key={a} value={a}>
-                            {a}
+                        {authorities.map(a => (
+                          <SelectItem key={a.value} value={a.value}>
+                            {a.label}
                           </SelectItem>
                         ))}
                       </SelectContent>

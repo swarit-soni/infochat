@@ -176,6 +176,13 @@
       "when": 1794800000000,
       "tag": "0024_add_college_tenancy",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1794900000000,
+      "tag": "0025_colleges_table",
+      "breakpoints": true
     }
   ]
 }

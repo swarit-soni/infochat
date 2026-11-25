@@ -8,6 +8,9 @@ import { createClient } from '@/lib/supabase/server'
 
 import { GET } from '../route'
 
+vi.mock('@/lib/colleges/store', async () =>
+  (await import('@/lib/colleges/testing')).collegeStoreMock()
+)
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn()
 }))
@@ -55,7 +58,7 @@ describe('GET /auth/oauth', () => {
 
   it('redirects to unauthorized_domain when Supabase returns a domain/hook error', async () => {
     const request = new NextRequest(
-      'http://localhost:3000/auth/oauth?error=access_denied&error_description=Only+%40kalvium.com+and+%40kalvium.community+Google+accounts+are+allowed.'
+      'http://localhost:3000/auth/oauth?error=access_denied&error_description=Please+sign+in+with+a+Google+account.'
     )
 
     const response = await GET(request)
@@ -256,6 +259,32 @@ describe('GET /auth/oauth', () => {
       name: 'Bob Student',
       avatarUrl: 'https://img/b.png'
     })
+    // Kalvium has a partner campus, so a new student says which one first.
+    expect(response.headers.get('location')).toBe(
+      'http://localhost:3000/onboarding/college'
+    )
+  })
+
+  it('skips onboarding once a Kalvium student has chosen a campus', async () => {
+    vi.mocked(getUserProfile).mockResolvedValue({
+      onboardedAt: new Date(),
+      college: 'kalvium',
+      campus: 'jecrc'
+    } as never)
+    getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: 'student-3',
+          email: 'dan@kalvium.community',
+          app_metadata: { providers: ['google'] }
+        }
+      },
+      error: null
+    })
+
+    const response = await GET(
+      new NextRequest('http://localhost:3000/auth/oauth?code=good-code')
+    )
     expect(response.headers.get('location')).toBe('http://localhost:3000/')
   })
 
@@ -285,7 +314,7 @@ describe('GET /auth/oauth', () => {
 
   it('allows non-production SERA_MENTOR_EMAILS login in preview as a Kalvium mentor', async () => {
     vi.stubEnv('VERCEL_ENV', 'preview')
-    vi.stubEnv('SERA_MENTOR_EMAILS', 'tester@gmail.com')
+    vi.stubEnv('SERA_MENTOR_EMAILS', 'kalvium:tester@gmail.com')
     getUser.mockResolvedValue({
       data: {
         user: {
@@ -319,7 +348,7 @@ describe('GET /auth/oauth', () => {
 
   it('signs in SERA_MENTOR_EMAILS external account in production without mentor access', async () => {
     vi.stubEnv('VERCEL_ENV', 'production')
-    vi.stubEnv('SERA_MENTOR_EMAILS', 'tester@gmail.com')
+    vi.stubEnv('SERA_MENTOR_EMAILS', 'kalvium:tester@gmail.com')
     getUser.mockResolvedValue({
       data: {
         user: {

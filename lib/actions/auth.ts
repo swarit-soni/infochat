@@ -5,11 +5,8 @@ import { cookies } from 'next/headers'
 import { getAuthProvider } from '@/lib/auth/provider'
 import type { AuthActionResult } from '@/lib/auth/types'
 import { getLoginHintDomain, isCollegeRoleEnabled } from '@/lib/colleges/access'
-import {
-  AUTH_COLLEGE_COOKIE,
-  getCollege,
-  isCollegeSlug
-} from '@/lib/colleges/registry'
+import { AUTH_COLLEGE_COOKIE, getCollege } from '@/lib/colleges/registry'
+import { getCollegeDirectory } from '@/lib/colleges/store'
 
 function unavailable(): AuthActionResult {
   return { success: false, error: 'Authentication is not available.' }
@@ -32,14 +29,19 @@ export async function signInWithGoogle(
   if (mentorCollege === undefined) {
     // A stale mentor attempt must not turn this into a mentor sign-in.
     cookieStore.delete(AUTH_COLLEGE_COOKIE)
-  } else {
-    if (!isCollegeSlug(mentorCollege)) {
+  }
+  const college =
+    mentorCollege === undefined
+      ? null
+      : getCollege(await getCollegeDirectory(), mentorCollege)
+  if (mentorCollege !== undefined) {
+    if (!college) {
       return { success: false, error: 'Unknown college.' }
     }
-    if (!isCollegeRoleEnabled(mentorCollege, 'mentor')) {
+    if (!isCollegeRoleEnabled(college, 'mentor')) {
       return {
         success: false,
-        error: `Mentor sign-in is not set up for ${getCollege(mentorCollege).shortName} yet.`
+        error: `Mentor sign-in is not set up for ${college.shortName} yet.`
       }
     }
   }
@@ -49,18 +51,18 @@ export async function signInWithGoogle(
     return unavailable()
   }
 
-  if (mentorCollege === undefined) {
+  if (!college) {
     return provider.signInWithOAuth('google')
   }
 
-  cookieStore.set(AUTH_COLLEGE_COOKIE, mentorCollege, {
+  cookieStore.set(AUTH_COLLEGE_COOKIE, college.slug, {
     path: '/',
     maxAge: 300,
     sameSite: 'lax',
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production'
   })
-  const loginHintDomain = getLoginHintDomain(mentorCollege, 'mentor')
+  const loginHintDomain = getLoginHintDomain(college, 'mentor')
   return provider.signInWithOAuth(
     'google',
     loginHintDomain ? { loginHintDomain } : undefined

@@ -3,12 +3,12 @@ import { redirect } from 'next/navigation'
 import { getAuthErrorMessage } from '@/lib/auth/error-messages'
 import { getCurrentUser } from '@/lib/auth/get-current-user'
 import { safeRedirectPath } from '@/lib/auth/redirect-target'
-import { getCollegeLoginConfig } from '@/lib/colleges/access'
 import {
   collegePath,
-  getCollegeFromPathname,
-  isCollegeSlug
+  getCollege,
+  getCollegeSegment
 } from '@/lib/colleges/registry'
+import { getCollegeDirectory } from '@/lib/colleges/store'
 import { isBetaVersion } from '@/lib/version/semver'
 
 import { LoginForm } from '@/components/login-form'
@@ -23,7 +23,9 @@ export async function CollegeMentorLoginPage({
   college: string
   searchParams: { next?: string; error?: string; college?: string }
 }) {
-  if (!isCollegeSlug(college)) {
+  const directory = await getCollegeDirectory()
+  const collegeConfig = getCollege(directory, college)
+  if (!collegeConfig) {
     redirect('/auth/mentor')
   }
 
@@ -32,9 +34,7 @@ export async function CollegeMentorLoginPage({
     ? safeRedirectPath(searchParams.next)
     : undefined
   const next =
-    safeNext && getCollegeFromPathname(safeNext) === college
-      ? safeNext
-      : undefined
+    safeNext && getCollegeSegment(safeNext) === college ? safeNext : undefined
 
   const user = await getCurrentUser()
   if (
@@ -46,7 +46,7 @@ export async function CollegeMentorLoginPage({
   }
 
   const initialError = getAuthErrorMessage(searchParams.error, {
-    college: searchParams.college
+    collegeName: getCollege(directory, searchParams.college)?.shortName
   })
 
   return (
@@ -54,7 +54,8 @@ export async function CollegeMentorLoginPage({
       <div className="w-full max-w-sm">
         <LoginForm
           mentorCollege={college}
-          mentorDomains={getCollegeLoginConfig(college).mentorDomains}
+          mentorCollegeName={collegeConfig.shortName}
+          mentorDomains={collegeConfig.mentorDomains}
           next={next}
           initialError={initialError}
           isBeta={isBetaVersion(packageJson.version)}

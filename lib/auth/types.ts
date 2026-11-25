@@ -26,9 +26,21 @@ export interface AppUser {
    * (e.g. exploring admissions) or not answered yet.
    */
   college?: CollegeSlug | null
+  /** Display name of `college`. */
+  collegeName?: string | null
+  /** Whether `college` was verified from a college email domain. */
+  collegeVerified?: boolean
   /**
-   * Whether the enrolled-college question is settled (answered, or the
-   * college came from a verified college email). False: ask it.
+   * Partner campus, for colleges with several: a partner college's slug,
+   * 'none' for a campus not on Sera, or null when not answered.
+   */
+  campus?: string | null
+  /** Display name of `campus` when it is a college on Sera. */
+  campusName?: string | null
+  /**
+   * Whether onboarding is complete: the enrolled-college question is
+   * answered (or verified) and, where the college has partner campuses, the
+   * campus question too. False: ask them.
    */
   collegeOnboarded?: boolean
 }

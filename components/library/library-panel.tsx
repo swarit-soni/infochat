@@ -30,9 +30,8 @@ import type { KnowledgeLibraryItem } from '@/lib/actions/knowledge'
 import { listKnowledgeDocuments } from '@/lib/actions/knowledge'
 import { deleteNote, listNotes } from '@/lib/actions/notes'
 import { captureClient } from '@/lib/analytics/posthog-client'
-import { COLLEGES, isCollegeSlug } from '@/lib/colleges/registry'
 import { useCollege } from '@/lib/colleges/use-college'
-import type { Note } from '@/lib/db/schema'
+import { KNOWLEDGE_SOURCE_LABELS, type Note } from '@/lib/db/schema'
 import { stripMarkdownText } from '@/lib/utils/markdown'
 
 import {
@@ -74,30 +73,6 @@ const LIBRARY_TABS: { value: LibraryTab; label: string }[] = [
   { value: 'notes', label: 'Notes' },
   { value: 'files', label: 'Files' }
 ]
-
-function formatAuthority(authority: KnowledgeLibraryItem['authority']) {
-  return isCollegeSlug(authority)
-    ? COLLEGES[authority].shortName
-    : 'Joint notice'
-}
-
-const KNOWLEDGE_SOURCE_LABELS: Record<
-  KnowledgeLibraryItem['sourceSystem'],
-  string
-> = {
-  jecrc_web: 'JECRC website',
-  jecrc_enotice: 'JECRC e-notice',
-  jecrc_portal_guide: 'JECRC portal guide',
-  kalvium_web: 'Kalvium website',
-  kalvium_guide: 'Kalvium guide',
-  whatsapp_forward: 'WhatsApp forward',
-  gchat_space: 'Google Chat space',
-  eventum: 'Eventum',
-  bkbirla_web: 'B.K. Birla College website',
-  bkbirla_notice: 'B.K. Birla College notice',
-  official_website: 'Official website',
-  official_document: 'Official document'
-}
 
 function formatDomain(domain: KnowledgeLibraryItem['domain']) {
   return domain.charAt(0).toUpperCase() + domain.slice(1)
@@ -225,7 +200,7 @@ function KnowledgeDocumentDetail({
     { label: 'Topic', value: formatDomain(document.domain) },
     {
       label: 'Authority',
-      value: formatAuthority(document.authority)
+      value: document.authorityLabel
     },
     { label: 'Source', value: KNOWLEDGE_SOURCE_LABELS[document.sourceSystem] },
     {
@@ -1070,7 +1045,7 @@ export function LibraryPanel() {
                         </p>
                         <p className="mt-1 truncate text-[11px] text-muted-foreground/75">
                           {formatDomain(document.domain)} ·{' '}
-                          {formatAuthority(document.authority)} ·{' '}
+                          {document.authorityLabel} ·{' '}
                           {formatDay(
                             document.effectiveDate ?? document.updatedAt
                           )}

@@ -3,7 +3,14 @@ import { redirect } from 'next/navigation'
 
 import { getMentorPortalOverview } from '@/lib/actions/mentor'
 import { getCurrentUser } from '@/lib/auth/get-current-user'
-import { collegePath, getCollege, isCollegeSlug } from '@/lib/colleges/registry'
+import {
+  collegePath,
+  getCollege,
+  getOfficialWebDomains,
+  getPartnerCampuses,
+  JOINT_AUTHORITY_LABEL
+} from '@/lib/colleges/registry'
+import { getCollegeDirectory } from '@/lib/colleges/store'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -16,7 +23,9 @@ export default async function CollegeMentorPortalPage(props: {
   params: Promise<{ college: string }>
 }) {
   const { college } = await props.params
-  if (!isCollegeSlug(college)) {
+  const directory = await getCollegeDirectory()
+  const collegeConfig = getCollege(directory, college)
+  if (!collegeConfig) {
     redirect('/')
   }
 
@@ -36,8 +45,15 @@ export default async function CollegeMentorPortalPage(props: {
     redirect(user.college ? collegePath(user.college, '/mentor') : '/')
   }
 
-  const collegeConfig = getCollege(college)
   const overview = await getMentorPortalOverview()
+  const authorities = [
+    { value: collegeConfig.slug, label: collegeConfig.shortName },
+    ...getPartnerCampuses(directory, collegeConfig.slug).map(partner => ({
+      value: partner.slug,
+      label: partner.shortName
+    })),
+    { value: 'joint', label: JOINT_AUTHORITY_LABEL }
+  ]
 
   return (
     <div className="h-full w-full overflow-y-auto">
@@ -59,7 +75,12 @@ export default async function CollegeMentorPortalPage(props: {
           </Button>
         </div>
 
-        <MentorPortalClient initialData={overview} college={college} />
+        <MentorPortalClient
+          initialData={overview}
+          college={collegeConfig}
+          authorities={authorities}
+          officialDomains={getOfficialWebDomains(directory, collegeConfig.slug)}
+        />
       </div>
     </div>
   )
