@@ -180,6 +180,9 @@ export function ChatPanel({
     noteContexts.length > 0 ||
     urlCards.length > 0 ||
     uploadedFiles.some(file => file.status === 'uploaded')
+  // Sending mid-upload would drop the in-flight files (the list is cleared on
+  // send), so hold the message until every upload has settled.
+  const isUploading = uploadedFiles.some(file => file.status === 'uploading')
   const searchMode = useSyncExternalStore(
     subscribeToCookieChange,
     getSearchModeSnapshot,
@@ -472,7 +475,7 @@ export function ChatPanel({
         onSubmit={e => {
           // The input stays editable while Sera answers so the next message
           // can be drafted, but it is only sent once the answer is done.
-          if (isLoading || isToolInvocationInProgress()) {
+          if (isLoading || isToolInvocationInProgress() || isUploading) {
             e.preventDefault()
             return
           }
@@ -835,6 +838,7 @@ export function ChatPanel({
                 if (
                   !hasPendingInput ||
                   isLoading ||
+                  isUploading ||
                   isToolInvocationInProgress()
                 ) {
                   e.preventDefault()
@@ -959,13 +963,16 @@ export function ChatPanel({
                 disabled={
                   disabled ||
                   (!hasPendingInput && !isLoading) ||
+                  (isUploading && !isLoading) ||
                   !hasAvailableModels
                 }
                 onClick={isLoading ? stop : undefined}
                 title={
-                  hasAvailableModels
-                    ? undefined
-                    : 'No enabled model is available'
+                  !hasAvailableModels
+                    ? 'No enabled model is available'
+                    : isUploading && !isLoading
+                      ? 'Waiting for attachments to finish uploading'
+                      : undefined
                 }
               >
                 {isLoading ? (

@@ -110,6 +110,63 @@ describe('ChatPanel', () => {
     expect(handleSubmit).toHaveBeenCalledOnce()
   })
 
+  test('holds the send while an attachment is still uploading', () => {
+    const handleSubmit = vi.fn((e: React.FormEvent) => e.preventDefault())
+    const append = vi.fn()
+    const setUploadedFiles = vi.fn()
+    const uploading: UploadedFile = {
+      file: new File(['x'], 'notes.pdf', { type: 'application/pdf' }),
+      status: 'uploading'
+    }
+    const uploaded: UploadedFile = {
+      file: new File(['y'], 'done.pdf', { type: 'application/pdf' }),
+      status: 'uploaded',
+      url: 'https://example.com/done.pdf',
+      name: 'done.pdf',
+      key: 'k'
+    }
+    const props = {
+      input: 'summarise these',
+      handleInputChange: vi.fn(),
+      handleSubmit,
+      status: 'ready' as const,
+      messages: [],
+      setMessages: vi.fn(),
+      stop: vi.fn(),
+      append,
+      showScrollToBottomButton: false,
+      setUploadedFiles,
+      quotedContexts: [],
+      setQuotedContexts: vi.fn(),
+      noteContexts: [],
+      setNoteContexts: vi.fn(),
+      chatId: 'chat',
+      scrollContainerRef: React.createRef<HTMLDivElement>()
+    }
+    const view = render(
+      <ChatPanel {...props} uploadedFiles={[uploaded, uploading]} />
+    )
+
+    const input = screen.getByRole('textbox')
+    const sendButton = input
+      .closest('form')!
+      .querySelector('button[type="submit"]')!
+    expect(sendButton).toBeDisabled()
+    fireEvent.keyDown(input, { key: 'Enter' })
+    fireEvent.submit(input.closest('form')!)
+    expect(handleSubmit).not.toHaveBeenCalled()
+    expect(append).not.toHaveBeenCalled()
+    expect(setUploadedFiles).not.toHaveBeenCalledWith([])
+
+    view.rerender(
+      <ChatPanel
+        {...props}
+        uploadedFiles={[uploaded, { ...uploading, status: 'uploaded' }]}
+      />
+    )
+    expect(sendButton).not.toBeDisabled()
+  })
+
   test.each(['sidebar', 'shortcut'])(
     'the %s resets an empty homepage draft and leaves a hidden cached panel alone',
     action => {
