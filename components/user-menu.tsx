@@ -93,7 +93,12 @@ export default function UserMenu({ user }: UserMenuProps) {
 
   return (
     <>
-      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen} modal={false}>
+      {/* Keep the menu modal: on phones it opens inside the sidebar Sheet,
+          which locks pointer events on <body>. A modal menu claims the top
+          pointer layer itself, so it stays tappable even if a cached install
+          leaves a second copy of Radix's dismissable-layer next to the
+          Sheet's. */}
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           <button
             type="button"
