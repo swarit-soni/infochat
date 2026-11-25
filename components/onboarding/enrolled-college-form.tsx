@@ -22,6 +22,18 @@ const NOT_ENROLLED: CollegeOption = {
   campuses: []
 }
 
+const DEMO_COLLEGE_SLUG = 'sera-demo'
+
+/** Put the demo university at the top for live onboarding walkthroughs. */
+export function buildOnboardingOptions(
+  colleges: CollegeOption[]
+): CollegeOption[] {
+  const demo = colleges.find(college => college.value === DEMO_COLLEGE_SLUG)
+  if (!demo) return [NOT_ENROLLED, ...colleges]
+  const rest = colleges.filter(college => college.value !== DEMO_COLLEGE_SLUG)
+  return [demo, NOT_ENROLLED, ...rest]
+}
+
 function OptionList({
   name,
   legend,
@@ -90,8 +102,8 @@ export function EnrolledCollegeForm({
   const [isPending, startTransition] = useTransition()
   const [isLeaving, setIsLeaving] = useState(false)
 
-  // Admission seekers come first: they're not enrolled anywhere yet.
-  const options = [NOT_ENROLLED, ...colleges]
+  // List the demo university first for live demos, followed by admission seekers.
+  const options = buildOnboardingOptions(colleges)
   const selected = options.find(option => option.value === answer) ?? null
   const campusOptions = selected?.campuses.length
     ? [...selected.campuses, { value: 'none', label: `${selected.label} only` }]
