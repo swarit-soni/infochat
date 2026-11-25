@@ -59,7 +59,7 @@ export function FileUploadButton({
       onDrop={handleDrop}
       className={cn(
         'relative rounded-full',
-        isDragging && 'ring-2 ring-blue-500 ring-offset-2'
+        isDragging && 'ring-2 ring-(--md-sys-color-primary) ring-offset-2'
       )}
       title="Drag and drop or click to upload"
     >

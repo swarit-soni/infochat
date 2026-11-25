@@ -43,8 +43,8 @@ export function TodoListContent({
       case 'in_progress':
         return (
           <div className="relative h-4 w-4 flex items-center justify-center flex-shrink-0">
-            <div className="h-2 w-2 bg-blue-600 rounded-full animate-ping absolute" />
-            <div className="h-2 w-2 bg-blue-600 rounded-full" />
+            <div className="h-2 w-2 bg-(--md-sys-color-primary) rounded-full animate-ping absolute" />
+            <div className="h-2 w-2 bg-(--md-sys-color-primary) rounded-full" />
           </div>
         )
       default:
@@ -62,7 +62,7 @@ export function TodoListContent({
     })
 
     return (
-      <div className="flex items-center gap-2 p-4 text-red-600">
+      <div className="flex items-center gap-2 p-4 text-(--md-sys-color-error)">
         <AlertCircle className="size-4" />
         <span>Error: {publicError.error}</span>
       </div>

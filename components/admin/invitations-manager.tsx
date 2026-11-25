@@ -120,7 +120,7 @@ export function InvitationsManager({
         </div>
       )}
 
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {error && <p className="text-sm text-(--md-sys-color-error)">{error}</p>}
 
       <ul className="flex flex-col gap-2">
         {invitations.length === 0 && (

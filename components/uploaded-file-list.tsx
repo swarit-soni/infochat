@@ -78,7 +78,7 @@ const UploadedFileListItem = React.memo(function UploadedFileListItem({
             className="size-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-sm font-semibold bg-gray-300 dark:bg-gray-700">
+          <div className="w-full h-full flex items-center justify-center text-sm font-semibold bg-(--md-sys-color-surface-container-highest) text-(--md-sys-color-on-surface-variant)">
             {filename.split('.').pop()?.toUpperCase()}
           </div>
         )}
@@ -93,7 +93,7 @@ const UploadedFileListItem = React.memo(function UploadedFileListItem({
         <button
           type="button"
           onClick={() => onRemove(index)}
-          className="absolute top-1 right-1 bg-black/40 hover:bg-red-600 text-white rounded-full p-1 z-20"
+          className="absolute top-1 right-1 bg-black/40 hover:bg-(--md-sys-color-error) text-white hover:text-(--md-sys-color-on-error) rounded-full p-1 z-20"
         >
           <X size={12} />
         </button>

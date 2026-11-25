@@ -76,7 +76,7 @@ export function ResetMemberPasswordForm({
           onChange={e => setPassword(e.target.value)}
         />
       </div>
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {error && <p className="text-sm text-(--md-sys-color-error)">{error}</p>}
       {success && (
         <p className="text-sm text-green-600 dark:text-green-500">
           Password updated.

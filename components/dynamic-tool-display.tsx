@@ -122,14 +122,14 @@ export function DynamicToolDisplay({ part }: DynamicToolDisplayProps) {
         <div
           className={`h-2 w-2 rounded-full ${
             part.state === 'input-streaming'
-              ? 'bg-blue-500 animate-pulse'
+              ? 'bg-(--md-sys-color-primary) animate-pulse'
               : part.state === 'input-available'
-                ? 'bg-blue-500'
+                ? 'bg-(--md-sys-color-primary)'
                 : part.state === 'output-available'
                   ? 'bg-green-500'
                   : part.state === 'output-error'
-                    ? 'bg-red-500'
-                    : 'bg-gray-300'
+                    ? 'bg-(--md-sys-color-error)'
+                    : 'bg-(--md-sys-color-outline-variant)'
           }`}
         />
         <span className="text-xs text-(--md-sys-color-on-surface-variant)">

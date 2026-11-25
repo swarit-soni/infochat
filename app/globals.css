@@ -487,6 +487,137 @@
   }
 }
 
+/* streamdown ships prebuilt shadcn color classes (bg-muted, text-muted-foreground,
+   border-border, ...). With no @theme color tokens Tailwind no longer generates
+   them, so map the exact classes streamdown 2.5 uses onto M3 roles here. */
+@layer utilities {
+  .text-muted-foreground {
+    color: var(--md-sys-color-on-surface-variant);
+  }
+  .hover\:text-foreground:hover {
+    color: var(--md-sys-color-on-surface);
+  }
+  .text-primary {
+    color: var(--md-sys-color-primary);
+  }
+  .text-primary-foreground {
+    color: var(--md-sys-color-on-primary);
+  }
+  .before\:text-muted-foreground\/50::before {
+    color: color-mix(
+      in oklab,
+      var(--md-sys-color-on-surface-variant) 50%,
+      transparent
+    );
+  }
+  .border-border {
+    border-color: var(--md-sys-color-outline-variant);
+  }
+  .border-sidebar {
+    border-color: var(--md-sys-color-surface-container-low);
+  }
+  .border-muted-foreground\/30 {
+    border-color: color-mix(
+      in oklab,
+      var(--md-sys-color-on-surface-variant) 30%,
+      transparent
+    );
+  }
+  .divide-border > :not(:last-child) {
+    border-color: var(--md-sys-color-outline-variant);
+  }
+  .bg-background {
+    background-color: var(--md-sys-color-surface);
+  }
+  .bg-background\/50 {
+    background-color: color-mix(
+      in oklab,
+      var(--md-sys-color-surface) 50%,
+      transparent
+    );
+  }
+  .bg-background\/80 {
+    background-color: color-mix(
+      in oklab,
+      var(--md-sys-color-surface) 80%,
+      transparent
+    );
+  }
+  .bg-background\/90 {
+    background-color: color-mix(
+      in oklab,
+      var(--md-sys-color-surface) 90%,
+      transparent
+    );
+  }
+  .bg-background\/95 {
+    background-color: color-mix(
+      in oklab,
+      var(--md-sys-color-surface) 95%,
+      transparent
+    );
+  }
+  .hover\:bg-background:hover {
+    background-color: var(--md-sys-color-surface);
+  }
+  .bg-muted {
+    background-color: var(--md-sys-color-surface-container);
+  }
+  .bg-muted\/80 {
+    background-color: color-mix(
+      in oklab,
+      var(--md-sys-color-surface-container) 80%,
+      transparent
+    );
+  }
+  .hover\:bg-muted:hover {
+    background-color: var(--md-sys-color-surface-container);
+  }
+  .hover\:bg-muted\/40:hover {
+    background-color: color-mix(
+      in oklab,
+      var(--md-sys-color-surface-container) 40%,
+      transparent
+    );
+  }
+  .bg-sidebar {
+    background-color: var(--md-sys-color-surface-container-low);
+  }
+  .bg-sidebar\/80 {
+    background-color: color-mix(
+      in oklab,
+      var(--md-sys-color-surface-container-low) 80%,
+      transparent
+    );
+  }
+  .bg-primary {
+    background-color: var(--md-sys-color-primary);
+  }
+  .hover\:bg-primary\/90:hover {
+    background-color: color-mix(
+      in oklab,
+      var(--md-sys-color-primary) 90%,
+      transparent
+    );
+  }
+  @supports (backdrop-filter: blur(0)) {
+    .supports-\[backdrop-filter\]\:bg-background\/70 {
+      background-color: color-mix(
+        in oklab,
+        var(--md-sys-color-surface) 70%,
+        transparent
+      );
+    }
+    .supports-\[backdrop-filter\]\:bg-sidebar\/70 {
+      background-color: color-mix(
+        in oklab,
+        var(--md-sys-color-surface-container-low) 70%,
+        transparent
+      );
+    }
+  }
+}
+
 /* Space switcher and settings (components/spaces) */
 html:active-view-transition-type(space)::view-transition-group(*),
 html:active-view-transition-type(space)::view-transition-old(*),

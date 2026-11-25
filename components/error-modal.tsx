@@ -48,7 +48,7 @@ export function ErrorModal({
         return <Clock className="size-6 text-yellow-500" />
       case 'auth':
       case 'forbidden':
-        return <AlertCircle className="size-6 text-red-500" />
+        return <AlertCircle className="size-6 text-(--md-sys-color-error)" />
       default:
         return <AlertCircle className="size-6 text-orange-500" />
     }
