@@ -4,6 +4,8 @@ import {
   applyCollegeEnvOverrides,
   getLoginHintDomain,
   isCollegeRoleEnabled,
+  isOpenStudentCollege,
+  isStudentEnrollmentEnabled,
   resolveCollegeIdentity
 } from '../access'
 import { DEFAULT_COLLEGE_DIRECTORY, DEFAULT_COLLEGES } from '../defaults'
@@ -180,20 +182,21 @@ describe('resolveCollegeIdentity', () => {
     })
   })
 
-  it('rejects B.K. Birla accounts until its domains are configured', () => {
-    expect(resolveCollegeIdentity('student@bkbck.edu.in', DIR, PROD)).toBeNull()
+  it('accepts @bkbck.edu.in students while keeping B.K. Birla staff login closed until configured', () => {
+    expect(resolveCollegeIdentity('student@bkbck.edu.in', DIR, PROD)).toEqual({
+      college: 'bkbirla',
+      userType: 'student'
+    })
+    expect(isCollegeRoleEnabled(college('bkbirla'), 'student')).toBe(true)
     expect(isCollegeRoleEnabled(college('bkbirla'), 'mentor')).toBe(false)
 
     const env = {
       ...PROD,
-      SERA_BKBIRLA_STUDENT_DOMAINS: '@bkbck.edu.in',
+      SERA_BKBIRLA_STUDENT_DOMAINS: '',
       SERA_BKBIRLA_MENTOR_DOMAINS: 'staff.bkbck.edu.in'
     }
     const directory = directoryWith(env)
-    expect(resolveCollegeIdentity('s@bkbck.edu.in', directory, env)).toEqual({
-      college: 'bkbirla',
-      userType: 'student'
-    })
+    expect(resolveCollegeIdentity('s@bkbck.edu.in', directory, env)).toBeNull()
     expect(
       resolveCollegeIdentity('t@staff.bkbck.edu.in', directory, env)
     ).toEqual({ college: 'bkbirla', userType: 'mentor' })
@@ -226,13 +229,31 @@ describe('resolveCollegeIdentity', () => {
     expect(getLoginHintDomain(college('kalvium'), 'student', PROD)).toBe(
       'kalvium.community'
     )
+    expect(getLoginHintDomain(college('bkbirla'), 'student', PROD)).toBe(
+      'bkbck.edu.in'
+    )
     expect(getLoginHintDomain(college('iitb'), 'mentor', PROD)).toBe(
       'iitb.ac.in'
     )
     expect(getLoginHintDomain(college('jnu'), 'mentor', PROD)).toBeUndefined()
     expect(
-      getLoginHintDomain(college('bkbirla'), 'student', PROD)
+      getLoginHintDomain(college('bkbirla'), 'mentor', PROD)
     ).toBeUndefined()
+  })
+
+  it('marks only sera-demo as an open student college', () => {
+    expect(isOpenStudentCollege('sera-demo')).toBe(true)
+    expect(isOpenStudentCollege(college('sera-demo'))).toBe(true)
+    expect(isOpenStudentCollege(college('bkbirla'))).toBe(false)
+    expect(isOpenStudentCollege(null)).toBe(false)
+
+    expect(isStudentEnrollmentEnabled(college('sera-demo'))).toBe(true)
+    expect(isStudentEnrollmentEnabled(college('bkbirla'))).toBe(true)
+    const disabledKalvium = applyCollegeEnvOverrides(college('kalvium'), {
+      ...PROD,
+      SERA_KALVIUM_STUDENT_DOMAINS: ''
+    })
+    expect(isStudentEnrollmentEnabled(disabledKalvium)).toBe(false)
   })
 
   it('keeps demo college login closed until mentor domains and allowlist are set', () => {

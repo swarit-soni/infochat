@@ -81,6 +81,19 @@ export interface CampusScope {
  */
 export const AUTH_COLLEGE_COOKIE = 'auth_college'
 
+/**
+ * Cookie carrying the college (or `NOT_ENROLLED_COLLEGE`) a student chose
+ * before Google sign-in. The OAuth callback verifies their Google account's
+ * domain against this choice before saving enrollment.
+ */
+export const AUTH_STUDENT_COLLEGE_COOKIE = 'auth_student_college'
+
+/** Built-in fictional college used for open live demonstrations. */
+export const DEMO_COLLEGE_SLUG: CollegeSlug = 'sera-demo'
+
+/** Sentinel value when a student is not enrolled at any listed college. */
+export const NOT_ENROLLED_COLLEGE = 'none'
+
 export const COLLEGE_SLUG_PATTERN = /^[a-z][a-z0-9-]{1,31}$/
 
 /**

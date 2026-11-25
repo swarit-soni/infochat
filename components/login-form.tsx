@@ -3,10 +3,15 @@
 import { useState } from 'react'
 import Link from 'next/link'
 
-import { signInWithGoogle } from '@/lib/actions/auth'
+import { signInStudentWithGoogle, signInWithGoogle } from '@/lib/actions/auth'
 import { USER_TYPE_LABELS } from '@/lib/auth/domain'
 import { safeRedirectPath } from '@/lib/auth/redirect-target'
-import { collegePath, type CollegeSlug } from '@/lib/colleges/registry'
+import {
+  collegePath,
+  type CollegeSlug,
+  DEMO_COLLEGE_SLUG,
+  NOT_ENROLLED_COLLEGE
+} from '@/lib/colleges/registry'
 import { useAuthCapabilities } from '@/lib/contexts/app-user-context'
 import { cn } from '@/lib/utils/index'
 
@@ -20,6 +25,81 @@ import {
   CardTitle
 } from '@/components/ui/card'
 import { IconLogo } from '@/components/ui/icons'
+
+export interface StudentCollegeOption {
+  slug: CollegeSlug
+  name: string
+  shortName: string
+  location: string
+  studentDomains: string[]
+  openAccess?: boolean
+}
+
+export interface StudentLoginOption {
+  value: string
+  label: string
+  shortName: string
+  description: string
+  studentDomains: string[]
+  openAccess: boolean
+  enabled: boolean
+}
+
+function toStudentLoginOption(
+  college: StudentCollegeOption
+): StudentLoginOption {
+  const openAccess = Boolean(college.openAccess)
+  return {
+    value: college.slug,
+    label: college.name,
+    shortName: college.shortName,
+    description: college.location,
+    studentDomains: college.studentDomains,
+    openAccess,
+    enabled: openAccess || college.studentDomains.length > 0
+  }
+}
+
+const NOT_ENROLLED_OPTION: StudentLoginOption = {
+  value: NOT_ENROLLED_COLLEGE,
+  label: 'Not enrolled yet',
+  shortName: 'Not enrolled yet',
+  description: "I'm exploring colleges or applying for admission",
+  studentDomains: [],
+  openAccess: true,
+  enabled: true
+}
+
+/**
+ * Put the demo university first, followed by admission seekers and listed
+ * colleges in display order.
+ */
+export function buildStudentLoginOptions(
+  colleges: StudentCollegeOption[]
+): StudentLoginOption[] {
+  const mapped = colleges.map(toStudentLoginOption)
+  const demo = mapped.find(college => college.value === DEMO_COLLEGE_SLUG)
+  if (!demo) {
+    return [NOT_ENROLLED_OPTION, ...mapped]
+  }
+  const rest = mapped.filter(college => college.value !== DEMO_COLLEGE_SLUG)
+  return [
+    { ...demo, openAccess: true, enabled: true },
+    NOT_ENROLLED_OPTION,
+    ...rest
+  ]
+}
+
+function formatStudentOptionSubtext(option: StudentLoginOption): string {
+  const accessText = option.openAccess
+    ? 'Any Google account'
+    : option.studentDomains.length > 0
+      ? option.studentDomains.map(domain => `@${domain}`).join(' / ')
+      : 'Student sign-in not set up yet'
+  return option.description
+    ? `${option.description} · ${accessText}`
+    : accessText
+}
 
 function GoogleIcon() {
   return (
@@ -54,6 +134,8 @@ export function LoginForm({
   mentorCollege,
   mentorCollegeName,
   mentorDomains = [],
+  studentColleges = [],
+  initialCollege = null,
   next,
   initialError = null,
   isBeta = false,
@@ -61,32 +143,67 @@ export function LoginForm({
 }: React.ComponentPropsWithoutRef<'div'> & {
   /**
    * Set for a college's mentor login (`/<college>/auth/mentor`). Omitted for
-   * the regular login, which any Google account may use.
+   * the regular student login, which asks for the college first.
    */
   mentorCollege?: CollegeSlug
   /** Short display name of `mentorCollege`. */
   mentorCollegeName?: string
   /** Email domains accepted as mentors of `mentorCollege` (empty: not set up). */
   mentorDomains?: string[]
+  /** Colleges offered on the regular student login. */
+  studentColleges?: StudentCollegeOption[]
+  /** Pre-selected college (or `none`) when returning from an OAuth error. */
+  initialCollege?: string | null
   next?: string
   initialError?: string | null
   isBeta?: boolean
 }) {
+  const isMentor = mentorCollege !== undefined
+  const studentOptions = isMentor
+    ? []
+    : buildStudentLoginOptions(studentColleges)
+  const initialStudentMatch =
+    !isMentor && initialCollege
+      ? (studentOptions.find(
+          option => option.value === initialCollege && option.enabled
+        ) ?? null)
+      : null
+
+  const [selectedCollege, setSelectedCollege] = useState<string | null>(
+    initialStudentMatch?.value ?? null
+  )
+  const [step, setStep] = useState<'college' | 'google'>(
+    initialStudentMatch ? 'google' : 'college'
+  )
   const [error, setError] = useState<string | null>(initialError)
   const [isLoading, setIsLoading] = useState(false)
   const capabilities = useAuthCapabilities()
 
-  const isMentor = mentorCollege !== undefined
   const college =
     mentorCollege !== undefined
       ? { shortName: mentorCollegeName ?? mentorCollege }
       : null
   const isEnabled = !isMentor || mentorDomains.length > 0
+  const selectedStudentOption = !isMentor
+    ? (studentOptions.find(
+        option => option.value === selectedCollege && option.enabled
+      ) ?? null)
+    : null
   const safeNext = next ? safeRedirectPath(next) : null
   const nextQuery =
     safeNext && safeNext !== '/' ? `?next=${encodeURIComponent(safeNext)}` : ''
   const alternateHref = isMentor ? `/auth/login${nextQuery}` : '/auth/mentor'
   const expectedDomain = mentorDomains.map(domain => `@${domain}`).join(' / ')
+
+  const handleContinueCollege = (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!selectedStudentOption) {
+      setError('Please choose an option.')
+      return
+    }
+    setError(null)
+    setStep('google')
+  }
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true)
@@ -107,7 +224,9 @@ export function LoginForm({
           )}; path=/; max-age=300; SameSite=Lax`
         : 'auth_next=; path=/; max-age=0; SameSite=Lax'
 
-      const result = await signInWithGoogle(mentorCollege)
+      const result = isMentor
+        ? await signInWithGoogle(mentorCollege)
+        : await signInStudentWithGoogle(selectedStudentOption?.value ?? '')
       if (!result.success) {
         throw new Error(result.error ?? 'An OAuth error occurred')
       }
@@ -120,12 +239,22 @@ export function LoginForm({
     }
   }
 
+  const studentDescription = !capabilities.oauth
+    ? 'Sign in with your Google account.'
+    : step === 'college'
+      ? 'Choose your college first, then sign in with your Google account.'
+      : selectedStudentOption?.value === NOT_ENROLLED_COLLEGE
+        ? 'Sign in with any Google account to explore colleges on Sera.'
+        : selectedStudentOption?.openAccess
+          ? `Sign in with any Google account to explore ${selectedStudentOption.shortName}.`
+          : `Sign in with your ${selectedStudentOption?.shortName} Google account to verify your enrollment.`
+
   return (
     <div
       className={cn('flex flex-col items-center gap-6', className)}
       {...props}
     >
-      <Card className="w-full max-w-sm">
+      <Card className={cn('w-full', isMentor ? 'max-w-sm' : 'max-w-md')}>
         <CardHeader className="text-center">
           <CardTitle className="text-2xl flex flex-col items-center justify-center gap-4">
             <IconLogo className="size-12" />
@@ -144,42 +273,171 @@ export function LoginForm({
           <CardDescription>
             {college
               ? `Sign in with your ${college.shortName} staff Google account to manage ${college.shortName} campus data.`
-              : 'Sign in with your Google account.'}
+              : studentDescription}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col gap-4">
-            {college && (
-              <div className="rounded-lg border bg-(--md-sys-color-surface-container)/40 p-3 text-xs text-(--md-sys-color-on-surface-variant)">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="min-w-0">
-                    <span className="block font-medium text-(--md-sys-color-on-surface)">
-                      {college.shortName}
+          {isMentor ? (
+            <div className="flex flex-col gap-4">
+              {college && (
+                <div className="rounded-lg border bg-(--md-sys-color-surface-container)/40 p-3 text-xs text-(--md-sys-color-on-surface-variant)">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="min-w-0">
+                      <span className="block font-medium text-(--md-sys-color-on-surface)">
+                        {college.shortName}
+                      </span>
+                      <span className="break-all">
+                        {isEnabled ? expectedDomain : 'Sign-in not set up yet'}
+                      </span>
                     </span>
-                    <span className="break-all">
-                      {isEnabled ? expectedDomain : 'Sign-in not set up yet'}
-                    </span>
-                  </span>
-                  <Badge variant="secondary">{USER_TYPE_LABELS.mentor}</Badge>
+                    <Badge variant="secondary">{USER_TYPE_LABELS.mentor}</Badge>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {error && (
-              <p
-                role="alert"
-                className="rounded-md border border-(--md-sys-color-error)/30 bg-(--md-sys-color-error)/10 p-3 text-sm text-(--md-sys-color-error)"
-              >
-                {error}
-              </p>
-            )}
+              {error && (
+                <p
+                  role="alert"
+                  className="rounded-md border border-(--md-sys-color-error)/30 bg-(--md-sys-color-error)/10 p-3 text-sm text-(--md-sys-color-error)"
+                >
+                  {error}
+                </p>
+              )}
 
-            {!isEnabled ? (
+              {!isEnabled ? (
+                <p className="text-center text-sm text-(--md-sys-color-on-surface-variant)">
+                  Staff sign-in for {college?.shortName} is not set up yet.
+                  Please contact your college administrator.
+                </p>
+              ) : capabilities.oauth ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={handleGoogleSignIn}
+                  disabled={isLoading}
+                >
+                  <GoogleIcon />
+                  {isLoading
+                    ? 'Redirecting to Google...'
+                    : 'Sign In with Google'}
+                </Button>
+              ) : (
+                <p className="text-center text-sm text-(--md-sys-color-on-surface-variant)">
+                  Google sign-in is unavailable in the current configuration.
+                </p>
+              )}
+            </div>
+          ) : !capabilities.oauth ? (
+            <div className="flex flex-col gap-4">
+              {error && (
+                <p
+                  role="alert"
+                  className="rounded-md border border-(--md-sys-color-error)/30 bg-(--md-sys-color-error)/10 p-3 text-sm text-(--md-sys-color-error)"
+                >
+                  {error}
+                </p>
+              )}
               <p className="text-center text-sm text-(--md-sys-color-on-surface-variant)">
-                Staff sign-in for {college?.shortName} is not set up yet. Please
-                contact your college administrator.
+                Google sign-in is unavailable in the current configuration.
               </p>
-            ) : capabilities.oauth ? (
+            </div>
+          ) : step === 'college' ? (
+            <form
+              onSubmit={handleContinueCollege}
+              className="flex flex-col gap-4"
+            >
+              <div className="max-h-[45vh] overflow-y-auto pr-1">
+                <fieldset className="flex flex-col gap-2">
+                  <legend className="mb-1 text-sm font-medium">
+                    Which college are you enrolled in?
+                  </legend>
+                  {studentOptions.map(option => (
+                    <label
+                      key={option.value}
+                      className={cn(
+                        'flex items-start gap-3 rounded-lg border p-3 text-sm transition-colors',
+                        option.enabled
+                          ? 'cursor-pointer hover:bg-(--md-sys-color-surface-container-high)'
+                          : 'cursor-not-allowed opacity-60',
+                        option.enabled &&
+                          selectedCollege === option.value &&
+                          'border-(--md-sys-color-primary) bg-(--md-sys-color-surface-container-high)'
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="student-college"
+                        value={option.value}
+                        disabled={!option.enabled}
+                        checked={selectedCollege === option.value}
+                        onChange={() => {
+                          setSelectedCollege(option.value)
+                          setError(null)
+                        }}
+                        className="mt-1"
+                      />
+                      <span>
+                        <span className="block font-medium">
+                          {option.label}
+                        </span>
+                        <span className="block text-xs text-(--md-sys-color-on-surface-variant)">
+                          {formatStudentOptionSubtext(option)}
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                </fieldset>
+              </div>
+
+              {error && (
+                <p
+                  role="alert"
+                  className="rounded-md border border-(--md-sys-color-error)/30 bg-(--md-sys-color-error)/10 p-3 text-sm text-(--md-sys-color-error)"
+                >
+                  {error}
+                </p>
+              )}
+
+              <Button type="submit" className="w-full">
+                Continue
+              </Button>
+            </form>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {selectedStudentOption && (
+                <div className="rounded-lg border bg-(--md-sys-color-surface-container)/40 p-3 text-xs text-(--md-sys-color-on-surface-variant)">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="min-w-0">
+                      <span className="block font-medium text-(--md-sys-color-on-surface)">
+                        {selectedStudentOption.shortName}
+                      </span>
+                      <span className="break-all">
+                        {selectedStudentOption.openAccess
+                          ? 'Any Google account'
+                          : selectedStudentOption.studentDomains
+                              .map(domain => `@${domain}`)
+                              .join(' / ')}
+                      </span>
+                    </span>
+                    <Badge variant="secondary">
+                      {selectedStudentOption.value === NOT_ENROLLED_COLLEGE
+                        ? 'Exploring'
+                        : USER_TYPE_LABELS.student}
+                    </Badge>
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <p
+                  role="alert"
+                  className="rounded-md border border-(--md-sys-color-error)/30 bg-(--md-sys-color-error)/10 p-3 text-sm text-(--md-sys-color-error)"
+                >
+                  {error}
+                </p>
+              )}
+
               <Button
                 type="button"
                 variant="outline"
@@ -190,12 +448,21 @@ export function LoginForm({
                 <GoogleIcon />
                 {isLoading ? 'Redirecting to Google...' : 'Sign In with Google'}
               </Button>
-            ) : (
-              <p className="text-center text-sm text-(--md-sys-color-on-surface-variant)">
-                Google sign-in is unavailable in the current configuration.
-              </p>
-            )}
-          </div>
+
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                disabled={isLoading}
+                onClick={() => {
+                  setError(null)
+                  setStep('college')
+                }}
+              >
+                Change college
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
       <div className="flex flex-col items-center gap-2 text-center text-xs text-(--md-sys-color-on-surface-variant)">

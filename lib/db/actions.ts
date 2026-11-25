@@ -1209,15 +1209,19 @@ export async function createChatWithFirstMessageTransaction({
 /**
  * Create or refresh a signed-in user's profile.
  *
- * `college` is only passed when it is verified from a college email domain;
- * it then overwrites the stored college and marks the user as onboarded.
- * Without it, a self-reported college chosen at onboarding is kept.
+ * When `college` is provided it overwrites the stored college and marks the
+ * user as onboarded. When `college` is null/omitted and `onboarded` is true,
+ * the stored college is cleared to null and marked onboarded (explicit
+ * "Not enrolled yet"). Otherwise any previously saved college/onboarded state
+ * is kept. When `campus` is provided (including null), it overwrites `campus`.
  */
 export async function upsertUserProfile({
   id,
   email,
   userType,
   college,
+  campus,
+  onboarded = false,
   name = null,
   avatarUrl = null
 }: {
@@ -1225,13 +1229,20 @@ export async function upsertUserProfile({
   email: string
   userType: UserType
   college?: CollegeSlug | null
+  campus?: string | null
+  onboarded?: boolean
   name?: string | null
   avatarUrl?: string | null
 }): Promise<UserProfile> {
   const normalizedEmail = normalizeEmail(email) ?? email.trim().toLowerCase()
-  const verifiedCollege = college
-    ? { college, onboardedAt: new Date() }
-    : undefined
+  const now = new Date()
+  const verifiedCollege =
+    college != null
+      ? { college, onboardedAt: now }
+      : onboarded
+        ? { college: null, onboardedAt: now }
+        : undefined
+  const campusField = campus !== undefined ? { campus } : undefined
   return withRLS(id, async tx => {
     const [profile] = await tx
       .insert(userProfiles)
@@ -1240,6 +1251,7 @@ export async function upsertUserProfile({
         email: normalizedEmail,
         userType,
         ...verifiedCollege,
+        ...campusField,
         name,
         avatarUrl
       })
@@ -1249,9 +1261,10 @@ export async function upsertUserProfile({
           email: normalizedEmail,
           userType,
           ...verifiedCollege,
+          ...campusField,
           name,
           avatarUrl,
-          updatedAt: new Date()
+          updatedAt: now
         }
       })
       .returning()

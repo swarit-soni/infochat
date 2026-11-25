@@ -139,4 +139,74 @@ describe('AccountSettingsDialog', () => {
     )
     expect(screen.getByText('Student')).toBeInTheDocument()
   })
+
+  it('shows the Change college link only for unverified students or verified students with a partner campus', () => {
+    const unverifiedDemoUser: AppUser = {
+      ...user,
+      userType: 'student',
+      college: 'sera-demo',
+      collegeName: 'Sera Demo University',
+      collegeVerified: false,
+      campus: null,
+      collegeOnboarded: true
+    }
+    const { rerender } = render(
+      <AppUserProvider user={unverifiedDemoUser} capabilities={capabilities}>
+        <AccountSettingsDialog
+          open
+          onOpenChange={vi.fn()}
+          user={unverifiedDemoUser}
+        />
+      </AppUserProvider>
+    )
+    expect(screen.getByRole('link', { name: 'Change' })).toHaveAttribute(
+      'href',
+      '/onboarding/college?change=1'
+    )
+
+    const verifiedWithCampus: AppUser = {
+      ...user,
+      email: 'student@kalvium.community',
+      userType: 'student',
+      college: 'kalvium',
+      collegeName: 'Kalvium',
+      collegeVerified: true,
+      campus: 'jecrc',
+      campusName: 'JECRC',
+      collegeOnboarded: true
+    }
+    rerender(
+      <AppUserProvider user={verifiedWithCampus} capabilities={capabilities}>
+        <AccountSettingsDialog
+          open
+          onOpenChange={vi.fn()}
+          user={verifiedWithCampus}
+        />
+      </AppUserProvider>
+    )
+    expect(screen.getByRole('link', { name: 'Change' })).toBeInTheDocument()
+
+    const verifiedSingleCampus: AppUser = {
+      ...user,
+      email: 'student@bkbck.edu.in',
+      userType: 'student',
+      college: 'bkbirla',
+      collegeName: 'B.K. Birla College',
+      collegeVerified: true,
+      campus: null,
+      collegeOnboarded: true
+    }
+    rerender(
+      <AppUserProvider user={verifiedSingleCampus} capabilities={capabilities}>
+        <AccountSettingsDialog
+          open
+          onOpenChange={vi.fn()}
+          user={verifiedSingleCampus}
+        />
+      </AppUserProvider>
+    )
+    expect(
+      screen.queryByRole('link', { name: 'Change' })
+    ).not.toBeInTheDocument()
+  })
 })

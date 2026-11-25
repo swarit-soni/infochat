@@ -58,9 +58,9 @@ export const DEFAULT_COLLEGES: College[] = [
     website: 'https://bkbck.edu.in',
     officialWebDomains: ['bkbck.edu.in'],
     partnerColleges: [],
-    // No confirmed Google Workspace domains yet: mentor login stays off.
+    // Confirmed student domain; staff Google Workspace domain not confirmed yet so staff login stays off.
     mentorDomains: [],
-    studentDomains: [],
+    studentDomains: ['bkbck.edu.in'],
     mentorRequiresAllowlist: false,
     aliases: ['B.K. Birla', 'BK Birla', 'BKBC', 'Birla College', 'Kalyan'],
     squadLabel: null,

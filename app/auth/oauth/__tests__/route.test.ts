@@ -446,4 +446,245 @@ describe('GET /auth/oauth', () => {
       )
     })
   })
+
+  describe('student college selection cookie', () => {
+    function studentLoginRequest(
+      collegeSelection: string,
+      extraCookies: string[] = []
+    ) {
+      const cookies = [
+        `auth_student_college=${collegeSelection}`,
+        ...extraCookies
+      ].join('; ')
+      return new NextRequest(
+        'http://localhost:3000/auth/oauth?code=good-code',
+        {
+          headers: { cookie: cookies }
+        }
+      )
+    }
+
+    it('admits a student whose Google account matches the chosen real college', async () => {
+      vi.mocked(getUserProfile).mockResolvedValue({
+        onboardedAt: null
+      } as never)
+      getUser.mockResolvedValue({
+        data: {
+          user: {
+            id: 'bkbirla-student',
+            email: 'student@bkbck.edu.in',
+            app_metadata: { provider: 'google' }
+          }
+        },
+        error: null
+      })
+
+      const response = await GET(studentLoginRequest('bkbirla'))
+
+      expect(signOut).not.toHaveBeenCalled()
+      expect(upsertUserProfile).toHaveBeenCalledWith({
+        id: 'bkbirla-student',
+        email: 'student@bkbck.edu.in',
+        userType: 'student',
+        college: 'bkbirla',
+        name: null,
+        avatarUrl: null
+      })
+      expect(response.headers.get('location')).toBe('http://localhost:3000/')
+      expect(response.cookies.get('auth_student_college')?.value).toBe('')
+    })
+
+    it('sends a matching Kalvium student to partner campus onboarding', async () => {
+      vi.mocked(getUserProfile).mockResolvedValue({
+        onboardedAt: null
+      } as never)
+      getUser.mockResolvedValue({
+        data: {
+          user: {
+            id: 'kalvium-student',
+            email: 'student@kalvium.community',
+            app_metadata: { provider: 'google' }
+          }
+        },
+        error: null
+      })
+
+      const response = await GET(studentLoginRequest('kalvium'))
+
+      expect(signOut).not.toHaveBeenCalled()
+      expect(upsertUserProfile).toHaveBeenCalledWith(
+        expect.objectContaining({ college: 'kalvium', userType: 'student' })
+      )
+      expect(response.headers.get('location')).toBe(
+        'http://localhost:3000/onboarding/college'
+      )
+    })
+
+    it('rejects a personal Google account when a real college was chosen, without deleting the user', async () => {
+      getUser.mockResolvedValue({
+        data: {
+          user: {
+            id: 'personal-1',
+            email: 'personal@gmail.com',
+            app_metadata: { provider: 'google' }
+          }
+        },
+        error: null
+      })
+
+      const response = await GET(
+        studentLoginRequest('bkbirla', ['auth_next=%2Fsearch%2Fabc'])
+      )
+
+      expect(signOut).toHaveBeenCalledTimes(1)
+      expect(deleteUser).not.toHaveBeenCalled()
+      expect(upsertUserProfile).not.toHaveBeenCalled()
+      expect(response.headers.get('location')).toBe(
+        'http://localhost:3000/auth/login?error=wrong_student_domain&college=bkbirla&next=%2Fsearch%2Fabc'
+      )
+      expect(response.cookies.get('auth_student_college')?.value).toBe('')
+    })
+
+    it('rejects an email from a different college and reports the actual college', async () => {
+      getUser.mockResolvedValue({
+        data: {
+          user: {
+            id: 'iitb-student',
+            email: 'student@iitb.ac.in',
+            app_metadata: { provider: 'google' }
+          }
+        },
+        error: null
+      })
+
+      const response = await GET(studentLoginRequest('iitm'))
+
+      expect(signOut).toHaveBeenCalledTimes(1)
+      expect(deleteUser).not.toHaveBeenCalled()
+      expect(upsertUserProfile).not.toHaveBeenCalled()
+      expect(response.headers.get('location')).toBe(
+        'http://localhost:3000/auth/login?error=wrong_student_domain&college=iitm&actual=iitb'
+      )
+    })
+
+    it('rejects a real college whose student domain has been disabled', async () => {
+      vi.stubEnv('SERA_KALVIUM_STUDENT_DOMAINS', '')
+      getUser.mockResolvedValue({
+        data: {
+          user: {
+            id: 'kalvium-student',
+            email: 'student@kalvium.community',
+            app_metadata: { provider: 'google' }
+          }
+        },
+        error: null
+      })
+
+      const response = await GET(studentLoginRequest('kalvium'))
+
+      expect(signOut).toHaveBeenCalledTimes(1)
+      expect(upsertUserProfile).not.toHaveBeenCalled()
+      expect(response.headers.get('location')).toBe(
+        'http://localhost:3000/auth/login?error=college_unavailable&college=kalvium'
+      )
+    })
+
+    it('saves sera-demo for any non-mentor Google account and skips onboarding', async () => {
+      vi.mocked(getUserProfile).mockResolvedValue({
+        college: 'sera-demo',
+        campus: null,
+        onboardedAt: new Date()
+      } as never)
+      getUser.mockResolvedValue({
+        data: {
+          user: {
+            id: 'demo-user',
+            email: 'visitor@gmail.com',
+            app_metadata: { provider: 'google' }
+          }
+        },
+        error: null
+      })
+
+      const response = await GET(
+        studentLoginRequest('sera-demo', ['auth_next=%2Fsearch%2Fdemo'])
+      )
+
+      expect(signOut).not.toHaveBeenCalled()
+      expect(upsertUserProfile).toHaveBeenCalledWith({
+        id: 'demo-user',
+        email: 'visitor@gmail.com',
+        userType: 'student',
+        college: 'sera-demo',
+        campus: null,
+        name: null,
+        avatarUrl: null
+      })
+      expect(response.headers.get('location')).toBe(
+        'http://localhost:3000/search/demo'
+      )
+    })
+
+    it('saves Not enrolled yet for personal Google accounts without redirecting to onboarding', async () => {
+      vi.mocked(getUserProfile).mockResolvedValue({
+        college: null,
+        campus: null,
+        onboardedAt: new Date()
+      } as never)
+      getUser.mockResolvedValue({
+        data: {
+          user: {
+            id: 'exploring-user',
+            email: 'applicant@gmail.com',
+            app_metadata: { provider: 'google' }
+          }
+        },
+        error: null
+      })
+
+      const response = await GET(studentLoginRequest('none'))
+
+      expect(upsertUserProfile).toHaveBeenCalledWith({
+        id: 'exploring-user',
+        email: 'applicant@gmail.com',
+        userType: 'student',
+        college: null,
+        campus: null,
+        onboarded: true,
+        name: null,
+        avatarUrl: null
+      })
+      expect(response.headers.get('location')).toBe('http://localhost:3000/')
+    })
+
+    it('still saves a verified college if an authentic college email chooses Not enrolled yet', async () => {
+      vi.mocked(getUserProfile).mockResolvedValue({
+        college: 'bkbirla',
+        campus: null,
+        onboardedAt: new Date()
+      } as never)
+      getUser.mockResolvedValue({
+        data: {
+          user: {
+            id: 'verified-student',
+            email: 'student@bkbck.edu.in',
+            app_metadata: { provider: 'google' }
+          }
+        },
+        error: null
+      })
+
+      const response = await GET(studentLoginRequest('none'))
+
+      expect(upsertUserProfile).toHaveBeenCalledWith({
+        id: 'verified-student',
+        email: 'student@bkbck.edu.in',
+        userType: 'student',
+        college: 'bkbirla',
+        name: null,
+        avatarUrl: null
+      })
+      expect(response.headers.get('location')).toBe('http://localhost:3000/')
+    })
+  })
 })

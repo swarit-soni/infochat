@@ -1,8 +1,13 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 
 import { saveEnrolledCollege } from '@/lib/actions/onboarding'
+import {
+  DEMO_COLLEGE_SLUG,
+  NOT_ENROLLED_COLLEGE
+} from '@/lib/colleges/registry'
 import { cn } from '@/lib/utils/index'
 
 import { Button } from '@/components/ui/button'
@@ -16,13 +21,11 @@ export interface CollegeOption {
 }
 
 const NOT_ENROLLED: CollegeOption = {
-  value: 'none',
+  value: NOT_ENROLLED_COLLEGE,
   label: 'Not enrolled yet',
   description: "I'm exploring colleges or applying for admission",
   campuses: []
 }
-
-const DEMO_COLLEGE_SLUG = 'sera-demo'
 
 /** Put the demo university at the top for live onboarding walkthroughs. */
 export function buildOnboardingOptions(
@@ -176,6 +179,18 @@ export function EnrolledCollegeForm({
       <Button type="submit" disabled={isPending || isLeaving}>
         {isPending || isLeaving ? 'Saving...' : 'Continue'}
       </Button>
+
+      {!lockedCollege && (
+        <p className="text-center text-xs text-(--md-sys-color-on-surface-variant)">
+          Enrolled at another college?{' '}
+          <Link
+            href="/auth/login"
+            className="underline underline-offset-4 hover:text-(--md-sys-color-on-surface)"
+          >
+            Sign in with your college Google account
+          </Link>
+        </p>
+      )}
     </form>
   )
 }
