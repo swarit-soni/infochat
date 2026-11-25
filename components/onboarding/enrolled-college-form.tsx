@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 
 import { saveEnrolledCollege } from '@/lib/actions/onboarding'
 import { cn } from '@/lib/utils/index'
@@ -84,13 +83,14 @@ export function EnrolledCollegeForm({
   lockedCollege?: string | null
   initialCampus?: string | null
 }) {
-  const router = useRouter()
   const [answer, setAnswer] = useState<string | null>(lockedCollege)
   const [campus, setCampus] = useState<string | null>(initialCampus)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [isLeaving, setIsLeaving] = useState(false)
 
-  const options = [...colleges, NOT_ENROLLED]
+  // Admission seekers come first: they're not enrolled anywhere yet.
+  const options = [NOT_ENROLLED, ...colleges]
   const selected = options.find(option => option.value === answer) ?? null
   const campusOptions = selected?.campuses.length
     ? [...selected.campuses, { value: 'none', label: `${selected.label} only` }]
@@ -116,8 +116,11 @@ export function EnrolledCollegeForm({
         setError(result.error ?? 'Could not save your answer.')
         return
       }
-      router.replace(next)
-      router.refresh()
+      // A full navigation: the client router may still hold the pre-onboarding
+      // render of `next` (a redirect back here), which would leave this form
+      // stuck on "Saving...".
+      setIsLeaving(true)
+      window.location.replace(next)
     })
   }
 
@@ -157,8 +160,8 @@ export function EnrolledCollegeForm({
         </p>
       )}
 
-      <Button type="submit" disabled={isPending}>
-        {isPending ? 'Saving...' : 'Continue'}
+      <Button type="submit" disabled={isPending || isLeaving}>
+        {isPending || isLeaving ? 'Saving...' : 'Continue'}
       </Button>
     </form>
   )
