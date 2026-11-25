@@ -38,13 +38,17 @@ describe('saveEnrolledCollege', () => {
 
     expect(await saveEnrolledCollege('bkbirla')).toEqual({ success: true })
     expect(setUserProfileCollege).toHaveBeenLastCalledWith(
-      'u1',
+      expect.objectContaining({ id: 'u1' }),
       'bkbirla',
       null
     )
 
     expect(await saveEnrolledCollege('none')).toEqual({ success: true })
-    expect(setUserProfileCollege).toHaveBeenLastCalledWith('u1', null, null)
+    expect(setUserProfileCollege).toHaveBeenLastCalledWith(
+      expect.objectContaining({ id: 'u1' }),
+      null,
+      null
+    )
   })
 
   it('rejects unknown answers', async () => {
@@ -74,7 +78,7 @@ describe('saveEnrolledCollege', () => {
       success: true
     })
     expect(setUserProfileCollege).toHaveBeenLastCalledWith(
-      'u1',
+      expect.objectContaining({ id: 'u1' }),
       'kalvium',
       'jecrc'
     )
@@ -93,7 +97,7 @@ describe('saveEnrolledCollege', () => {
       success: true
     })
     expect(setUserProfileCollege).toHaveBeenLastCalledWith(
-      'u2',
+      expect.objectContaining({ id: 'u2' }),
       'kalvium',
       'none'
     )

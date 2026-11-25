@@ -23,9 +23,10 @@ export async function saveEnrolledCollege(
   campusAnswer?: string | null
 ): Promise<{ success: boolean; error?: string }> {
   const user = await getCurrentUser()
-  if (!user) {
+  if (!user?.email) {
     return { success: false, error: 'Please sign in first.' }
   }
+  const email = user.email
 
   const directory = await getCollegeDirectory()
   const college = user.collegeVerified
@@ -50,7 +51,11 @@ export async function saveEnrolledCollege(
   }
 
   try {
-    const profile = await setUserProfileCollege(user.id, college, campus)
+    const profile = await setUserProfileCollege(
+      { id: user.id, email, userType: user.userType },
+      college,
+      campus
+    )
     if (!profile) {
       return { success: false, error: 'Could not save your answer.' }
     }

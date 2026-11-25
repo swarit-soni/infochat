@@ -1261,24 +1261,30 @@ export async function upsertUserProfile({
 }
 
 /**
- * Save the student's answer to "Which college are you enrolled in?".
- * `null` records that they are not enrolled (e.g. exploring admissions).
- */
-/**
  * Save a student's onboarding answers: their college (null when not enrolled
  * anywhere) and, for colleges with partner campuses, which campus they are on
  * (a partner slug or `none`).
  */
 export async function setUserProfileCollege(
-  userId: string,
+  user: { id: string; email: string; userType?: UserType | null },
   college: CollegeSlug | null,
   campus: string | null = null
 ): Promise<UserProfile | null> {
-  return withRLS(userId, async tx => {
+  const now = new Date()
+  const answers = { college, campus, onboardedAt: now, updatedAt: now }
+  return withRLS(user.id, async tx => {
+    // Create the profile when it is missing: a session can exist without one
+    // (e.g. if the sign-in callback's profile upsert never ran), and an
+    // update alone would then save nothing.
     const [profile] = await tx
-      .update(userProfiles)
-      .set({ college, campus, onboardedAt: new Date(), updatedAt: new Date() })
-      .where(eq(userProfiles.id, userId))
+      .insert(userProfiles)
+      .values({
+        id: user.id,
+        email: normalizeEmail(user.email) ?? user.email.trim().toLowerCase(),
+        userType: user.userType ?? 'student',
+        ...answers
+      })
+      .onConflictDoUpdate({ target: userProfiles.id, set: answers })
       .returning()
     return profile ?? null
   })
