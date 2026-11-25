@@ -6,6 +6,9 @@ const mocks = vi.hoisted(() => ({
   ingestUrgentUpdate: vi.fn()
 }))
 
+vi.mock('@/lib/colleges/store', async () =>
+  (await import('@/lib/colleges/testing')).collegeStoreMock()
+)
 vi.mock('@/lib/rag/ingestion', () => ({
   ingestUrgentUpdate: mocks.ingestUrgentUpdate
 }))
@@ -26,7 +29,31 @@ function buildRequest(body: unknown, headers: Record<string, string> = {}) {
 describe('POST /api/webhooks/gchat', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.unstubAllEnvs()
     delete process.env.GCHAT_WEBHOOK_SECRET
+    // This deployment's spaces feed Kalvium's knowledge base.
+    vi.stubEnv('SERA_GCHAT_COLLEGE', 'kalvium')
+  })
+
+  it('ignores spaces that are not linked to any college', async () => {
+    vi.stubEnv('SERA_GCHAT_COLLEGE', '')
+    const res = await POST(
+      buildRequest({
+        type: 'MESSAGE',
+        space: {
+          name: 'spaces/unknown',
+          displayName: 'Official Announcements'
+        },
+        message: {
+          text: 'Exam postponed to Monday.',
+          sender: { email: 'mentor@kalvium.com' }
+        }
+      })
+    )
+    const json = await res.json()
+    expect(json.status).toBe('ignored')
+    expect(json.reason).toContain('not linked to a college')
+    expect(mocks.ingestUrgentUpdate).not.toHaveBeenCalled()
   })
 
   it('rejects requests with invalid secret when GCHAT_WEBHOOK_SECRET is configured', async () => {

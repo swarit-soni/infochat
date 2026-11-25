@@ -4,13 +4,15 @@ import { type NextRequest, NextResponse } from 'next/server'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 import {
-  getUserTypeFromEmail,
+  getCollegeIdentityFromEmail,
   isAllowedEmail,
   isGoogleAuthUser,
   normalizeEmail
 } from '@/lib/auth/domain'
 import { getRequestOrigin } from '@/lib/auth/request'
 import type { AppUser, AuthActionResult, AuthProvider } from '@/lib/auth/types'
+import type { IdentityDirectory } from '@/lib/colleges/access'
+import { getCollegeDirectory } from '@/lib/colleges/store'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { hasSupabasePublicConfig } from '@/lib/supabase/keys'
 import { updateSession } from '@/lib/supabase/middleware'
@@ -29,13 +31,21 @@ function metaString(
   return null
 }
 
-export function toAppUser(user: SupabaseUser): AppUser | null {
+export function toAppUser(
+  user: SupabaseUser,
+  directory: IdentityDirectory = { list: [] }
+): AppUser | null {
   const email = normalizeEmail(user.email)
   if (!email || !isGoogleAuthUser(user)) {
     return null
   }
-  // Non-Kalvium Google accounts sign in without a mentor/student type.
-  const userType = getUserTypeFromEmail(email)
+  // Any Google account may sign in. A college email domain decides mentor
+  // access and, for students, their college; other accounts get neither here
+  // (their self-reported college comes from user_profiles, see
+  // getCurrentUser).
+  const identity = getCollegeIdentityFromEmail(email, directory)
+  const userType = identity?.userType ?? null
+  const college = identity?.college ?? null
 
   const metadata = (user.user_metadata ?? {}) as Record<string, unknown>
   return {
@@ -45,7 +55,8 @@ export function toAppUser(user: SupabaseUser): AppUser | null {
     image: metaString(metadata, 'avatar_url', 'picture'),
     createdAt: user.created_at ?? null,
     userType,
-    role: userType
+    role: userType,
+    college
   }
 }
 
@@ -58,7 +69,7 @@ const getCurrentSupabaseUser = cache(async (): Promise<AppUser | null> => {
 
   const supabase = await createClient()
   const { data } = await supabase.auth.getUser()
-  return data.user ? toAppUser(data.user) : null
+  return data.user ? toAppUser(data.user, await getCollegeDirectory()) : null
 })
 
 // Most callers only need the id. getClaims() verifies the session JWT locally

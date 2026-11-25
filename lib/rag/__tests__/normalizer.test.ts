@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   computeContentHash,
+  inferAuthority,
   normalizeUrgentUpdateInput,
   resolveSenderTrustGate
 } from '../normalizer'
@@ -74,6 +75,7 @@ describe('normalizeUrgentUpdateInput', () => {
   it('auto-publishes mentor timetable update with cohort tags and ephemeral TTL', async () => {
     const capturedAt = new Date('2026-11-23T09:00:00.000Z')
     const result = await normalizeUrgentUpdateInput({
+      college: 'kalvium',
       rawText:
         'Squad 42 Sem 3 B.Tech CSE: Today 2 PM DSA session shifted from Room B-104 to Lab 3.',
       channel: 'whatsapp_forward',
@@ -109,5 +111,21 @@ describe('normalizeUrgentUpdateInput', () => {
     expect(result.status).toBe('pending_review')
     expect(result.domain).toBe('examinations')
     expect(result.authority).toBe('jecrc')
+  })
+
+  it('attributes updates to the college named by its aliases', () => {
+    expect(inferAuthority('JECRC exam form deadline extended', 'kalvium')).toBe(
+      'jecrc'
+    )
+    expect(
+      inferAuthority('Kalvium and JECRC University joint holiday', 'kalvium')
+    ).toBe('joint')
+    // Colleges outside the posting college's view are never chosen.
+    expect(inferAuthority('IIT Bombay hackathon', 'kalvium')).toBe('kalvium')
+    expect(inferAuthority('Notice from IIT KGP hall council', undefined)).toBe(
+      'iitkgp'
+    )
+    expect(inferAuthority('B. K. Birla convocation', undefined)).toBe('bkbirla')
+    expect(inferAuthority('library timings changed', 'jnu')).toBe('jnu')
   })
 })

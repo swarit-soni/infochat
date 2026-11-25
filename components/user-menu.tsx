@@ -161,7 +161,7 @@ export default function UserMenu({ user }: UserMenuProps) {
           </DropdownMenuItem>
           {user.userType === 'mentor' && (
             <DropdownMenuItem asChild>
-              <Link href="/mentor">
+              <Link href={user.college ? `/${user.college}/mentor` : '/mentor'}>
                 <IconShield className="size-4" />
                 <span>Mentor Portal</span>
               </Link>

@@ -43,8 +43,9 @@ const document: KnowledgeLibraryItem = {
   id: 'doc-1',
   title: 'Mid-semester exam schedule',
   domain: 'examinations',
-  sourceSystem: 'jecrc_enotice',
+  sourceSystem: 'official_notice',
   authority: 'jecrc',
+  authorityLabel: 'JECRC',
   priority: 'urgent',
   program: null,
   semester: '3',
@@ -123,7 +124,7 @@ describe('LibraryPanel knowledge base', () => {
     expect(
       screen.getByText('Download your admit card by Friday.')
     ).toBeInTheDocument()
-    expect(screen.getByText('JECRC e-notice')).toBeInTheDocument()
+    expect(screen.getByText('Official notice')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /View source/ })).toHaveAttribute(
       'href',
       'https://example.edu/notice/1'

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 import {
@@ -129,6 +130,31 @@ export function AccountSettingsDialog({
                 <p className="truncate">{user.email}</p>
               </div>
             </div>
+            {user.collegeOnboarded !== undefined && (
+              <div className="flex items-center justify-between gap-2 text-sm">
+                <div className="min-w-0">
+                  <p className="font-medium">College</p>
+                  <p className="truncate text-muted-foreground">
+                    {user.college
+                      ? (user.collegeName ?? user.college)
+                      : 'Not enrolled'}
+                    {user.campusName ? ` · ${user.campusName} campus` : ''}
+                  </p>
+                </div>
+                {/* A verified college can't change, but its students can
+                    still change their partner campus. */}
+                {user.userType !== 'mentor' && (
+                  <Button asChild variant="outline" size="sm">
+                    <Link
+                      href="/onboarding/college?change=1"
+                      onClick={() => onOpenChange(false)}
+                    >
+                      Change
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            )}
           </section>
 
           <Separator />

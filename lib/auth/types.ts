@@ -1,6 +1,7 @@
 import type { NextRequest, NextResponse } from 'next/server'
 
 import type { UserType } from '@/lib/auth/domain'
+import type { CollegeSlug } from '@/lib/colleges/registry'
 import type { db } from '@/lib/db'
 
 export type AuthProviderName = 'supabase' | 'better-auth' | 'none'
@@ -15,10 +16,33 @@ export interface AppUser {
   name?: string | null
   image?: string | null
   createdAt?: Date | string | null
-  /** Kalvium classification derived from verified email domain. */
+  /** Role at the user's college, derived from the verified email. */
   userType?: UserType | null
-  /** Kalvium role when the provider resolves one (`mentor` | `student`). */
+  /** Role when the provider resolves one (`mentor` | `student`). */
   role?: string | null
+  /**
+   * The college the account belongs to: verified from a college email
+   * domain, or self-reported at onboarding. Null when not enrolled anywhere
+   * (e.g. exploring admissions) or not answered yet.
+   */
+  college?: CollegeSlug | null
+  /** Display name of `college`. */
+  collegeName?: string | null
+  /** Whether `college` was verified from a college email domain. */
+  collegeVerified?: boolean
+  /**
+   * Partner campus, for colleges with several: a partner college's slug,
+   * 'none' for a campus not on Sera, or null when not answered.
+   */
+  campus?: string | null
+  /** Display name of `campus` when it is a college on Sera. */
+  campusName?: string | null
+  /**
+   * Whether onboarding is complete: the enrolled-college question is
+   * answered (or verified) and, where the college has partner campuses, the
+   * campus question too. False: ask them.
+   */
+  collegeOnboarded?: boolean
 }
 
 /**

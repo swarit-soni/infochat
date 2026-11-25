@@ -1,9 +1,17 @@
 'use server'
 
-import { and, desc, eq, gt, isNull, lt, or } from 'drizzle-orm'
+import { and, desc, eq, gt, inArray, isNull, lt, or } from 'drizzle-orm'
 
+import { resolveVisibleColleges } from '@/lib/colleges/current'
+import { formatAuthority } from '@/lib/colleges/registry'
+import { getCollegeDirectory } from '@/lib/colleges/store'
 import { db } from '@/lib/db'
-import { type KnowledgeDocument, knowledgeDocuments } from '@/lib/db/schema'
+import {
+  type KnowledgeDocument,
+  knowledgeDocuments,
+  type KnowledgeSourceSystem,
+  toSourceSystem
+} from '@/lib/db/schema'
 
 const DEFAULT_KNOWLEDGE_PAGE_SIZE = 25
 const MAX_KNOWLEDGE_PAGE_SIZE = 50
@@ -18,7 +26,6 @@ export type KnowledgeLibraryItem = Pick<
   | 'id'
   | 'title'
   | 'domain'
-  | 'sourceSystem'
   | 'authority'
   | 'priority'
   | 'program'
@@ -29,19 +36,26 @@ export type KnowledgeLibraryItem = Pick<
   | 'sourceUrl'
   | 'content'
   | 'updatedAt'
->
+> & {
+  sourceSystem: KnowledgeSourceSystem
+  /** Display name of the issuing college (or "Joint notice"). */
+  authorityLabel: string
+}
 
 /**
- * List the documents Sera currently answers from: active and not expired,
- * newest first. The knowledge base is readable by everyone (its RLS select
- * policy is public), so no sign-in is required.
+ * List the documents Sera answers from: active and not expired, newest
+ * first, from the colleges visible to the user (see resolveVisibleColleges).
+ * The knowledge base is public (its RLS select policy is `true`).
  */
 export async function listKnowledgeDocuments({
   limit = DEFAULT_KNOWLEDGE_PAGE_SIZE,
-  cursor
+  cursor,
+  college
 }: {
   limit?: number
   cursor?: KnowledgeListCursor | null
+  /** Ignored for signed-in users, who always see their own college. */
+  college?: string | null
 } = {}): Promise<{
   success: boolean
   documents?: KnowledgeLibraryItem[]
@@ -58,6 +72,8 @@ export async function listKnowledgeDocuments({
     cursor && cursorDate && !Number.isNaN(cursorDate.getTime())
 
   try {
+    const visibleColleges = await resolveVisibleColleges(college)
+
     const rows = await db
       .select({
         id: knowledgeDocuments.id,
@@ -78,6 +94,7 @@ export async function listKnowledgeDocuments({
       .from(knowledgeDocuments)
       .where(
         and(
+          inArray(knowledgeDocuments.college, visibleColleges),
           eq(knowledgeDocuments.status, 'active'),
           or(
             isNull(knowledgeDocuments.expiresAt),
@@ -97,7 +114,14 @@ export async function listKnowledgeDocuments({
       .orderBy(desc(knowledgeDocuments.updatedAt), desc(knowledgeDocuments.id))
       .limit(pageLimit + 1)
 
-    const documents = rows.slice(0, pageLimit)
+    const directory = await getCollegeDirectory()
+    const documents: KnowledgeLibraryItem[] = rows
+      .slice(0, pageLimit)
+      .map(row => ({
+        ...row,
+        sourceSystem: toSourceSystem(row.sourceSystem),
+        authorityLabel: formatAuthority(directory, row.authority)
+      }))
     const last = documents[documents.length - 1]
     const hasMore = rows.length > pageLimit
 

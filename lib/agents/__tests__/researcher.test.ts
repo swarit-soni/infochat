@@ -58,7 +58,7 @@ vi.mock('@/lib/utils/telemetry', () => ({
 
 vi.mock('../prompts/search-mode-prompts', () => ({
   getAdaptiveModePrompt: vi.fn(() => 'Adaptive prompt'),
-  QUICK_MODE_PROMPT: 'Quick prompt'
+  getQuickModePrompt: vi.fn(() => 'Quick prompt')
 }))
 
 import { createResearcher } from '../researcher'
