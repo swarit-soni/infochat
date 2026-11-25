@@ -1,5 +1,10 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter as FontSans } from 'next/font/google'
+import {
+  BBH_Bogle as FontDisplay,
+  EB_Garamond as FontSerif,
+  Inter as FontSans,
+  Merriweather as FontHeading
+} from 'next/font/google'
 import { cookies } from 'next/headers'
 
 import { Analytics } from '@vercel/analytics/next'
@@ -32,9 +37,27 @@ import { UsageBudgetProvider } from '@/components/usage-budget-provider'
 
 import './globals.css'
 
+// SERA brand typography: Inter for UI text, Merriweather for headings,
+// EB Garamond for editorial text and BBH Bogle for the wordmark.
 const fontSans = FontSans({
   subsets: ['latin'],
   variable: '--font-sans'
+})
+
+const fontHeading = FontHeading({
+  subsets: ['latin'],
+  variable: '--font-heading'
+})
+
+const fontSerif = FontSerif({
+  subsets: ['latin'],
+  variable: '--font-serif'
+})
+
+const fontDisplay = FontDisplay({
+  subsets: ['latin'],
+  weight: '400',
+  variable: '--font-display'
 })
 
 const title = 'Sera'
@@ -117,7 +140,10 @@ export default async function RootLayout({
       <body
         className={cn(
           'fixed inset-0 flex flex-col font-sans antialiased overflow-hidden',
-          fontSans.variable
+          fontSans.variable,
+          fontHeading.variable,
+          fontSerif.variable,
+          fontDisplay.variable
         )}
       >
         <ThemeProvider

@@ -41,7 +41,7 @@ export default function AppSidebar({ user }: AppSidebarProps) {
       <SidebarHeader className="flex flex-row justify-between items-center">
         <HomeLink className="flex items-center gap-2 px-2 py-3">
           <IconLogo className={cn('size-5')} />
-          <span className="font-semibold text-sm">Sera</span>
+          <span className="font-display text-base tracking-wide">SERA</span>
           {isBeta && (
             <Badge
               variant="secondary"
