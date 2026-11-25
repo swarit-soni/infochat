@@ -44,7 +44,7 @@ export function SourceFavicons({
       {favicons.map(({ domain, src }, index) => (
         <div
           key={domain}
-          className="relative rounded-full border border-background overflow-hidden"
+          className="relative rounded-full border border-(--md-sys-color-surface) overflow-hidden"
           style={{
             marginLeft: index > 0 ? '-6px' : '0',
             zIndex: favicons.length - index
@@ -55,7 +55,7 @@ export function SourceFavicons({
             alt={domain}
             width={16}
             height={16}
-            className="bg-background"
+            className="bg-(--md-sys-color-surface)"
             unoptimized
           />
         </div>

@@ -46,9 +46,13 @@ export function MemberRoleManager({ members }: { members: MemberSummary[] }) {
               {member.role === 'admin' ? ' (admin)' : ''}
             </span>
             {member.role === 'admin' ? (
-              <span className="text-xs text-muted-foreground">Admin</span>
+              <span className="text-xs text-(--md-sys-color-on-surface-variant)">
+                Admin
+              </span>
             ) : promotedIds.has(member.id) ? (
-              <span className="text-xs text-muted-foreground">Promoted</span>
+              <span className="text-xs text-(--md-sys-color-on-surface-variant)">
+                Promoted
+              </span>
             ) : (
               <Button
                 size="sm"

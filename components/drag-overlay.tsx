@@ -11,7 +11,7 @@ export function DragOverlay({ visible }: { visible: boolean }) {
         visible ? 'opacity-100' : 'opacity-0'
       )}
     >
-      <div className="text-center text-muted-foreground">
+      <div className="text-center text-(--md-sys-color-on-surface-variant)">
         <UploadCloud className="mx-auto mb-4 size-10" />
         <p className="text-lg font-semibold">Drop files here</p>
       </div>

@@ -243,7 +243,7 @@ export function UsageBudgetWarning() {
 
   return (
     <p
-      className="mx-auto w-full max-w-3xl px-4 pb-2 text-sm text-destructive"
+      className="mx-auto w-full max-w-3xl px-4 pb-2 text-sm text-(--md-sys-color-error)"
       role="status"
       aria-live="polite"
     >

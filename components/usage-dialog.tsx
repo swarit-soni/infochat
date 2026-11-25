@@ -50,7 +50,7 @@ export function UsageDialog({ open, onOpenChange, usage }: UsageDialogProps) {
               {usage.remaining} of {usage.limit} remaining
             </p>
             <div
-              className="h-2 overflow-hidden rounded-full bg-muted"
+              className="h-2 overflow-hidden rounded-full bg-(--md-sys-color-surface-container)"
               role="progressbar"
               aria-label="Monthly usage remaining"
               aria-valuemin={0}
@@ -58,31 +58,31 @@ export function UsageDialog({ open, onOpenChange, usage }: UsageDialogProps) {
               aria-valuenow={Math.max(0, usage.remaining)}
             >
               <div
-                className="h-full rounded-full bg-primary transition-transform duration-200 ease-out motion-reduce:transition-none"
+                className="h-full rounded-full bg-(--md-sys-color-primary) transition-transform duration-200 ease-out motion-reduce:transition-none"
                 style={{
                   width: '100%',
                   transform: `translateX(-${100 - percentage}%)`
                 }}
               />
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-(--md-sys-color-on-surface-variant)">
               {formatUsageRenewal(usage.resetAt)}
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-(--md-sys-color-on-surface-variant)">
               Usage renews monthly based on when your account was created.
             </p>
           </div>
 
-          <div className="rounded-lg bg-muted/60 px-4 py-3 text-sm">
+          <div className="rounded-lg bg-(--md-sys-color-surface-container)/60 px-4 py-3 text-sm">
             <div className="flex items-center justify-between gap-4 py-1">
               <span>Quick</span>
-              <span className="text-muted-foreground tabular-nums">
+              <span className="text-(--md-sys-color-on-surface-variant) tabular-nums">
                 {usage.costs?.quick ?? 1} per message
               </span>
             </div>
             <div className="flex items-center justify-between gap-4 py-1">
               <span>Adaptive</span>
-              <span className="text-muted-foreground tabular-nums">
+              <span className="text-(--md-sys-color-on-surface-variant) tabular-nums">
                 {usage.costs?.adaptive ?? 2} per message
               </span>
             </div>

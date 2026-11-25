@@ -219,7 +219,7 @@ export function ChatMessages({
     >
       <div className="relative mx-auto w-full max-w-full md:max-w-3xl px-4">
         {ownerInstructions && sections.length > 0 && (
-          <p className="mb-4 text-xs text-muted-foreground">
+          <p className="mb-4 text-xs text-(--md-sys-color-on-surface-variant)">
             This chat follows custom instructions from its owner.
           </p>
         )}

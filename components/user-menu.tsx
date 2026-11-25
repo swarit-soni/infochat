@@ -97,7 +97,7 @@ export default function UserMenu({ user }: UserMenuProps) {
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-hidden ring-sidebar-ring transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            className="flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-hidden ring-(--md-sys-color-primary) transition-colors hover:bg-(--md-sys-color-secondary-container) hover:text-(--md-sys-color-on-secondary-container) focus-visible:ring-2 data-[state=open]:bg-(--md-sys-color-secondary-container) data-[state=open]:text-(--md-sys-color-on-secondary-container)"
             aria-label={accountMenuLabel}
           >
             <span className="relative shrink-0">
@@ -109,7 +109,7 @@ export default function UserMenu({ user }: UserMenuProps) {
               </Avatar>
               {isLow && (
                 <span
-                  className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-destructive ring-2 ring-sidebar"
+                  className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-(--md-sys-color-error) ring-2 ring-(--md-sys-color-surface-container-low)"
                   aria-hidden="true"
                   data-testid="usage-status-dot"
                 />
@@ -118,12 +118,12 @@ export default function UserMenu({ user }: UserMenuProps) {
             <span className="grid min-w-0 flex-1 leading-tight">
               <span className="truncate font-medium">{userName}</span>
               {user.email && (
-                <span className="truncate text-xs text-muted-foreground">
+                <span className="truncate text-xs text-(--md-sys-color-on-surface-variant)">
                   {user.email}
                 </span>
               )}
             </span>
-            <IconSelector className="size-4 shrink-0 text-muted-foreground" />
+            <IconSelector className="size-4 shrink-0 text-(--md-sys-color-on-surface-variant)" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -144,7 +144,7 @@ export default function UserMenu({ user }: UserMenuProps) {
                   </Badge>
                 )}
               </div>
-              <p className="text-xs leading-none text-muted-foreground truncate">
+              <p className="text-xs leading-none text-(--md-sys-color-on-surface-variant) truncate">
                 {user.email}
               </p>
             </div>
@@ -176,7 +176,7 @@ export default function UserMenu({ user }: UserMenuProps) {
             >
               <ChartBar className="size-4" />
               <span>Usage</span>
-              <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+              <span className="ml-auto text-xs text-(--md-sys-color-on-surface-variant) tabular-nums">
                 {usage.remaining} / {usage.limit}
               </span>
             </DropdownMenuItem>

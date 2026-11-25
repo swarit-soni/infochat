@@ -43,7 +43,7 @@ export function SearchResults({
             target="_blank"
             className="block"
           >
-            <Card className="w-full hover:bg-muted/50 transition-colors">
+            <Card className="w-full hover:bg-(--md-sys-color-surface-container)/50 transition-colors">
               <CardContent className="p-2 flex items-start space-x-2">
                 <Avatar className="h-4 w-4 mt-1 shrink-0">
                   <AvatarImage
@@ -58,10 +58,10 @@ export function SearchResults({
                   <p className="text-sm font-medium line-clamp-1">
                     {result.title || new URL(result.url).pathname}
                   </p>
-                  <p className="text-xs text-muted-foreground line-clamp-2">
+                  <p className="text-xs text-(--md-sys-color-on-surface-variant) line-clamp-2">
                     {result.content}
                   </p>
-                  <div className="text-xs text-muted-foreground/80 mt-1 truncate">
+                  <div className="text-xs text-(--md-sys-color-on-surface-variant)/80 mt-1 truncate">
                     <span className="underline">
                       {new URL(result.url).hostname}
                     </span>
@@ -81,7 +81,7 @@ export function SearchResults({
       {displayedGridResults.map((result, index) => (
         <div className="min-w-0 md:w-1/4 md:p-1" key={index}>
           <Link href={result.url} passHref target="_blank">
-            <Card className="h-full flex-1 rounded-md hover:bg-muted/50 transition-colors">
+            <Card className="h-full flex-1 rounded-md hover:bg-(--md-sys-color-surface-container)/50 transition-colors">
               <CardContent className="flex h-full min-w-0 items-center justify-between gap-2 p-2 md:flex-col md:items-stretch">
                 <p className="min-w-0 flex-1 line-clamp-1 text-xs md:min-h-8 md:line-clamp-2">
                   {result.title || result.content}
@@ -110,7 +110,7 @@ export function SearchResults({
           <div className="flex justify-center py-1 md:hidden">
             <Button
               variant="link"
-              className="h-auto px-2 py-1 text-muted-foreground"
+              className="h-auto px-2 py-1 text-(--md-sys-color-on-surface-variant)"
               onClick={handleViewMore}
             >
               View {additionalResultsCount} more
@@ -121,7 +121,7 @@ export function SearchResults({
               <CardContent className="p-2">
                 <Button
                   variant="link"
-                  className="text-muted-foreground"
+                  className="text-(--md-sys-color-on-surface-variant)"
                   onClick={handleViewMore}
                 >
                   View {additionalResultsCount} more

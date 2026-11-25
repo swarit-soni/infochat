@@ -69,7 +69,7 @@ const UploadedFileListItem = React.memo(function UploadedFileListItem({
 
   return (
     <div className="relative w-20 shrink-0 flex flex-col items-center">
-      <div className="relative w-20 aspect-7/5 rounded-lg overflow-hidden shadow-sm border bg-muted/20 dark:bg-muted/10">
+      <div className="relative w-20 aspect-7/5 rounded-lg overflow-hidden shadow-sm border bg-(--md-sys-color-surface-container)/20 dark:bg-(--md-sys-color-surface-container)/10">
         {isImage && imageSrc ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -99,7 +99,7 @@ const UploadedFileListItem = React.memo(function UploadedFileListItem({
         </button>
       </div>
 
-      <div className="mt-2 text-xs text-center text-foreground truncate w-full">
+      <div className="mt-2 text-xs text-center text-(--md-sys-color-on-surface) truncate w-full">
         {filename}
       </div>
     </div>

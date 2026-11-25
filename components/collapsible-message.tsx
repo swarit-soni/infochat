@@ -69,11 +69,17 @@ export function CollapsibleMessage({
         <div
           className={cn(
             'flex-1 overflow-hidden min-w-0',
-            variant === 'default' && showBorder && 'rounded-lg border bg-card',
-            variant === 'default' && !showBorder && 'rounded-lg bg-card',
-            variant === 'process' && 'rounded-lg border bg-card',
-            variant === 'process-sub' && 'rounded-md border bg-card/50',
-            isOpen && !showBorder && 'bg-background'
+            variant === 'default' &&
+              showBorder &&
+              'rounded-lg border bg-(--md-sys-color-surface-container-low)',
+            variant === 'default' &&
+              !showBorder &&
+              'rounded-lg bg-(--md-sys-color-surface-container-low)',
+            variant === 'process' &&
+              'rounded-lg border bg-(--md-sys-color-surface-container-low)',
+            variant === 'process-sub' &&
+              'rounded-md border bg-(--md-sys-color-surface-container-low)/50',
+            isOpen && !showBorder && 'bg-(--md-sys-color-surface)'
           )}
         >
           <Collapsible
@@ -119,7 +125,7 @@ export function CollapsibleMessage({
                   <button
                     type="button"
                     className={cn(
-                      'rounded-md group cursor-pointer hover:bg-accent/50',
+                      'rounded-md group cursor-pointer hover:bg-(--md-sys-color-surface-container-high)/50',
                       variant === 'minimal' && 'p-0.5',
                       (variant === 'process' || variant === 'process-sub') &&
                         'p-0.5'
@@ -128,7 +134,7 @@ export function CollapsibleMessage({
                   >
                     <ChevronDown
                       className={cn(
-                        'text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180',
+                        'text-(--md-sys-color-on-surface-variant) transition-transform duration-200 group-data-[state=open]:rotate-180',
                         chevronSize === 'sm' ? 'h-3 w-3' : 'h-4 w-4'
                       )}
                     />
@@ -139,17 +145,17 @@ export function CollapsibleMessage({
                 <CollapsibleTrigger asChild>
                   <button
                     type="button"
-                    className="p-1 hover:bg-accent rounded-md transition-transform duration-200 group"
+                    className="p-1 hover:bg-(--md-sys-color-surface-container-high) rounded-md transition-transform duration-200 group"
                     aria-label={isOpen ? 'Collapse' : 'Expand'}
                   >
-                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                    <ChevronDown className="h-4 w-4 text-(--md-sys-color-on-surface-variant) transition-transform duration-200 group-data-[state=open]:rotate-180" />
                   </button>
                 </CollapsibleTrigger>
               )}
             </div>
             <CollapsibleContent className="data-[state=closed]:animate-collapse-up data-[state=open]:animate-collapse-down">
               {showSeparator && variant === 'default' && (
-                <Separator className="mb-2 border-border/50" />
+                <Separator className="mb-2 border-(--md-sys-color-outline-variant)/50" />
               )}
               <div
                 className={cn(

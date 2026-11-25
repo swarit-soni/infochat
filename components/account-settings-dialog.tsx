@@ -124,7 +124,7 @@ export function AccountSettingsDialog({
                   </Badge>
                 )}
               </div>
-              <div className="text-sm text-muted-foreground">
+              <div className="text-sm text-(--md-sys-color-on-surface-variant)">
                 <p className="truncate">{userName}</p>
                 <p className="truncate">{user.email}</p>
               </div>
@@ -136,7 +136,7 @@ export function AccountSettingsDialog({
           <section className="grid gap-3">
             <div className="grid gap-1">
               <h3 className="text-sm font-medium">Theme</h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-(--md-sys-color-on-surface-variant)">
                 Choose how Sera appears on this device.
               </p>
             </div>
@@ -168,10 +168,10 @@ export function AccountSettingsDialog({
 
               <section className="grid gap-3">
                 <div className="grid gap-1">
-                  <h3 className="text-sm font-medium text-destructive">
+                  <h3 className="text-sm font-medium text-(--md-sys-color-error)">
                     Delete account
                   </h3>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-(--md-sys-color-on-surface-variant)">
                     Permanently delete your account, chat history, and uploaded
                     files. This action cannot be undone.
                   </p>
@@ -214,7 +214,7 @@ export function AccountSettingsDialog({
                           event.preventDefault()
                           handleDeleteAccount()
                         }}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        className="bg-(--md-sys-color-error) text-(--md-sys-color-on-error) hover:bg-(--md-sys-color-error)/90"
                       >
                         {isDeleting ? <Spinner /> : 'Delete account'}
                       </AlertDialogAction>

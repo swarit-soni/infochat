@@ -22,11 +22,11 @@ export default async function Page({
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               {params?.error ? (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-(--md-sys-color-on-surface-variant)">
                   Code error: {params.error}
                 </p>
               ) : (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-(--md-sys-color-on-surface-variant)">
                   An unspecified error occurred.
                 </p>
               )}

@@ -714,7 +714,7 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
             </CardHeader>
             <CardContent className="space-y-3">
               {initialData.documents.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-(--md-sys-color-on-surface-variant)">
                   No documents ingested yet. Upload a circular or crawl an
                   official page above.
                 </p>
@@ -741,10 +741,10 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
                           <Badge variant="destructive">urgent</Badge>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground line-clamp-2">
+                      <p className="text-xs text-(--md-sys-color-on-surface-variant) line-clamp-2">
                         {doc.content}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-(--md-sys-color-on-surface-variant)">
                         Effective: {formatTimestamp(doc.effectiveDate)}
                         {doc.expiresAt
                           ? ` · Expires: ${formatTimestamp(doc.expiresAt)}`
@@ -902,7 +902,7 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
             </CardHeader>
             <CardContent className="space-y-3">
               {initialData.pendingDocuments.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-(--md-sys-color-on-surface-variant)">
                   No pending updates awaiting approval.
                 </p>
               ) : (
@@ -914,7 +914,7 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
                       <Badge variant="secondary">{doc.domain}</Badge>
                       <Badge variant="outline">{doc.authority}</Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+                    <p className="text-xs text-(--md-sys-color-on-surface-variant) whitespace-pre-wrap">
                       {doc.content}
                     </p>
                     <div className="flex gap-2">
@@ -1128,7 +1128,7 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
             </CardHeader>
             <CardContent className="space-y-3">
               {initialData.events.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-(--md-sys-color-on-surface-variant)">
                   No structured Eventum events published yet.
                 </p>
               ) : (
@@ -1168,13 +1168,13 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
                         </SelectContent>
                       </Select>
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-(--md-sys-color-on-surface-variant)">
                       {event.organizer} · Starts:{' '}
                       {formatTimestamp(event.startAt)}
                       {event.venue ? ` · Venue: ${event.venue}` : ''}
                     </p>
                     {event.registrationDeadline && (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-(--md-sys-color-on-surface-variant)">
                         Reg Deadline:{' '}
                         {formatTimestamp(event.registrationDeadline)}
                       </p>
@@ -1350,10 +1350,10 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
                       Edit
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground break-all">
+                  <p className="text-xs text-(--md-sys-color-on-surface-variant) break-all">
                     {portal.url}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-(--md-sys-color-on-surface-variant)">
                     {portal.capabilities}
                   </p>
                 </div>
@@ -1377,7 +1377,7 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
           </CardHeader>
           <CardContent className="space-y-3">
             {initialData.unansweredQueries.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-(--md-sys-color-on-surface-variant)">
                 No unanswered queries or citation flags logged yet.
               </p>
             ) : (
@@ -1402,10 +1402,10 @@ export function MentorPortalClient({ initialData }: MentorPortalClientProps) {
                         {entry.status}
                       </Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-(--md-sys-color-on-surface-variant)">
                       Reason: {entry.reason}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-(--md-sys-color-on-surface-variant)">
                       Logged: {formatTimestamp(entry.createdAt)}
                       {entry.cohort ? ` · Cohort: ${entry.cohort}` : ''}
                     </p>

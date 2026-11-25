@@ -74,7 +74,7 @@ export function DynamicToolDisplay({ part }: DynamicToolDisplayProps) {
   return (
     <div className="dynamic-tool-container rounded-lg border p-4 my-2">
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-sm font-medium text-muted-foreground">
+        <span className="text-sm font-medium text-(--md-sys-color-on-surface-variant)">
           {toolType}
         </span>
         <span className="text-sm font-semibold">{displayName}</span>
@@ -86,8 +86,10 @@ export function DynamicToolDisplay({ part }: DynamicToolDisplayProps) {
         part.state === 'output-available' ||
         part.state === 'output-error') && (
         <div className="mb-2">
-          <div className="text-xs text-muted-foreground mb-1">Input:</div>
-          <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-40">
+          <div className="text-xs text-(--md-sys-color-on-surface-variant) mb-1">
+            Input:
+          </div>
+          <pre className="text-xs bg-(--md-sys-color-surface-container) p-2 rounded overflow-auto max-h-40">
             <code>{JSON.stringify(part.input, null, 2)}</code>
           </pre>
         </div>
@@ -96,8 +98,10 @@ export function DynamicToolDisplay({ part }: DynamicToolDisplayProps) {
       {/* Output display */}
       {part.state === 'output-available' && (
         <div className="mb-2">
-          <div className="text-xs text-muted-foreground mb-1">Output:</div>
-          <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-40">
+          <div className="text-xs text-(--md-sys-color-on-surface-variant) mb-1">
+            Output:
+          </div>
+          <pre className="text-xs bg-(--md-sys-color-surface-container) p-2 rounded overflow-auto max-h-40">
             <code>{JSON.stringify(part.output, null, 2)}</code>
           </pre>
         </div>
@@ -106,8 +110,8 @@ export function DynamicToolDisplay({ part }: DynamicToolDisplayProps) {
       {/* Error display */}
       {part.state === 'output-error' && (
         <div className="mb-2">
-          <div className="text-xs text-destructive mb-1">Error:</div>
-          <div className="text-xs bg-destructive/10 text-destructive p-2 rounded">
+          <div className="text-xs text-(--md-sys-color-error) mb-1">Error:</div>
+          <div className="text-xs bg-(--md-sys-color-error)/10 text-(--md-sys-color-error) p-2 rounded">
             {errorMessage}
           </div>
         </div>
@@ -128,7 +132,7 @@ export function DynamicToolDisplay({ part }: DynamicToolDisplayProps) {
                     : 'bg-gray-300'
           }`}
         />
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-(--md-sys-color-on-surface-variant)">
           {part.state === 'input-streaming'
             ? 'Streaming...'
             : part.state === 'input-available'

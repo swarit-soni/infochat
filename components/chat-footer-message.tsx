@@ -28,13 +28,13 @@ function FooterContent() {
   return (
     <div className="flex items-center gap-2 select-none">
       {tip ? (
-        <span className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground/60">
+        <span className="flex items-center gap-1.5 font-mono text-xs text-(--md-sys-color-on-surface-variant)/60">
           <span>Tips:</span>
           <span className="inline-flex items-center gap-0.5">
             {tip.keys.map((key, i) => (
               <kbd
                 key={i}
-                className="inline-flex items-center justify-center rounded border border-border/50 bg-muted/50 px-1 py-0.5 text-[10px] leading-none text-muted-foreground/70"
+                className="inline-flex items-center justify-center rounded border border-(--md-sys-color-outline-variant)/50 bg-(--md-sys-color-surface-container)/50 px-1 py-0.5 text-[10px] leading-none text-(--md-sys-color-on-surface-variant)/70"
               >
                 {key}
               </kbd>
@@ -43,7 +43,7 @@ function FooterContent() {
           <span>{displayText}</span>
         </span>
       ) : (
-        <span className="font-mono text-xs text-muted-foreground/60">
+        <span className="font-mono text-xs text-(--md-sys-color-on-surface-variant)/60">
           {displayText}
         </span>
       )}

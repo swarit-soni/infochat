@@ -22,7 +22,7 @@ export const Button: ComponentFn<CatalogType, 'Button'> = ({ props, on }) => {
   // wrappable text, zero padding.
   const linkOverride =
     variant === 'link'
-      ? 'h-auto w-fit justify-start whitespace-normal text-left px-0 py-0.5 font-semibold text-accent-foreground/50 hover:text-accent-foreground/70'
+      ? 'h-auto w-fit justify-start whitespace-normal text-left px-0 py-0.5 font-semibold text-(--md-sys-color-on-surface)/50 hover:text-(--md-sys-color-on-surface)/70'
       : ''
 
   return (

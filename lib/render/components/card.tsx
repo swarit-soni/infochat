@@ -43,10 +43,10 @@ export const Card: ComponentFn<CatalogType, 'Card'> = ({ props, children }) => {
               : chatIdFromPath(window.location.pathname)
         })
       }
-      className={`${cardClass} transition-colors hover:bg-muted/50`}
+      className={`${cardClass} transition-colors hover:bg-(--md-sys-color-surface-container)/50`}
     >
       {children}
-      <span className="mt-auto flex min-w-0 items-center gap-1.5 pt-1 text-xs text-muted-foreground">
+      <span className="mt-auto flex min-w-0 items-center gap-1.5 pt-1 text-xs text-(--md-sys-color-on-surface-variant)">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={faviconUrl(href)}

@@ -52,7 +52,7 @@ export function ResetMemberPasswordForm({
         <Label htmlFor="member">Member</Label>
         <select
           id="member"
-          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+          className="flex h-9 w-full rounded-md border border-(--md-sys-color-outline) bg-transparent px-3 py-1 text-sm shadow-xs"
           value={userId}
           onChange={e => setUserId(e.target.value)}
         >

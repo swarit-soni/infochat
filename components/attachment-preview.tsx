@@ -27,11 +27,11 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({
         return (
           <div key={index} className="max-w-xs break-words">
             {!url ? (
-              <div className="rounded-md border px-3 py-2 text-xs text-muted-foreground">
+              <div className="rounded-md border px-3 py-2 text-xs text-(--md-sys-color-on-surface-variant)">
                 {att.name ?? 'File'} unavailable
               </div>
             ) : isImage ? (
-              <div className="flex size-16 items-center justify-center overflow-hidden rounded-md border bg-muted/20">
+              <div className="flex size-16 items-center justify-center overflow-hidden rounded-md border bg-(--md-sys-color-surface-container)/20">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={url}

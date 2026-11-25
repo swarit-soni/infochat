@@ -24,7 +24,7 @@ export function PastedContentCard({
     <div>
       <button
         type="button"
-        className="flex w-fit items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+        className="flex w-fit items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-(--md-sys-color-on-surface-variant) hover:bg-(--md-sys-color-surface-container) hover:text-(--md-sys-color-on-surface)"
         onClick={() => setOpen(o => !o)}
       >
         <FileText className="size-3.5 shrink-0" />
@@ -36,7 +36,7 @@ export function PastedContentCard({
         )}
       </button>
       {open && (
-        <p className="mt-1.5 max-h-60 overflow-auto whitespace-pre-wrap break-words text-xs text-muted-foreground/80">
+        <p className="mt-1.5 max-h-60 overflow-auto whitespace-pre-wrap break-words text-xs text-(--md-sys-color-on-surface-variant)/80">
           {text}
         </p>
       )}
@@ -56,7 +56,7 @@ export function UrlChip({ url }: { url: string }) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex w-fit items-center gap-1.5 rounded-full border border-input bg-background py-1 pl-2 pr-2.5 text-xs text-muted-foreground hover:text-foreground"
+      className="inline-flex w-fit items-center gap-1.5 rounded-full border border-(--md-sys-color-outline) bg-(--md-sys-color-surface) py-1 pl-2 pr-2.5 text-xs text-(--md-sys-color-on-surface-variant) hover:text-(--md-sys-color-on-surface)"
     >
       {favicon && (
         /* eslint-disable-next-line @next/next/no-img-element */

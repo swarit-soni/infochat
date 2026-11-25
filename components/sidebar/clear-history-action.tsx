@@ -95,7 +95,7 @@ export function ClearHistoryAction({ empty }: ClearHistoryActionProps) {
           <AlertDialogTrigger asChild>
             <DropdownMenuItem
               disabled={empty || isPending}
-              className="gap-2 text-destructive focus:text-destructive"
+              className="gap-2 text-(--md-sys-color-error) focus:text-(--md-sys-color-error)"
               onSelect={event => {
                 event.preventDefault()
               }}

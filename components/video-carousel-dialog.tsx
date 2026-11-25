@@ -85,7 +85,7 @@ export function VideoCarouselDialog({
               setCurrent((nextApi?.selectedScrollSnap() ?? initialIndex) + 1)
               setApi(nextApi)
             }}
-            className="w-full bg-muted max-h-[60vh]"
+            className="w-full bg-(--md-sys-color-surface-container) max-h-[60vh]"
             opts={{
               startIndex: initialIndex // Set initial slide
             }}
@@ -121,7 +121,7 @@ export function VideoCarouselDialog({
             </div>
           </Carousel>
           <div className="py-2">
-            <div className="text-center text-sm text-muted-foreground">
+            <div className="text-center text-sm text-(--md-sys-color-on-surface-variant)">
               {current} of {videos.length}
             </div>
           </div>

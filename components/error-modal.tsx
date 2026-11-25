@@ -105,17 +105,17 @@ export function ErrorModal({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
+          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-(--md-sys-color-surface-container)">
             {getErrorIcon()}
           </div>
           <DialogTitle className="text-center text-xl font-semibold">
             {getErrorTitle()}
           </DialogTitle>
-          <DialogDescription className="text-center text-muted-foreground">
+          <DialogDescription className="text-center text-(--md-sys-color-on-surface-variant)">
             {getErrorDescription()}
           </DialogDescription>
           {getErrorDetails() && (
-            <div className="mt-4 rounded-lg bg-muted p-3 text-sm text-muted-foreground">
+            <div className="mt-4 rounded-lg bg-(--md-sys-color-surface-container) p-3 text-sm text-(--md-sys-color-on-surface-variant)">
               {getErrorDetails()}
             </div>
           )}

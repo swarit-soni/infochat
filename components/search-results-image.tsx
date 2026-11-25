@@ -260,7 +260,11 @@ export const SearchResultsImageSection: React.FC<
   })
 
   if (status === 'empty') {
-    return <div className="text-muted-foreground">No images found</div>
+    return (
+      <div className="text-(--md-sys-color-on-surface-variant)">
+        No images found
+      </div>
+    )
   }
 
   const handleSelect = (index: number) => {
@@ -284,7 +288,7 @@ export const SearchResultsImageSection: React.FC<
           return (
             <div key={image.id} className="aspect-video">
               <div
-                className={`h-full w-full bg-muted animate-pulse shadow-sm ${cornerClasses}`}
+                className={`h-full w-full bg-(--md-sys-color-surface-container) animate-pulse shadow-sm ${cornerClasses}`}
               />
             </div>
           )

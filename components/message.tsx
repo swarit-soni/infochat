@@ -56,7 +56,7 @@ export function MarkdownMessage({
     <CitationProvider citationMaps={citationMaps}>
       <div
         className={cn(
-          'prose-sm prose-neutral prose-a:text-accent-foreground/50',
+          'prose-sm prose-neutral prose-a:text-(--md-sys-color-on-surface)/50',
           className
         )}
       >

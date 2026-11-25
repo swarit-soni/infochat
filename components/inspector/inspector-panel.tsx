@@ -62,8 +62,8 @@ export function InspectorPanel() {
 
   return (
     <TooltipProvider>
-      <div className="h-full flex flex-col overflow-hidden bg-muted md:px-4 md:pt-14 md:pb-4">
-        <div className="flex flex-col h-full bg-background rounded-xl md:border overflow-hidden">
+      <div className="h-full flex flex-col overflow-hidden bg-(--md-sys-color-surface-container) md:px-4 md:pt-14 md:pb-4">
+        <div className="flex flex-col h-full bg-(--md-sys-color-surface) rounded-xl md:border overflow-hidden">
           {part.type === 'draft' ? (
             // The draft panel brings its own header and footer.
             <DraftPanel />
@@ -88,7 +88,7 @@ export function InspectorPanel() {
                   <X className="size-4" />
                 </TooltipButton>
               </div>
-              <Separator className="my-1 bg-border/50" />
+              <Separator className="my-1 bg-(--md-sys-color-outline-variant)/50" />
               <div data-vaul-no-drag className="flex-1 overflow-y-auto p-4">
                 <ArtifactContent part={part} />
               </div>

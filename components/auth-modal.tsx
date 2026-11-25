@@ -22,13 +22,13 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader className="items-center text-center">
-          <div className="mx-auto mb-6 flex size-20 items-center justify-center rounded-full bg-muted">
+          <div className="mx-auto mb-6 flex size-20 items-center justify-center rounded-full bg-(--md-sys-color-surface-container)">
             <IconLogo className="size-14" />
           </div>
           <DialogTitle className="text-xl font-semibold">
             Continue with Sera
           </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
+          <DialogDescription className="text-(--md-sys-color-on-surface-variant)">
             Sign in with your Google account to continue.
           </DialogDescription>
         </DialogHeader>
@@ -36,11 +36,11 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
           <Button asChild className="w-full" size="lg">
             <Link href="/auth/login">Sign In with Google</Link>
           </Button>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-(--md-sys-color-on-surface-variant)">
             Are you a mentor?{' '}
             <Link
               href="/auth/mentor"
-              className="underline underline-offset-4 hover:text-foreground"
+              className="underline underline-offset-4 hover:text-(--md-sys-color-on-surface)"
             >
               Mentor login
             </Link>

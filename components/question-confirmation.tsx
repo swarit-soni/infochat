@@ -152,7 +152,7 @@ export function QuestionConfirmation({
 
     return (
       <Card className="p-3 md:p-4 w-full flex flex-col justify-between items-center gap-2">
-        <CardTitle className="text-base font-medium text-muted-foreground w-full">
+        <CardTitle className="text-base font-medium text-(--md-sys-color-on-surface-variant) w-full">
           {question}
         </CardTitle>
         <div className="flex items-center justify-start gap-1 w-full">
@@ -161,7 +161,7 @@ export function QuestionConfirmation({
           ) : (
             <Check size={16} className="text-green-500 w-4 h-4" />
           )}
-          <h5 className="text-muted-foreground text-xs truncate">
+          <h5 className="text-(--md-sys-color-on-surface-variant) text-xs truncate">
             {updatedQuery()}
           </h5>
         </div>
@@ -200,7 +200,10 @@ export function QuestionConfirmation({
 
           {allowsInput && (
             <div className="mb-6 flex flex-col space-y-2 text-sm">
-              <label className="text-muted-foreground" htmlFor="query">
+              <label
+                className="text-(--md-sys-color-on-surface-variant)"
+                htmlFor="query"
+              >
                 {inputLabel}
               </label>
               <Input

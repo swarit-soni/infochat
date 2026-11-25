@@ -139,7 +139,7 @@ export function LoginForm({
         <CardContent>
           <div className="flex flex-col gap-4">
             {isMentor && (
-              <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
+              <div className="rounded-lg border bg-(--md-sys-color-surface-container)/40 p-3 text-xs text-(--md-sys-color-on-surface-variant)">
                 <div className="flex items-center justify-between gap-2">
                   <span>{expectedDomain}</span>
                   <Badge variant="secondary">{roleLabel}</Badge>
@@ -150,7 +150,7 @@ export function LoginForm({
             {error && (
               <p
                 role="alert"
-                className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+                className="rounded-md border border-(--md-sys-color-error)/30 bg-(--md-sys-color-error)/10 p-3 text-sm text-(--md-sys-color-error)"
               >
                 {error}
               </p>
@@ -168,19 +168,19 @@ export function LoginForm({
                 {isLoading ? 'Redirecting to Google...' : 'Sign In with Google'}
               </Button>
             ) : (
-              <p className="text-center text-sm text-muted-foreground">
+              <p className="text-center text-sm text-(--md-sys-color-on-surface-variant)">
                 Google sign-in is unavailable in the current configuration.
               </p>
             )}
           </div>
         </CardContent>
       </Card>
-      <div className="flex flex-col items-center gap-2 text-center text-xs text-muted-foreground">
+      <div className="flex flex-col items-center gap-2 text-center text-xs text-(--md-sys-color-on-surface-variant)">
         <p>
           {isMentor ? 'Not a mentor? ' : 'Are you a mentor? '}
           <Link
             href={alternateHref}
-            className="underline underline-offset-4 hover:text-foreground"
+            className="underline underline-offset-4 hover:text-(--md-sys-color-on-surface)"
           >
             {isMentor ? 'Regular login' : 'Mentor login'}
           </Link>

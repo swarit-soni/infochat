@@ -229,7 +229,7 @@ export const UserTextSection: React.FC<UserTextSectionProps> = ({
               onCompositionStart={handleCompositionStart}
               onCompositionEnd={handleCompositionEnd}
               onKeyDown={handleTextareaKeyDown}
-              className="resize-none flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
+              className="resize-none flex w-full rounded-md border border-(--md-sys-color-outline) bg-(--md-sys-color-surface) px-3 py-2 text-sm placeholder:text-(--md-sys-color-on-surface-variant) focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
               minRows={2}
               maxRows={10}
             />
@@ -257,7 +257,7 @@ export const UserTextSection: React.FC<UserTextSectionProps> = ({
             {(isClamped || isExpanded) && (
               <button
                 type="button"
-                className="text-xs text-muted-foreground hover:text-foreground mt-1"
+                className="text-xs text-(--md-sys-color-on-surface-variant) hover:text-(--md-sys-color-on-surface) mt-1"
                 onClick={() => setIsExpanded(prev => !prev)}
               >
                 {isExpanded ? (
@@ -274,7 +274,7 @@ export const UserTextSection: React.FC<UserTextSectionProps> = ({
             {attachments}
             <div
               className={cn(
-                'absolute -top-1 -right-1 flex items-center gap-0.5 p-0.5 transition-opacity bg-background rounded-full shadow-sm border',
+                'absolute -top-1 -right-1 flex items-center gap-0.5 p-0.5 transition-opacity bg-(--md-sys-color-surface) rounded-full shadow-sm border',
                 'opacity-0',
                 'max-md:group-focus-within:opacity-100',
                 'md:group-hover:opacity-100'

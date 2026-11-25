@@ -7,7 +7,7 @@ import { type CatalogType, iconMap } from './shared'
 export const Heading: ComponentFn<CatalogType, 'Heading'> = ({ props }) => {
   const Icon = props.icon ? iconMap[props.icon] : null
   return (
-    <div className="flex items-center gap-2 text-lg font-bold text-foreground">
+    <div className="flex items-center gap-2 text-lg font-bold text-(--md-sys-color-on-surface)">
       {Icon && <Icon className="size-5" />}
       {props.title}
     </div>

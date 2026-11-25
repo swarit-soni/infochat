@@ -12,8 +12,8 @@ export const Text: ComponentFn<CatalogType, 'Text'> = ({ props }) => {
     <span
       className={cn(
         tone === 'muted'
-          ? 'text-xs text-muted-foreground line-clamp-3'
-          : 'text-sm leading-snug text-foreground line-clamp-2',
+          ? 'text-xs text-(--md-sys-color-on-surface-variant) line-clamp-3'
+          : 'text-sm leading-snug text-(--md-sys-color-on-surface) line-clamp-2',
         weight === 'semibold' && 'font-medium'
       )}
     >

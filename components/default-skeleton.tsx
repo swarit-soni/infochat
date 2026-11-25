@@ -38,19 +38,19 @@ export function SearchSkeleton() {
       <div className="flex flex-col gap-1 pb-0.5 md:-m-1 md:flex-row md:flex-wrap md:gap-0">
         {[...Array(3)].map((_, index) => (
           <div className="min-w-0 md:w-1/4 md:p-1" key={index}>
-            <div className="rounded-md border bg-card p-2">
+            <div className="rounded-md border bg-(--md-sys-color-surface-container-low) p-2">
               <div className="flex min-w-0 items-center justify-between gap-2 md:flex-col md:items-stretch">
                 <div className="min-w-0 flex-1 md:min-h-8 md:space-y-1">
                   <Skeleton className="h-3.5 w-full" />
                   <Skeleton className="hidden h-3 w-2/3 md:block" />
                 </div>
-                <div className="flex max-w-[42%] min-w-0 shrink-0 items-center gap-1 rounded-sm bg-muted/50 px-1 py-0.5 md:hidden">
-                  <Skeleton className="size-4 shrink-0 rounded-full bg-muted-foreground/20" />
-                  <Skeleton className="h-3 min-w-8 flex-1 bg-muted-foreground/20" />
+                <div className="flex max-w-[42%] min-w-0 shrink-0 items-center gap-1 rounded-sm bg-(--md-sys-color-surface-container)/50 px-1 py-0.5 md:hidden">
+                  <Skeleton className="size-4 shrink-0 rounded-full bg-(--md-sys-color-on-surface-variant)/20" />
+                  <Skeleton className="h-3 min-w-8 flex-1 bg-(--md-sys-color-on-surface-variant)/20" />
                 </div>
-                <div className="hidden min-w-0 items-center gap-1 rounded-sm bg-muted/50 px-1 py-0.5 md:mt-2 md:flex">
-                  <Skeleton className="size-4 shrink-0 rounded-full bg-muted-foreground/20" />
-                  <Skeleton className="h-3 w-16 bg-muted-foreground/20" />
+                <div className="hidden min-w-0 items-center gap-1 rounded-sm bg-(--md-sys-color-surface-container)/50 px-1 py-0.5 md:mt-2 md:flex">
+                  <Skeleton className="size-4 shrink-0 rounded-full bg-(--md-sys-color-on-surface-variant)/20" />
+                  <Skeleton className="h-3 w-16 bg-(--md-sys-color-on-surface-variant)/20" />
                 </div>
               </div>
             </div>
@@ -60,7 +60,7 @@ export function SearchSkeleton() {
           <Skeleton className="h-5 w-24" />
         </div>
         <div className="hidden md:block md:w-1/4 md:p-1">
-          <div className="flex h-full min-h-[68px] items-center justify-center rounded-md border bg-card p-2">
+          <div className="flex h-full min-h-[68px] items-center justify-center rounded-md border bg-(--md-sys-color-surface-container-low) p-2">
             <Skeleton className="h-4 w-24" />
           </div>
         </div>

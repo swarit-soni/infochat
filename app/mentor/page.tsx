@@ -31,7 +31,7 @@ export default async function MentorPortalPage() {
               <h1 className="text-2xl font-semibold">Mentor Data Portal</h1>
               <Badge variant="secondary">Mentor</Badge>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-(--md-sys-color-on-surface-variant)">
               Signed in as {user.email}. Curate official Kalvium X JECRC
               circulars, approve urgent updates, manage Eventum events, and
               review knowledge gaps.

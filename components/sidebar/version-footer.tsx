@@ -54,7 +54,7 @@ export async function VersionFooter({ user }: { user?: AppUser | null }) {
   }
 
   return (
-    <div className="text-xs text-muted-foreground text-center space-y-0.5">
+    <div className="text-xs text-(--md-sys-color-on-surface-variant) text-center space-y-0.5">
       <div>
         <a
           href={`https://github.com/${repo}/releases`}
@@ -71,7 +71,7 @@ export async function VersionFooter({ user }: { user?: AppUser | null }) {
             href={update.releaseUrl}
             target="_blank"
             rel="noopener"
-            className="text-destructive underline"
+            className="text-(--md-sys-color-error) underline"
           >
             Update: {update.latestVersion}
           </a>
