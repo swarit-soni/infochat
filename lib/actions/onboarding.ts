@@ -1,22 +1,25 @@
 'use server'
 
+import { getCollegeIdentityFromEmail } from '@/lib/auth/domain'
 import { getCurrentUser } from '@/lib/auth/get-current-user'
+import { isOpenStudentCollege } from '@/lib/colleges/access'
 import {
   getCollege,
   getPartnerCampuses,
-  NO_CAMPUS
+  NO_CAMPUS,
+  NOT_ENROLLED_COLLEGE
 } from '@/lib/colleges/registry'
 import { getCollegeDirectory } from '@/lib/colleges/store'
 import { setUserProfileCollege } from '@/lib/db/actions'
 
-/** Answer value for students who are not enrolled at any listed college. */
-const NOT_ENROLLED = 'none'
-
 /**
  * Save the student's answers to "Which college are you enrolled in?" and,
- * for colleges with partner campuses, "Which campus are you on?". A college
- * verified from the student's email domain cannot be changed here; only the
- * campus is saved for it.
+ * for colleges with partner campuses, "Which campus are you on?".
+ *
+ * Saving a real college requires an authentic email domain matching that
+ * college; unverified accounts may only choose the open demo college or
+ * "Not enrolled yet". A college verified from the student's email domain
+ * cannot be switched to another real college here.
  */
 export async function saveEnrolledCollege(
   answer: string,
@@ -29,13 +32,33 @@ export async function saveEnrolledCollege(
   const email = user.email
 
   const directory = await getCollegeDirectory()
-  const college = user.collegeVerified
-    ? user.college
-    : answer === NOT_ENROLLED
-      ? null
-      : (getCollege(directory, answer)?.slug ?? undefined)
-  if (college === undefined) {
-    return { success: false, error: 'Please choose an option.' }
+  const emailIdentity = getCollegeIdentityFromEmail(email, directory)
+  const verifiedCollegeSlug =
+    emailIdentity?.college && getCollege(directory, emailIdentity.college)
+      ? emailIdentity.college
+      : null
+
+  let college: string | null
+  if (user.collegeVerified) {
+    college = user.college ?? null
+  } else if (answer === NOT_ENROLLED_COLLEGE) {
+    college = null
+  } else {
+    const target = getCollege(directory, answer)
+    if (!target) {
+      return { success: false, error: 'Please choose an option.' }
+    }
+    if (isOpenStudentCollege(target) || target.slug === verifiedCollegeSlug) {
+      college = target.slug
+    } else {
+      return {
+        success: false,
+        error:
+          target.studentDomains.length > 0
+            ? `Sign in with your ${target.shortName} Google account (${target.studentDomains.map(domain => `@${domain}`).join(' / ')}) to enroll at ${target.shortName}.`
+            : `Student sign-in for ${target.shortName} is not set up yet.`
+      }
+    }
   }
 
   const campuses = getPartnerCampuses(directory, college)

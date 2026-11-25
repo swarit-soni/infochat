@@ -1,7 +1,9 @@
 import { redirect } from 'next/navigation'
 
+import { getCollegeIdentityFromEmail } from '@/lib/auth/domain'
 import { getCurrentUser } from '@/lib/auth/get-current-user'
 import { safeRedirectPath } from '@/lib/auth/redirect-target'
+import { isOpenStudentCollege } from '@/lib/colleges/access'
 import { getPartnerCampuses } from '@/lib/colleges/registry'
 import { getCollegeDirectory } from '@/lib/colleges/store'
 
@@ -39,15 +41,21 @@ export default async function EnrolledCollegePage(props: {
   }
 
   const directory = await getCollegeDirectory()
-  const colleges = directory.list.map(college => ({
-    value: college.slug,
-    label: college.name,
-    description: college.location,
-    campuses: getPartnerCampuses(directory, college.slug).map(campus => ({
-      value: campus.slug,
-      label: campus.name
+  const verifiedSlug =
+    getCollegeIdentityFromEmail(user.email, directory)?.college ?? null
+  const colleges = directory.list
+    .filter(
+      college => isOpenStudentCollege(college) || college.slug === verifiedSlug
+    )
+    .map(college => ({
+      value: college.slug,
+      label: college.name,
+      description: college.location,
+      campuses: getPartnerCampuses(directory, college.slug).map(campus => ({
+        value: campus.slug,
+        label: campus.name
+      }))
     }))
-  }))
   // A college verified from the email domain is fixed; only ask the campus.
   const lockedCollege = user.collegeVerified ? user.college : null
   if (
@@ -58,29 +66,31 @@ export default async function EnrolledCollegePage(props: {
   }
 
   return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="flex flex-col items-center gap-4 text-2xl">
-            <IconLogo className="size-12" />
-            {lockedCollege
-              ? `Which ${user.collegeName ?? 'college'} campus are you on?`
-              : 'Which college are you enrolled in?'}
-          </CardTitle>
-          <CardDescription>
-            Sera answers questions about fees, exams, notices and campus life
-            from your college&apos;s official sources.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <EnrolledCollegeForm
-            next={destination}
-            colleges={colleges}
-            lockedCollege={lockedCollege}
-            initialCampus={user.campus}
-          />
-        </CardContent>
-      </Card>
+    <div className="h-full w-full overflow-y-auto">
+      <div className="mx-auto flex min-h-full w-full max-w-md items-center justify-center p-6 md:p-10">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="flex flex-col items-center gap-4 text-2xl">
+              <IconLogo className="size-12" />
+              {lockedCollege
+                ? `Which ${user.collegeName ?? 'college'} campus are you on?`
+                : 'Which college are you enrolled in?'}
+            </CardTitle>
+            <CardDescription>
+              Sera answers questions about fees, exams, notices and campus life
+              from your college&apos;s official sources.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EnrolledCollegeForm
+              next={destination}
+              colleges={colleges}
+              lockedCollege={lockedCollege}
+              initialCampus={user.campus}
+            />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

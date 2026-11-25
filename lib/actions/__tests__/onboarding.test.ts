@@ -30,16 +30,16 @@ describe('saveEnrolledCollege', () => {
     expect(setUserProfileCollege).not.toHaveBeenCalled()
   })
 
-  it('saves the chosen college, or null for students not enrolled anywhere', async () => {
+  it('allows unverified accounts to save sera-demo or Not enrolled yet, and blocks real colleges', async () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'u1',
       email: 'someone@gmail.com'
     })
 
-    expect(await saveEnrolledCollege('bkbirla')).toEqual({ success: true })
+    expect(await saveEnrolledCollege('sera-demo')).toEqual({ success: true })
     expect(setUserProfileCollege).toHaveBeenLastCalledWith(
       expect.objectContaining({ id: 'u1' }),
-      'bkbirla',
+      'sera-demo',
       null
     )
 
@@ -49,6 +49,20 @@ describe('saveEnrolledCollege', () => {
       null,
       null
     )
+
+    vi.mocked(setUserProfileCollege).mockClear()
+    expect(await saveEnrolledCollege('bkbirla')).toEqual({
+      success: false,
+      error:
+        'Sign in with your B.K. Birla College Google account (@bkbck.edu.in) to enroll at B.K. Birla College.'
+    })
+    expect(await saveEnrolledCollege('kalvium', 'jecrc')).toMatchObject({
+      success: false
+    })
+    expect(await saveEnrolledCollege('iitm')).toMatchObject({
+      success: false
+    })
+    expect(setUserProfileCollege).not.toHaveBeenCalled()
   })
 
   it('rejects unknown answers', async () => {
@@ -62,11 +76,13 @@ describe('saveEnrolledCollege', () => {
     expect(setUserProfileCollege).not.toHaveBeenCalled()
   })
 
-  it('asks Kalvium students for their partner campus', async () => {
+  it('requires and validates partner campus for Kalvium students', async () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'u1',
-      email: 'someone@gmail.com'
-    })
+      email: 'student@kalvium.community',
+      college: 'kalvium',
+      collegeVerified: true
+    } as never)
     expect(await saveEnrolledCollege('kalvium')).toMatchObject({
       success: false,
       error: 'Please choose your campus.'
@@ -100,6 +116,29 @@ describe('saveEnrolledCollege', () => {
       expect.objectContaining({ id: 'u2' }),
       'kalvium',
       'none'
+    )
+  })
+
+  it('lets a verified student temporarily on sera-demo switch back to their verified college, not another college', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      id: 'u3',
+      email: 'student@kalvium.community',
+      college: 'sera-demo',
+      collegeVerified: false
+    } as never)
+
+    expect(await saveEnrolledCollege('iitm')).toMatchObject({
+      success: false
+    })
+    expect(setUserProfileCollege).not.toHaveBeenCalled()
+
+    expect(await saveEnrolledCollege('kalvium', 'jecrc')).toEqual({
+      success: true
+    })
+    expect(setUserProfileCollege).toHaveBeenLastCalledWith(
+      expect.objectContaining({ id: 'u3' }),
+      'kalvium',
+      'jecrc'
     )
   })
 })

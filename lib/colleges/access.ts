@@ -1,4 +1,9 @@
-import type { College, CollegeRole, CollegeSlug } from './registry'
+import {
+  type College,
+  type CollegeRole,
+  type CollegeSlug,
+  DEMO_COLLEGE_SLUG
+} from './registry'
 
 type Env = Record<string, string | undefined>
 
@@ -74,6 +79,28 @@ export function isCollegeRoleEnabled(
   return role === 'mentor'
     ? college.mentorDomains.length > 0
     : college.studentDomains.length > 0
+}
+
+/**
+ * Whether students may enroll in this college without an email-domain match
+ * (`sera-demo` is open for live demonstrations).
+ */
+export function isOpenStudentCollege(
+  college: College | CollegeSlug | null | undefined
+): boolean {
+  if (!college) return false
+  const slug = typeof college === 'string' ? college : college.slug
+  return slug === DEMO_COLLEGE_SLUG
+}
+
+/**
+ * Whether students can choose this college during sign-in (either it is an
+ * open demo college or it has authentic student domains configured).
+ */
+export function isStudentEnrollmentEnabled(college: College): boolean {
+  return (
+    isOpenStudentCollege(college) || isCollegeRoleEnabled(college, 'student')
+  )
 }
 
 /**

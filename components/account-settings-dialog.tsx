@@ -146,21 +146,22 @@ export function AccountSettingsDialog({
                 </div>
                 {/* A verified college can't change, but its students can
                     still change their partner campus. */}
-                {user.userType !== 'mentor' && (
-                  <Button
-                    asChild
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0"
-                  >
-                    <Link
-                      href="/onboarding/college?change=1"
-                      onClick={() => onOpenChange(false)}
+                {user.userType !== 'mentor' &&
+                  (!user.collegeVerified || user.campus !== null) && (
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0"
                     >
-                      Change
-                    </Link>
-                  </Button>
-                )}
+                      <Link
+                        href="/onboarding/college?change=1"
+                        onClick={() => onOpenChange(false)}
+                      >
+                        Change
+                      </Link>
+                    </Button>
+                  )}
               </div>
             )}
           </section>

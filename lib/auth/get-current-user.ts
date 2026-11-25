@@ -2,6 +2,7 @@ import { cache } from 'react'
 
 import { getAuthProvider, isAnonymousMode } from '@/lib/auth/provider'
 import {
+  DEMO_COLLEGE_SLUG,
   getCollege,
   getPartnerCampuses,
   NO_CAMPUS
@@ -43,12 +44,15 @@ export async function getCurrentUser(): Promise<AppUser | null> {
     getProfileCollege(user.id)
   ])
 
-  // A college verified from the email domain is authoritative; otherwise the
-  // student's answer, as long as that college still exists on Sera.
-  const collegeVerified = Boolean(getCollege(directory, user.college))
-  const college = collegeVerified
-    ? user.college!
-    : (getCollege(directory, profile.college)?.slug ?? null)
+  // A college verified from the email domain is authoritative. Only the open
+  // demo college can be stored without a matching college email domain.
+  const verifiedCollege = getCollege(directory, user.college)?.slug ?? null
+  const storedDemo =
+    user.userType !== 'mentor' &&
+    profile.college === DEMO_COLLEGE_SLUG &&
+    Boolean(getCollege(directory, DEMO_COLLEGE_SLUG))
+  const college = storedDemo ? DEMO_COLLEGE_SLUG : verifiedCollege
+  const collegeVerified = !storedDemo && Boolean(verifiedCollege)
   const campuses = getPartnerCampuses(directory, college)
   const campus =
     profile.campus === NO_CAMPUS ||
