@@ -10,6 +10,7 @@ import { type Model } from '@/lib/types/models'
 
 import { defaultCampusScope } from '../colleges/defaults'
 import type { CampusScope } from '../colleges/registry'
+import { hasStudentPortalIntegration } from '../student-portal/service'
 import { createCampusRagTools } from '../tools/campus-rag'
 import { createDraftTools } from '../tools/draft'
 import { createFetchTool } from '../tools/fetch'
@@ -162,24 +163,26 @@ export function createResearcher({
     let activeToolsList: (keyof ResearcherTools)[] = []
     let maxSteps: number
     let searchTool = originalSearchTool
+    const studentPortalActive = hasStudentPortalIntegration(campusScope.college)
 
     // Configure based on search mode
     switch (searchMode) {
       case 'quick':
-        console.log(
-          '[Researcher] Quick mode: maxSteps=20, tools=[searchCampusKnowledge, queryEvents, getOfficialPortalLinks, searchOfficialWeb, logUnansweredQuery, search, fetch, editDraft]'
-        )
         systemPrompt = getQuickModePrompt(campusScope, audienceRole)
         activeToolsList = [
           'searchCampusKnowledge',
           'queryEvents',
           'getOfficialPortalLinks',
+          ...(studentPortalActive ? (['getStudentRecords'] as const) : []),
           'searchOfficialWeb',
           'logUnansweredQuery',
           'search',
           'fetch',
           'editDraft'
         ]
+        console.log(
+          `[Researcher] Quick mode: maxSteps=20, tools=[${activeToolsList.join(', ')}]`
+        )
         maxSteps = 20
         searchTool = wrapSearchToolForQuickMode(originalSearchTool)
         break
@@ -191,6 +194,7 @@ export function createResearcher({
           'searchCampusKnowledge',
           'queryEvents',
           'getOfficialPortalLinks',
+          ...(studentPortalActive ? (['getStudentRecords'] as const) : []),
           'searchOfficialWeb',
           'logUnansweredQuery',
           'search',

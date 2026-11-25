@@ -3,6 +3,7 @@ import type { InferUITool, UIMessage as AIMessage } from 'ai'
 
 import type {
   getOfficialPortalLinksTool,
+  getStudentRecordsTool,
   logUnansweredQueryTool,
   queryEventsTool,
   searchCampusKnowledgeTool,
@@ -54,6 +55,7 @@ export type UITools = {
   searchCampusKnowledge: InferUITool<typeof searchCampusKnowledgeTool>
   queryEvents: InferUITool<typeof queryEventsTool>
   getOfficialPortalLinks: InferUITool<typeof getOfficialPortalLinksTool>
+  getStudentRecords: InferUITool<typeof getStudentRecordsTool>
   searchOfficialWeb: InferUITool<typeof searchOfficialWebTool>
   logUnansweredQuery: InferUITool<typeof logUnansweredQueryTool>
   // Dynamic tools will be added at runtime
@@ -66,7 +68,10 @@ export type ToolPart<T extends keyof UITools = keyof UITools> = {
   input: UITools[T]['input']
   output?: UITools[T]['output']
   state:
-    'input-streaming' | 'input-available' | 'output-available' | 'output-error'
+    | 'input-streaming'
+    | 'input-available'
+    | 'output-available'
+    | 'output-error'
   errorText?: string
 }
 

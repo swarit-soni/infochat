@@ -56,6 +56,7 @@ describe('campus RAG tool parts', () => {
     'tool-searchCampusKnowledge',
     'tool-queryEvents',
     'tool-getOfficialPortalLinks',
+    'tool-getStudentRecords',
     'tool-searchOfficialWeb',
     'tool-logUnansweredQuery'
   ])('round-trips %s through the dynamic tool columns', partType => {

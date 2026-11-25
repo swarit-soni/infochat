@@ -80,6 +80,7 @@ export function ChatMessages({
     'tool-searchCampusKnowledge',
     'tool-queryEvents',
     'tool-getOfficialPortalLinks',
+    'tool-getStudentRecords',
     'tool-searchOfficialWeb'
   ]
 

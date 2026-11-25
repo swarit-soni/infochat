@@ -32,6 +32,8 @@ export function InspectorDrawer() {
         return 'Campus Events'
       case 'tool-getOfficialPortalLinks':
         return 'Official Portals'
+      case 'tool-getStudentRecords':
+        return 'Student Portal'
       case 'tool-searchOfficialWeb':
         return 'Official Web'
       case 'tool-fetch':

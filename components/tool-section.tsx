@@ -73,6 +73,7 @@ export function ToolSection({
     case 'tool-searchCampusKnowledge':
     case 'tool-queryEvents':
     case 'tool-getOfficialPortalLinks':
+    case 'tool-getStudentRecords':
     case 'tool-searchOfficialWeb':
       return (
         <SearchSection

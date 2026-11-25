@@ -161,6 +161,37 @@ export const DEFAULT_OFFICIAL_PORTALS: ReadonlyArray<OfficialPortalRecord> = [
     supportContact:
       'B.K. Birla College enquiry: 1800 233 0144 / enquiry@bkbck.edu.in',
     lastVerifiedAt: VERIFIED_AT
+  },
+  // Sera Demo University is fictional (live demonstrations); so are these.
+  {
+    id: 'portal_sera-demo_student',
+    college: 'sera-demo',
+    portalKey: 'sera-demo_student',
+    name: 'Sera Demo University Student Portal (fictional)',
+    authority: 'sera-demo',
+    url: 'https://sera-demo.example/portal',
+    requiresLogin: 1,
+    capabilities:
+      'Attendance, semester results, fee payment and receipts, hall tickets and late-entry requests.',
+    navigationSteps:
+      '1. Open the student portal. 2. Sign in with your student ID. 3. Fees, hall tickets and attendance are in the left menu.',
+    supportContact: 'helpdesk@sera-demo.example (extension 1234)',
+    lastVerifiedAt: VERIFIED_AT
+  },
+  {
+    id: 'portal_sera-demo_placements',
+    college: 'sera-demo',
+    portalKey: 'sera-demo_placements',
+    name: 'Sera Demo University Placement Portal (fictional)',
+    authority: 'sera-demo',
+    url: 'https://sera-demo.example/placements',
+    requiresLogin: 1,
+    capabilities:
+      'Placement drive registration, resume upload and interview slots.',
+    navigationSteps:
+      '1. Sign in to the placement portal. 2. Upload your resume. 3. Open Drives, choose a company and register.',
+    supportContact: 'placements@sera-demo.example',
+    lastVerifiedAt: VERIFIED_AT
   }
 ]
 
@@ -212,7 +243,29 @@ const PORTAL_SYNONYMS: Record<string, string[]> = {
   bkbirla_results: ['result', 'marks', 'grade', 'atkt', 'sgpa', 'cgpa'],
   bkbirla_admit_card: ['admit card', 'hall ticket', 'hallticket'],
   bkbirla_timetable: ['timetable', 'time table', 'exam date', 'schedule'],
-  bkbirla_notices: ['notice', 'circular', 'merit list', 'scholarship']
+  bkbirla_notices: ['notice', 'circular', 'merit list', 'scholarship'],
+  'sera-demo_student': [
+    'login',
+    'fee',
+    'pay',
+    'receipt',
+    'result',
+    'marks',
+    'grade',
+    'hall ticket',
+    'admit card',
+    'late entry',
+    'dashboard'
+  ],
+  'sera-demo_placements': [
+    'placement',
+    'drive',
+    'company',
+    'resume',
+    'interview',
+    'job',
+    'internship'
+  ]
 }
 
 /**

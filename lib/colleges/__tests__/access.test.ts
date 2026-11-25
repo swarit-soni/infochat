@@ -38,11 +38,17 @@ function directoryWith(env: Record<string, string>) {
 }
 
 describe('college directory', () => {
-  it('includes the launch colleges and the ten NIRF institutions', () => {
+  it('includes the launch colleges, the demo college, and the ten NIRF institutions', () => {
     const slugs = DIR.list.map(c => c.slug)
-    expect(slugs.slice(0, 3)).toEqual(['kalvium', 'jecrc', 'bkbirla'])
+    expect(slugs.slice(0, 4)).toEqual([
+      'kalvium',
+      'jecrc',
+      'bkbirla',
+      'sera-demo'
+    ])
     expect(slugs).toEqual(
       expect.arrayContaining([
+        'sera-demo',
         'iitm',
         'iisc',
         'iitb',
@@ -55,7 +61,7 @@ describe('college directory', () => {
         'bhu'
       ])
     )
-    expect(slugs).toHaveLength(13)
+    expect(slugs).toHaveLength(14)
     for (const c of DIR.list) {
       expect(isValidCollegeSlugFormat(c.slug)).toBe(true)
     }
@@ -97,14 +103,18 @@ describe('college directory', () => {
     ])
     expect(getVisibleCollegesFor(DIR, 'kalvium', 'none')).toEqual(['kalvium'])
     expect(getVisibleCollegesFor(DIR, 'jecrc')).toEqual(['jecrc'])
+    expect(getVisibleCollegesFor(DIR, 'sera-demo')).toEqual(['sera-demo'])
     expect(getVisibleCollegesFor(DIR, 'iitd')).toEqual(['iitd'])
-    expect(getVisibleCollegesFor(DIR, null)).toHaveLength(13)
+    expect(getVisibleCollegesFor(DIR, null)).toHaveLength(14)
     expect(getPartnerCampuses(DIR, 'kalvium').map(c => c.slug)).toEqual([
       'jecrc'
     ])
     expect(getOfficialWebDomains(DIR, 'kalvium')).toEqual([
       'kalvium.com',
       'jecrcuniversity.edu.in'
+    ])
+    expect(getOfficialWebDomains(DIR, 'sera-demo')).toEqual([
+      'sera-demo.example'
     ])
     expect(getOfficialWebDomains(DIR, 'aiims')).toEqual([
       'aiims.edu',
@@ -223,5 +233,31 @@ describe('resolveCollegeIdentity', () => {
     expect(
       getLoginHintDomain(college('bkbirla'), 'student', PROD)
     ).toBeUndefined()
+  })
+
+  it('keeps demo college login closed until mentor domains and allowlist are set', () => {
+    expect(isCollegeRoleEnabled(college('sera-demo'), 'mentor')).toBe(false)
+    expect(isCollegeRoleEnabled(college('sera-demo'), 'student')).toBe(false)
+    expect(
+      resolveCollegeIdentity('student@sera-demo.example', DIR, PROD)
+    ).toBeNull()
+
+    const env = {
+      ...PROD,
+      SERA_SERA_DEMO_MENTOR_DOMAINS: 'gmail.com'
+    }
+    const directory = {
+      ...directoryWith(env),
+      mentorEmails: { 'sera-demo': ['presenter@gmail.com'] }
+    }
+    expect(
+      resolveCollegeIdentity('Presenter@gmail.com', directory, env)
+    ).toEqual({
+      college: 'sera-demo',
+      userType: 'mentor'
+    })
+    expect(
+      resolveCollegeIdentity('visitor@gmail.com', directory, env)
+    ).toBeNull()
   })
 })

@@ -10,6 +10,7 @@ export function ToolInvocationContent({ part }: { part: ToolPart }) {
     case 'tool-searchCampusKnowledge':
     case 'tool-queryEvents':
     case 'tool-getOfficialPortalLinks':
+    case 'tool-getStudentRecords':
     case 'tool-searchOfficialWeb':
       return <SearchArtifactContent tool={part as ToolPart<'search'>} />
     default:

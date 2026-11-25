@@ -642,6 +642,40 @@ describe('processCitations', () => {
       )
       expect(nextCitationLabelNumber([ragMessage])).toBe(5)
     })
+
+    it('extracts labels from tool-getStudentRecords outputs', () => {
+      const portalMessage = {
+        id: 'portal-turn',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-getStudentRecords',
+            state: 'output-available',
+            toolCallId: 'call_portal_1',
+            input: { view: 'attendance', timeframe: 'this_week' },
+            output: {
+              results: [
+                {
+                  title: 'Sera Demo University — Attendance Record',
+                  url: 'https://sera-demo.example/portal#attendance',
+                  content: 'CS205 Computer Organisation: 20/28 (71.4%)',
+                  label: 'S2'
+                }
+              ]
+            }
+          },
+          { type: 'text', text: 'Computer Organisation is at 71.4%. [1](#S2)' }
+        ]
+      } as unknown as UIMessage
+
+      const maps = extractCitationMapsFromMessages([portalMessage])
+      expect(
+        processCitations('Computer Organisation is at 71.4%. [1](#S2)', maps)
+      ).toBe(
+        'Computer Organisation is at 71.4%. [sera-demo](https://sera-demo.example/portal#attendance)'
+      )
+      expect(nextCitationLabelNumber([portalMessage])).toBe(3)
+    })
   })
 
   describe('isCitationLabel', () => {

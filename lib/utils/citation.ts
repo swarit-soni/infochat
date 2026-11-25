@@ -25,6 +25,7 @@ const CITATION_SEARCH_TOOL_TYPES = new Set([
   'tool-searchCampusKnowledge',
   'tool-queryEvents',
   'tool-getOfficialPortalLinks',
+  'tool-getStudentRecords',
   'tool-searchOfficialWeb'
 ])
 

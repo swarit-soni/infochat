@@ -60,7 +60,10 @@ export function SearchSection({
   const errorMessage = toPublicErrorPayload(tool.errorText, {
     fallbackMessage: 'Search failed'
   }).error
-  const query = tool.input?.query || output?.query || ''
+  const query =
+    tool.input?.query ||
+    output?.query ||
+    ((tool.type as string) === 'tool-getStudentRecords' ? 'Student portal' : '')
   const includeDomains = tool.input?.include_domains
   const includeDomainsString =
     Array.isArray(includeDomains) && includeDomains.length > 0

@@ -1,4 +1,5 @@
 import { BKBIRLA_KNOWLEDGE } from './bkbirla'
+import { DEMO_KNOWLEDGE } from './demo'
 import { JECRC_KNOWLEDGE } from './jecrc'
 import { KALVIUM_KNOWLEDGE } from './kalvium'
 import { NATIONAL_KNOWLEDGE } from './national'
@@ -12,5 +13,6 @@ export const KNOWLEDGE_SEED: readonly KnowledgeSeedDocument[] = [
   ...KALVIUM_KNOWLEDGE,
   ...JECRC_KNOWLEDGE,
   ...BKBIRLA_KNOWLEDGE,
+  ...DEMO_KNOWLEDGE,
   ...NATIONAL_KNOWLEDGE
 ]

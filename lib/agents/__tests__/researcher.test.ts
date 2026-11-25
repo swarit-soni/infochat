@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { defaultCampusScope } from '@/lib/colleges/defaults'
 import { createCampusRagTools } from '@/lib/tools/campus-rag'
 import { createFetchTool } from '@/lib/tools/fetch'
 import { createSearchTool } from '@/lib/tools/search'
@@ -43,6 +44,7 @@ vi.mock('@/lib/tools/campus-rag', () => ({
     searchCampusKnowledge: {},
     queryEvents: {},
     getOfficialPortalLinks: {},
+    getStudentRecords: {},
     searchOfficialWeb: {},
     logUnansweredQuery: {}
   }))
@@ -169,5 +171,30 @@ describe('createResearcher', () => {
     expect(mocks.agentOptions?.instructions).toMatch(
       /^Quick prompt\nCurrent date: /
     )
+  })
+
+  it('exposes getStudentRecords only when the college has student portal integration', () => {
+    createResearcher({
+      model: 'openai:model-id',
+      searchMode: 'quick',
+      campusScope: defaultCampusScope('sera-demo')
+    })
+    expect(mocks.agentOptions?.activeTools).toContain('getStudentRecords')
+
+    createResearcher({
+      model: 'openai:model-id',
+      searchMode: 'adaptive',
+      campusScope: defaultCampusScope('sera-demo')
+    })
+    expect(mocks.agentOptions?.activeTools).toContain('getStudentRecords')
+
+    for (const college of ['kalvium', 'jecrc', null] as const) {
+      createResearcher({
+        model: 'openai:model-id',
+        searchMode: 'quick',
+        campusScope: defaultCampusScope(college)
+      })
+      expect(mocks.agentOptions?.activeTools).not.toContain('getStudentRecords')
+    }
   })
 })
