@@ -24,6 +24,11 @@ export function InspectorPanel() {
   // Get the icon and title based on part type
   const getIconAndTitle = () => {
     switch (part.type) {
+      case 'tool-getStudentRecords':
+        return {
+          icon: <Search size={18} />,
+          title: 'Student Portal'
+        }
       case 'tool-search':
       case 'tool-askQuestion':
       case 'tool-searchCampusKnowledge':

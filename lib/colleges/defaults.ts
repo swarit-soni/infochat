@@ -71,6 +71,30 @@ export const DEFAULT_COLLEGES: College[] = [
     sortOrder: 30
   },
   {
+    // Fictional college for live demonstrations: no real institution has
+    // authorized an integration yet. All its data is invented (see
+    // lib/rag/knowledge-seed/demo.ts and drizzle/0026_demo_college.sql).
+    slug: 'sera-demo',
+    name: 'Sera Demo University (fictional)',
+    shortName: 'Sera Demo University',
+    location: 'Demo City (fictional)',
+    website: 'https://sera-demo.example',
+    officialWebDomains: ['sera-demo.example'],
+    partnerColleges: [],
+    // Students pick the college at onboarding. Demo mentors are added by
+    // email to the allowlist (and their domain here) in the database.
+    mentorDomains: [],
+    studentDomains: [],
+    mentorRequiresAllowlist: true,
+    aliases: ['Sera Demo University', 'Demo University', 'SDU'],
+    squadLabel: 'Section',
+    residencyLabel: 'Hostel / day scholar',
+    eventsLabel: 'Events',
+    gchatSpaces: [],
+    enabled: true,
+    sortOrder: 40
+  },
+  {
     slug: 'iitm',
     name: 'Indian Institute of Technology Madras',
     shortName: 'IIT Madras',

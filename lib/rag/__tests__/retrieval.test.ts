@@ -172,4 +172,18 @@ describe('matchDefaultPortals', () => {
     )
     expect(kalvium[0].portalKey).toBe('kalvium_dashboard')
   })
+
+  it('resolves Sera Demo University student and placement portals', () => {
+    const student = matchDefaultPortals(
+      'pay winter tuition fee or download admit card',
+      'sera-demo'
+    )
+    expect(student[0].portalKey).toBe('sera-demo_student')
+
+    const placements = matchDefaultPortals(
+      'register for placement drive resume',
+      'sera-demo'
+    )
+    expect(placements[0].portalKey).toBe('sera-demo_placements')
+  })
 })

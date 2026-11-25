@@ -18,6 +18,11 @@ import {
   retrieveOfficialPortals
 } from '@/lib/rag/retrieval'
 import { sliceWithoutSplittingSurrogatePair } from '@/lib/streaming/helpers/slice-without-splitting-surrogate-pair'
+import { TIMETABLE_DAY_PARAMS } from '@/lib/student-portal/schedule-dates'
+import {
+  formatStudentPortalSearchResults,
+  retrieveStudentPortalData
+} from '@/lib/student-portal/service'
 import type { SearchResultItem } from '@/lib/types'
 import {
   assignCitationLabels,
@@ -542,12 +547,80 @@ export function createCampusRagTools(options?: {
     }
   })
 
+  const getStudentRecords = tool({
+    description: `Retrieve live student portal records for ${collegeNames} (subject-wise attendance percentages, weekly assignments with due dates and submission status, and daily/weekly class timetable). Use whenever the student asks about their personal attendance, assignments, deadlines, submission status, class schedule, or needs help prioritizing upcoming coursework.`,
+    inputSchema: z.object({
+      view: z
+        .enum(['attendance', 'assignments', 'timetable', 'overview'])
+        .default('overview')
+        .describe(
+          'Which records to retrieve: attendance, assignments, timetable, or overview (all three for holistic planning)'
+        ),
+      day: z
+        .enum(TIMETABLE_DAY_PARAMS)
+        .optional()
+        .describe(
+          'Day for timetable view: today, tomorrow, a weekday name, or week'
+        ),
+      timeframe: z
+        .enum(['this_week', 'upcoming', 'all'])
+        .optional()
+        .default('this_week')
+        .describe('Assignment timeframe filter (default: this_week)')
+    }),
+    async *execute(
+      { view = 'overview', day, timeframe = 'this_week' },
+      context
+    ) {
+      const displayQuery =
+        view === 'attendance'
+          ? 'Student portal: attendance'
+          : view === 'assignments'
+            ? `Student portal: assignments (${timeframe})`
+            : view === 'timetable'
+              ? `Student portal: timetable (${day ?? 'tomorrow'})`
+              : 'Student portal: overview'
+
+      yield {
+        state: 'searching' as const,
+        query: displayQuery
+      }
+
+      const snapshot = await retrieveStudentPortalData({
+        college,
+        userId: options?.userId ?? null,
+        view,
+        day,
+        timeframe
+      })
+      const rawResults = formatStudentPortalSearchResults(snapshot)
+      const labelStart = labelAllocator.reserve(rawResults.length)
+      const results = assignCitationLabels(rawResults, labelStart)
+
+      yield {
+        state: 'complete' as const,
+        query: displayQuery,
+        results,
+        integrated: snapshot.integrated,
+        studentProfile: snapshot.studentProfile,
+        attendance: snapshot.attendance ?? null,
+        assignments: snapshot.assignments ?? null,
+        timetable: snapshot.timetable ?? null,
+        images: [] as string[],
+        number_of_results: results.length,
+        ...(context?.toolCallId ? { toolCallId: context.toolCallId } : {})
+      }
+    },
+    toModelOutput: trimModelOutput
+  })
+
   return {
     searchCampusKnowledge,
     queryEvents,
     getOfficialPortalLinks,
     searchOfficialWeb,
-    logUnansweredQuery
+    logUnansweredQuery,
+    getStudentRecords
   }
 }
 
@@ -559,3 +632,4 @@ export const getOfficialPortalLinksTool =
   defaultCampusRagTools.getOfficialPortalLinks
 export const searchOfficialWebTool = defaultCampusRagTools.searchOfficialWeb
 export const logUnansweredQueryTool = defaultCampusRagTools.logUnansweredQuery
+export const getStudentRecordsTool = defaultCampusRagTools.getStudentRecords

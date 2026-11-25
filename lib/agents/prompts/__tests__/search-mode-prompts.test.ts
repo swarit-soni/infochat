@@ -88,4 +88,20 @@ describe('Sera system prompt', () => {
       'They are a **mentor**'
     )
   })
+
+  it.each(builders)(
+    '%s mode enables live student portal routing and structured formatting only for sera-demo',
+    (_mode, build) => {
+      const demoPrompt = build(scope('sera-demo'))
+      expect(demoPrompt).toContain('live student-portal integration')
+      expect(demoPrompt).toContain('`getStudentRecords`')
+      expect(demoPrompt).toContain('Attended / Total')
+      expect(demoPrompt).toContain('Time | Course | Type | Room | Faculty')
+      expect(demoPrompt).toContain('earliest deadline among these')
+
+      for (const other of ['kalvium', 'jecrc', 'iitb', null] as const) {
+        expect(build(scope(other))).not.toContain('getStudentRecords')
+      }
+    }
+  )
 })

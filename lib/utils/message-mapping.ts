@@ -78,6 +78,7 @@ const RAG_TOOL_NAMES = new Set([
   'searchCampusKnowledge',
   'queryEvents',
   'getOfficialPortalLinks',
+  'getStudentRecords',
   'searchOfficialWeb',
   'logUnansweredQuery'
 ])
@@ -356,6 +357,7 @@ export function mapUIMessagePartsToDBParts(
       case 'tool-searchCampusKnowledge':
       case 'tool-queryEvents':
       case 'tool-getOfficialPortalLinks':
+      case 'tool-getStudentRecords':
       case 'tool-searchOfficialWeb':
       case 'tool-logUnansweredQuery': {
         if (!isExtendedToolPart(part)) {

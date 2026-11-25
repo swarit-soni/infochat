@@ -21,6 +21,7 @@ export function ArtifactContent({ part }: { part: Part | null }) {
     case 'tool-searchCampusKnowledge':
     case 'tool-queryEvents':
     case 'tool-getOfficialPortalLinks':
+    case 'tool-getStudentRecords':
     case 'tool-searchOfficialWeb':
     case 'tool-fetch':
     case 'tool-askQuestion':

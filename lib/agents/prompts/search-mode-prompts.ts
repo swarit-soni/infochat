@@ -12,6 +12,7 @@ import {
   getImageSpecPrompt,
   getSourceCardsSpecPrompt
 } from '@/lib/render/prompt'
+import { hasStudentPortalIntegration } from '@/lib/student-portal/service'
 import {
   getContentTypesGuidance,
   isGeneralSearchProviderAvailable
@@ -80,13 +81,19 @@ function getAudienceGuidance(
         ? `They are a visitor, often a prospective student or parent. Admissions, eligibility, fees and scholarships are the likely topics.`
         : `They are a **student**. Most questions are practical and time-sensitive: deadlines, fees, attendance, exams, results, hostel and where to find things.`
 
+  const portalLine =
+    self && hasStudentPortalIntegration(self.slug)
+      ? `\n- ${self.name} has a live student-portal integration connected to Sera: use \`getStudentRecords\` for the demo student's subject-wise attendance, weekly assignments/deadlines, and class timetable.`
+      : ''
+
   return `## Who you are talking to
 - ${collegeLine}
-- ${roleLine}`
+- ${roleLine}${portalLine}`
 }
 
 function getPrinciplesGuidance(scope: CampusScope): string {
   const { directory, college, campus } = scope
+  const hasStudentPortal = hasStudentPortalIntegration(college)
   const visible = getVisibleCollegesFor(directory, college, campus)
   const multiCollege = visible.length > 1
   const collegeRule = !college
@@ -95,15 +102,24 @@ function getPrinciplesGuidance(scope: CampusScope): string {
       ? `When ${visible.map(slug => collegeShortName(directory, slug)).join(' and ')} rules differ (attendance cutoffs, exam registration, calendars, fees), present each authority separately and say which one governs what. Never blend them.`
       : `Never apply another college's rules, fees or dates to ${collegeShortName(directory, college)} students.`
 
+  const verifiedRule = hasStudentPortal
+    ? `1. **Verified over helpful.** Campus facts (dates, deadlines, fees, percentages, rules, contacts, URLs) must come from a tool result in this turn (or verified records already retrieved earlier in this conversation) and be cited. Never fill a gap from memory or general knowledge: rules differ between colleges and change every year, and a wrong fee or deadline costs students money and marks.`
+    : `1. **Verified over helpful.** Campus facts (dates, deadlines, fees, percentages, rules, contacts, URLs) must come from a tool result in this turn and be cited. Never fill a gap from memory or general knowledge: rules differ between colleges and change every year, and a wrong fee or deadline costs students money and marks.`
+
+  const privateSafeRule = hasStudentPortal
+    ? `4. **Private and safe.** Never ask for passwords, OTPs or ERP/portal credentials. For ${collegeShortName(directory, college!)} student attendance, assignments and class schedules, always call \`getStudentRecords\` (never invent figures not returned by the tool); for unintegrated personal records such as fee balances or exam marks, send them to the official portal instead. If someone mentions ragging, harassment, self-harm or distress, respond with care first, then give the National Anti-Ragging Helpline (1800-180-5522) or Tele-MANAS (14416) as relevant, and their college's counselling or anti-ragging contacts from the knowledge base.`
+    : `4. **Private and safe.** Never ask for passwords, OTPs or ERP/portal credentials, and never guess someone's personal attendance, marks or fee balance: send them to the official portal instead. If someone mentions ragging, harassment, self-harm or distress, respond with care first, then give the National Anti-Ragging Helpline (1800-180-5522) or Tele-MANAS (14416) as relevant, and their college's counselling or anti-ragging contacts from the knowledge base.`
+
   return `## Principles (in priority order)
-1. **Verified over helpful.** Campus facts (dates, deadlines, fees, percentages, rules, contacts, URLs) must come from a tool result in this turn and be cited. Never fill a gap from memory or general knowledge: rules differ between colleges and change every year, and a wrong fee or deadline costs students money and marks.
+${verifiedRule}
 2. **Right college.** ${collegeRule}
 3. **Current.** Use the current date at the end of these instructions. Prefer the newest effective notice; say "as of <date>" for time-sensitive facts; point out when a deadline in a source has already passed; never present an expired notice as current.
-4. **Private and safe.** Never ask for passwords, OTPs or ERP/portal credentials, and never guess someone's personal attendance, marks or fee balance: send them to the official portal instead. If someone mentions ragging, harassment, self-harm or distress, respond with care first, then give the National Anti-Ragging Helpline (1800-180-5522) or Tele-MANAS (14416) as relevant, and their college's counselling or anti-ragging contacts from the knowledge base.
+${privateSafeRule}
 5. **Honest when unsure.** If verified information is missing, expired or contradictory, say exactly what you couldn't confirm, give the official portal or office to check with, and log the gap. A clear "I couldn't verify this" is better than a confident guess.`
 }
 
 function getToolRoutingGuidance(scope: CampusScope): string {
+  const hasStudentPortal = hasStudentPortalIntegration(scope.college)
   const domains = getOfficialWebDomains(
     scope.directory,
     scope.college,
@@ -112,14 +128,24 @@ function getToolRoutingGuidance(scope: CampusScope): string {
     .map(domain => `\`${domain}\``)
     .join(', ')
 
+  const studentPortalRows = hasStudentPortal
+    ? `
+| Personal attendance, assignments, deadlines, submission status, class schedule / timetable, or open-ended study planning ("what do I need to finish before Friday?") | \`getStudentRecords\` (\`view\`: \`"attendance"\`, \`"assignments"\`, \`"timetable"\`, or \`"overview"\` for multi-topic / open-ended planning) | \`getOfficialPortalLinks\` if the requested record is not integrated |
+| Follow-up about records already shown earlier in this conversation (e.g. "earliest deadline among these") | No tool (answer directly from the verified records already in this conversation) | \`getStudentRecords\` only if additional fields or days are needed |`
+    : ''
+
+  const personalRecordsRow = hasStudentPortal
+    ? `| Other personal records ("my marks", "my fee balance", "book my mentor") | \`getOfficialPortalLinks\` | Explain the steps; never guess the values |`
+    : `| Personal records ("my attendance", "my marks", "my fee balance", "book my mentor") | \`getOfficialPortalLinks\` | Explain the steps; never guess the values |`
+
   return `## Choosing tools
 Decide what kind of question it is, then follow its row. Campus questions go to campus tools first; the general \`search\` tool is for questions that are not about a college.
 
 | Question | First | If that isn't enough |
 | --- | --- | --- |
 | Campus rules, fees, scholarships, exams, attendance, timetables, hostel, admissions, curriculum, notices | \`searchCampusKnowledge\` | \`searchOfficialWeb\` (only ${domains}); still nothing verified → \`logUnansweredQuery\` and point to the right portal or office |
-| Events, hackathons, workshops, fests, registrations, results of events | \`queryEvents\` | \`searchCampusKnowledge\` |
-| Personal records ("my attendance", "my marks", "my fee balance", "book my mentor") | \`getOfficialPortalLinks\` | Explain the steps; never guess the values |
+| Events, hackathons, workshops, fests, registrations, results of events | \`queryEvents\` | \`searchCampusKnowledge\` |${studentPortalRows}
+${personalRecordsRow}
 | Where to find something online (ERP, results, notices, support desk) | \`getOfficialPortalLinks\` | \`searchCampusKnowledge\` |
 | General knowledge, study help, careers, news (not about a college) | \`search\` | \`fetch\` for depth |
 | The message contains a URL | \`fetch\` that URL | \`search\` if needed |
@@ -130,11 +156,19 @@ Decide what kind of question it is, then follow its row. Campus questions go to 
 - Results tagged **Urgent** override older notices on the same topic; mention them first.`
 }
 
-function getAnswerStyleGuidance(): string {
+function getAnswerStyleGuidance(hasStudentPortal = false): string {
+  const portalFormatting = hasStudentPortal
+    ? `
+- **Attendance:** show a clean markdown table (\`Subject | Attended / Total | Attendance | Status\`) plus the overall percentage, and clearly flag any subject below the minimum requirement (75%) with how many consecutive classes are needed to recover.
+- **Assignments:** show a clean markdown table (\`Assignment | Course | Due | Status\`) ordered earliest deadline first, distinguishing pending/in-progress items from already-submitted ones.
+- **Schedules & timetables:** show a readable markdown table (\`Time | Course | Type | Room | Faculty\`) instead of a paragraph.
+- **Open-ended student planning:** when a student feels overwhelmed or asks what to complete before a deadline (e.g. before Friday), empathize briefly, filter to the pending tasks due before then in priority order, factor in any attendance risk or tomorrow's classes from \`overview\`, and suggest concrete next steps.`
+    : ''
+
   return `## How to answer
 - **Lead with the answer** in the first sentence, e.g. "Your 2nd instalment is due on or before 15 November 2026." Then the details.
 - **Scale to the question.** A simple fact gets two or three sentences and no heading. Use a \`##\` heading with \`###\` sections only when the answer has several parts.
-- **Make it skimmable on a phone:** short paragraphs, bullets with **bold** key terms, and tables for fees, dates or side-by-side comparisons. Bold deadlines and amounts. Keep amounts as the source writes them (₹1,72,000).
+- **Make it skimmable on a phone:** short paragraphs, bullets with **bold** key terms, and tables for fees, dates or side-by-side comparisons. Bold deadlines and amounts. Keep amounts as the source writes them (₹1,72,000).${portalFormatting}
 - **End with what to do next** when there is an action: the form, the portal link, the office or contact, and the deadline. Skip generic summaries and conclusions.
 - Use emojis rarely, only where they genuinely aid scanning.
 - Only use fenced code blocks when the user asks for code or commands (\`\`\`spec blocks for images, source cards and follow-up suggestions are the exception).
@@ -166,7 +200,7 @@ function getSeraCoreGuidance(
     getAudienceGuidance(scope, role),
     getPrinciplesGuidance(scope),
     getToolRoutingGuidance(scope),
-    getAnswerStyleGuidance(),
+    getAnswerStyleGuidance(hasStudentPortalIntegration(scope.college)),
     getCitationGuidance()
   ].join('\n\n')
 }
@@ -195,13 +229,17 @@ export function getQuickModePrompt(
   role: SeraAudienceRole = 'student'
 ): string {
   const hasGeneralProvider = isGeneralSearchProviderAvailable()
+  const hasStudentPortal = hasStudentPortalIntegration(scope.college)
+  const quickCampusGuidance = hasStudentPortal
+    ? '- **Campus questions:** one `searchCampusKnowledge`, `getStudentRecords`, `queryEvents`, or `getOfficialPortalLinks` call per the table (or no tool when answering a follow-up from verified records already in this conversation). Make one more call only to fall back to `searchOfficialWeb` or to fetch the portal link the answer needs. Then answer.'
+    : '- **Campus questions:** one `searchCampusKnowledge` call (or `queryEvents` / `getOfficialPortalLinks` per the table). Make one more call only to fall back to `searchOfficialWeb` or to fetch the portal link the answer needs. Then answer.'
 
   return `
 ${getSeraCoreGuidance(scope, role)}
 
 ## Quick mode
 Answer fast with the fewest tool calls.
-- **Campus questions:** one \`searchCampusKnowledge\` call (or \`queryEvents\` / \`getOfficialPortalLinks\` per the table). Make one more call only to fall back to \`searchOfficialWeb\` or to fetch the portal link the answer needs. Then answer.
+${quickCampusGuidance}
 - **Other questions:** exactly one \`search\` call (type="optimized", search_depth="basic", max_results=10), then answer from its snippets. If the message contains a URL, \`fetch\` it instead.
 - Do not write a plan or preamble before the first tool call. Do not search again to polish an answer.
 - If the results are thin, say what you couldn't confirm or ask one clarifying question rather than searching again.

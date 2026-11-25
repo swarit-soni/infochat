@@ -1252,6 +1252,169 @@ export const unansweredQueries = pgTable(
 export type UnansweredQuery = InferSelectModel<typeof unansweredQueries>
 export type NewUnansweredQuery = typeof unansweredQueries.$inferInsert
 
+export const STUDENT_ASSIGNMENT_STATUSES = [
+  'pending',
+  'in_progress',
+  'submitted',
+  'overdue'
+] as const
+export type StudentAssignmentStatus =
+  (typeof STUDENT_ASSIGNMENT_STATUSES)[number]
+
+export const RELATIVE_DUE_SLOTS = [
+  'yesterday_night',
+  'before_friday_early',
+  'before_friday_late',
+  'friday_evening',
+  'next_week'
+] as const
+export type RelativeDueSlot = (typeof RELATIVE_DUE_SLOTS)[number]
+
+// Student attendance records (for colleges with student portal integration)
+export const studentAttendance = pgTable(
+  'student_attendance',
+  {
+    id: varchar('id', { length: ID_LENGTH })
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    college: collegeColumn(),
+    userId: varchar('user_id', { length: USER_ID_LENGTH }),
+    courseCode: varchar('course_code', { length: 32 }).notNull(),
+    courseName: text('course_name').notNull(),
+    faculty: text('faculty'),
+    attendedClasses: integer('attended_classes').notNull(),
+    totalClasses: integer('total_classes').notNull(),
+    minimumRequiredPct: integer('minimum_required_pct').notNull().default(75),
+    sortOrder: integer('sort_order').notNull().default(0),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+  },
+  table => [
+    index('student_attendance_college_user_idx').on(
+      table.college,
+      table.userId
+    ),
+    pgPolicy('student_attendance_read', {
+      as: 'permissive',
+      for: 'select',
+      to: 'public',
+      using: sql`${table.userId} IS NULL OR ${table.userId} = (select current_setting('app.current_user_id', true))`
+    }),
+    pgPolicy('student_attendance_mentor_manage', {
+      as: 'permissive',
+      for: 'all',
+      to: 'public',
+      using: collegeMentorOrSystemWriteCondition(table.college),
+      withCheck: collegeMentorOrSystemWriteCondition(table.college)
+    })
+  ]
+).enableRLS()
+
+export type StudentAttendance = InferSelectModel<typeof studentAttendance>
+export type NewStudentAttendance = typeof studentAttendance.$inferInsert
+
+// Student assignments (for colleges with student portal integration)
+export const studentAssignments = pgTable(
+  'student_assignments',
+  {
+    id: varchar('id', { length: ID_LENGTH })
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    college: collegeColumn(),
+    userId: varchar('user_id', { length: USER_ID_LENGTH }),
+    courseCode: varchar('course_code', { length: 32 }).notNull(),
+    courseName: text('course_name').notNull(),
+    title: text('title').notNull(),
+    description: text('description'),
+    dueAt: timestamp('due_at', { withTimezone: true }),
+    relativeDueSlot: varchar('relative_due_slot', {
+      length: 32,
+      enum: RELATIVE_DUE_SLOTS
+    }),
+    status: varchar('status', {
+      length: 32,
+      enum: STUDENT_ASSIGNMENT_STATUSES
+    })
+      .notNull()
+      .default('pending'),
+    estimatedMinutes: integer('estimated_minutes'),
+    submissionPortalUrl: text('submission_portal_url'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+  },
+  table => [
+    index('student_assignments_college_user_idx').on(
+      table.college,
+      table.userId
+    ),
+    pgPolicy('student_assignments_read', {
+      as: 'permissive',
+      for: 'select',
+      to: 'public',
+      using: sql`${table.userId} IS NULL OR ${table.userId} = (select current_setting('app.current_user_id', true))`
+    }),
+    pgPolicy('student_assignments_mentor_manage', {
+      as: 'permissive',
+      for: 'all',
+      to: 'public',
+      using: collegeMentorOrSystemWriteCondition(table.college),
+      withCheck: collegeMentorOrSystemWriteCondition(table.college)
+    })
+  ]
+).enableRLS()
+
+export type StudentAssignment = InferSelectModel<typeof studentAssignments>
+export type NewStudentAssignment = typeof studentAssignments.$inferInsert
+
+// Student weekly timetable (for colleges with student portal integration)
+export const studentTimetable = pgTable(
+  'student_timetable',
+  {
+    id: varchar('id', { length: ID_LENGTH })
+      .primaryKey()
+      .$defaultFn(() => generateId()),
+    college: collegeColumn(),
+    userId: varchar('user_id', { length: USER_ID_LENGTH }),
+    dayOfWeek: integer('day_of_week').notNull(),
+    startTime: varchar('start_time', { length: 16 }).notNull(),
+    endTime: varchar('end_time', { length: 16 }).notNull(),
+    courseCode: varchar('course_code', { length: 32 }).notNull(),
+    courseName: text('course_name').notNull(),
+    sessionType: varchar('session_type', { length: 32 })
+      .notNull()
+      .default('Lecture'),
+    room: text('room').notNull(),
+    faculty: text('faculty'),
+    sortOrder: integer('sort_order').notNull().default(0)
+  },
+  table => [
+    index('student_timetable_college_user_day_idx').on(
+      table.college,
+      table.userId,
+      table.dayOfWeek
+    ),
+    pgPolicy('student_timetable_read', {
+      as: 'permissive',
+      for: 'select',
+      to: 'public',
+      using: sql`${table.userId} IS NULL OR ${table.userId} = (select current_setting('app.current_user_id', true))`
+    }),
+    pgPolicy('student_timetable_mentor_manage', {
+      as: 'permissive',
+      for: 'all',
+      to: 'public',
+      using: collegeMentorOrSystemWriteCondition(table.college),
+      withCheck: collegeMentorOrSystemWriteCondition(table.college)
+    })
+  ]
+).enableRLS()
+
+export type StudentTimetableEntry = InferSelectModel<typeof studentTimetable>
+export type NewStudentTimetableEntry = typeof studentTimetable.$inferInsert
+
 // Better Auth tables (user, session, account, verification, invitations)
 // are defined in lib/auth/better-auth/schema.ts and re-exported here so the
 // canonical schema module — and drizzle-kit generation anchored on it —

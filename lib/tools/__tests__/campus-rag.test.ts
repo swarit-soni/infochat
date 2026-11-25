@@ -304,4 +304,55 @@ describe('createCampusRagTools', () => {
       })
     )
   })
+
+  it('returns labelled JSON-safe student portal records only for integrated colleges', async () => {
+    const seraDemoTools = createCampusRagTools({
+      campusScope: defaultCampusScope('sera-demo'),
+      labelAllocator: createCitationLabelAllocator(1)
+    })
+    const output = await collectGeneratorResult<any>(
+      seraDemoTools.getStudentRecords.execute!(
+        { view: 'overview', timeframe: 'this_week' },
+        { toolCallId: 'tc-student', messages: [], context: {} }
+      ) as any
+    )
+
+    expect(output.integrated).toBe(true)
+    expect(output.results.map((r: { label: string }) => r.label)).toEqual([
+      'S1',
+      'S2',
+      'S3'
+    ])
+    expect(output.attendance.overallPercentage).toBe(82.3)
+
+    const modelOutput = await seraDemoTools.getStudentRecords.toModelOutput!({
+      toolCallId: 'tc-student',
+      input: { view: 'overview', timeframe: 'this_week' },
+      output
+    } as any)
+    const parsed = modelMessageSchema.safeParse({
+      role: 'tool',
+      content: [
+        {
+          type: 'tool-result',
+          toolCallId: 'tc-student',
+          toolName: 'getStudentRecords',
+          output: modelOutput
+        }
+      ]
+    })
+    expect(parsed.success).toBe(true)
+
+    const kalviumTools = createCampusRagTools({
+      campusScope: defaultCampusScope('kalvium')
+    })
+    const nonIntegrated = await collectGeneratorResult<any>(
+      kalviumTools.getStudentRecords.execute!(
+        { view: 'attendance', timeframe: 'this_week' },
+        { toolCallId: 'tc-non', messages: [], context: {} }
+      ) as any
+    )
+    expect(nonIntegrated.integrated).toBe(false)
+    expect(nonIntegrated.results).toEqual([])
+  })
 })
