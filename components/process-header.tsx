@@ -27,14 +27,14 @@ export function ProcessHeader({
       onClick={onInspect}
       aria-expanded={ariaExpanded}
       className={cn(
-        'flex items-center justify-between w-full min-w-0 text-left text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer',
+        'flex items-center justify-between w-full min-w-0 text-left text-xs text-(--md-sys-color-on-surface-variant) hover:text-(--md-sys-color-on-surface) transition-colors cursor-pointer',
         isLoading && 'animate-pulse',
         className
       )}
     >
       <div className="min-w-0 max-w-full flex-1 overflow-hidden">{label}</div>
       {meta ? (
-        <span className="shrink-0 ml-2 text-xs text-muted-foreground flex items-center gap-1">
+        <span className="shrink-0 ml-2 text-xs text-(--md-sys-color-on-surface-variant) flex items-center gap-1">
           {meta}
         </span>
       ) : null}

@@ -322,7 +322,10 @@ export function ResearchProcessSection({
       {segments.map((seg, sidx) => {
         const groups = groupConsecutiveParts(seg)
         const isSingle = groups.length === 1 && groups[0].length === 1
-        const containerClass = cn(!isSingle && 'rounded-lg border bg-card')
+        const containerClass = cn(
+          !isSingle &&
+            'rounded-lg border bg-(--md-sys-color-surface-container-low)'
+        )
 
         // Count total parts in this segment
         const totalParts = seg.length
@@ -382,13 +385,13 @@ export function ResearchProcessSection({
                   type="button"
                   className="flex items-center px-1 py-0.5 gap-2 text-sm rounded-lg group"
                 >
-                  <Waypoints className="size-4 text-muted-foreground group-hover:text-muted-foreground/70" />
-                  <span className="font-medium text-muted-foreground group-hover:text-muted-foreground/70">
+                  <Waypoints className="size-4 text-(--md-sys-color-on-surface-variant) group-hover:text-(--md-sys-color-on-surface-variant)/70" />
+                  <span className="font-medium text-(--md-sys-color-on-surface-variant) group-hover:text-(--md-sys-color-on-surface-variant)/70">
                     Research Process ({totalParts} steps)
                   </span>
                   <ChevronDown
                     className={cn(
-                      'size-4 text-muted-foreground group-hover:text-muted-foreground/70 transition-transform duration-200',
+                      'size-4 text-(--md-sys-color-on-surface-variant) group-hover:text-(--md-sys-color-on-surface-variant)/70 transition-transform duration-200',
                       isParentOpen && 'rotate-180'
                     )}
                   />

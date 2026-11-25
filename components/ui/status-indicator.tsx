@@ -14,7 +14,7 @@ export function StatusIndicator({
   children
 }: StatusIndicatorProps) {
   return (
-    <span className="flex items-center gap-1 text-muted-foreground text-xs">
+    <span className="flex items-center gap-1 text-(--md-sys-color-on-surface-variant) text-xs">
       <Icon size={16} className={iconClassName} />
       {children && <span>{children}</span>}
     </span>

@@ -103,7 +103,7 @@ export function InvitationsManager({
           {isCreating ? 'Creating...' : 'Create invitation'}
         </Button>
       </form>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs text-(--md-sys-color-on-surface-variant)">
         Each invitation is single-use and can only be redeemed by this address.
       </p>
 
@@ -120,11 +120,13 @@ export function InvitationsManager({
         </div>
       )}
 
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {error && <p className="text-sm text-(--md-sys-color-error)">{error}</p>}
 
       <ul className="flex flex-col gap-2">
         {invitations.length === 0 && (
-          <li className="text-sm text-muted-foreground">No invitations yet.</li>
+          <li className="text-sm text-(--md-sys-color-on-surface-variant)">
+            No invitations yet.
+          </li>
         )}
         {invitations.map(invitation => (
           <li
@@ -135,7 +137,7 @@ export function InvitationsManager({
               <span className="font-medium">
                 {invitation.email ?? 'No email specified'}
               </span>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-(--md-sys-color-on-surface-variant)">
                 Expires {new Date(invitation.expiresAt).toLocaleString()}
               </span>
             </div>

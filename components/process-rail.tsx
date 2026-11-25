@@ -15,7 +15,7 @@ export function ProcessRail({
     <div className="relative flex flex-col items-center w-5 h-full">
       {/* Connector line above */}
       {!isFirst && (
-        <div className="absolute w-px bg-border/50 -top-full h-full" />
+        <div className="absolute w-px bg-(--md-sys-color-outline-variant)/50 -top-full h-full" />
       )}
 
       {/* Dot positioned at header center - aligned with "Thoughts" text */}
@@ -23,8 +23,8 @@ export function ProcessRail({
         className={cn(
           'absolute rounded-full z-10',
           isSubStep
-            ? 'h-1.5 w-1.5 bg-muted-foreground/50'
-            : 'h-2 w-2 bg-muted-foreground'
+            ? 'h-1.5 w-1.5 bg-(--md-sys-color-on-surface-variant)/50'
+            : 'h-2 w-2 bg-(--md-sys-color-on-surface-variant)'
         )}
         style={{ top: '0.5rem' }} // Align with header text baseline
       />
@@ -32,7 +32,7 @@ export function ProcessRail({
       {/* Connector line below */}
       {!isLast && (
         <div
-          className="absolute w-px bg-border/50"
+          className="absolute w-px bg-(--md-sys-color-outline-variant)/50"
           style={{
             top: '1.125rem',
             bottom: '-100%',

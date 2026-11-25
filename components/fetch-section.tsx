@@ -96,7 +96,7 @@ export function FetchSection({
       isLoading={isLoading && isToolLoading}
       label={
         <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-          <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <Globe className="h-4 w-4 shrink-0 text-(--md-sys-color-on-surface-variant)" />
           <span className="truncate block min-w-0 max-w-full">
             {getPageTitle()}
           </span>
@@ -114,7 +114,7 @@ export function FetchSection({
           </>
         ) : displayStatus === 'error' ? (
           <>
-            <AlertCircle size={16} className="text-destructive" />
+            <AlertCircle size={16} className="text-(--md-sys-color-error)" />
             <span>{error}</span>
           </>
         ) : isToolLoading ? (
@@ -122,7 +122,8 @@ export function FetchSection({
         ) : undefined
       }
       className={cn(
-        displayStatus === 'success' && 'hover:text-foreground cursor-pointer'
+        displayStatus === 'success' &&
+          'hover:text-(--md-sys-color-on-surface) cursor-pointer'
       )}
     />
   )
@@ -133,10 +134,10 @@ export function FetchSection({
       {borderless && (
         <>
           {!isFirst && (
-            <div className="absolute left-[19.5px] w-px bg-border h-2 top-0" />
+            <div className="absolute left-[19.5px] w-px bg-(--md-sys-color-outline-variant) h-2 top-0" />
           )}
           {!isLast && (
-            <div className="absolute left-[19.5px] w-px bg-border h-2 bottom-0" />
+            <div className="absolute left-[19.5px] w-px bg-(--md-sys-color-outline-variant) h-2 bottom-0" />
           )}
         </>
       )}
@@ -144,7 +145,8 @@ export function FetchSection({
       <div
         className={cn(
           'rounded-lg',
-          !borderless && 'bg-card border border-border'
+          !borderless &&
+            'bg-(--md-sys-color-surface-container-low) border border-(--md-sys-color-outline-variant)'
         )}
       >
         <div className="flex items-center gap-2 p-3">
@@ -153,10 +155,10 @@ export function FetchSection({
             <button
               type="button"
               onClick={handleClick}
-              className="shrink-0 p-1 hover:bg-accent rounded transition-colors"
+              className="shrink-0 p-1 hover:bg-(--md-sys-color-surface-container-high) rounded transition-colors"
               aria-label="Open in new tab"
             >
-              <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              <ExternalLink className="h-4 w-4 text-(--md-sys-color-on-surface-variant)" />
             </button>
           )}
         </div>

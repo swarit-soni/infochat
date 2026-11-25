@@ -40,7 +40,7 @@ export default async function MentorCollegePickerPage(props: {
         <div className="flex flex-col items-center gap-3 text-center">
           <IconLogo className="size-12" />
           <h1 className="text-2xl font-semibold">Mentor sign in</h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-(--md-sys-color-on-surface-variant)">
             Choose your college. Each college has its own mentor sign-in and
             dashboard.
           </p>
@@ -49,7 +49,7 @@ export default async function MentorCollegePickerPage(props: {
         {errorMessage && (
           <p
             role="alert"
-            className="w-full rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+            className="w-full rounded-md border border-(--md-sys-color-error)/30 bg-(--md-sys-color-error)/10 p-3 text-sm text-(--md-sys-color-error)"
           >
             {errorMessage}
           </p>
@@ -75,7 +75,7 @@ export default async function MentorCollegePickerPage(props: {
                       </Link>
                     </Button>
                   ) : (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-(--md-sys-color-on-surface-variant)">
                       Mentor sign-in is not set up for this college yet.
                     </p>
                   )}
@@ -87,7 +87,7 @@ export default async function MentorCollegePickerPage(props: {
 
         <Link
           href="/auth/login"
-          className="text-xs text-muted-foreground hover:underline"
+          className="text-xs text-(--md-sys-color-on-surface-variant) hover:underline"
         >
           Not a mentor? Regular login
         </Link>

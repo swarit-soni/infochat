@@ -81,7 +81,7 @@ export function SearchSection({
       ariaExpanded={isOpen}
       label={
         <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-          <SearchIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <SearchIcon className="h-4 w-4 shrink-0 text-(--md-sys-color-on-surface-variant)" />
           <span className="truncate block min-w-0 max-w-full">{`${query}${includeDomainsString}`}</span>
         </div>
       }
@@ -106,10 +106,10 @@ export function SearchSection({
       {borderless && (
         <>
           {!isFirst && (
-            <div className="absolute left-[19.5px] w-px bg-border h-2 top-0" />
+            <div className="absolute left-[19.5px] w-px bg-(--md-sys-color-outline-variant) h-2 top-0" />
           )}
           {!isLast && (
-            <div className="absolute left-[19.5px] w-px bg-border h-2 bottom-0" />
+            <div className="absolute left-[19.5px] w-px bg-(--md-sys-color-outline-variant) h-2 bottom-0" />
           )}
         </>
       )}
@@ -132,7 +132,7 @@ export function SearchSection({
               <div className="w-[16px] shrink-0 flex justify-center">
                 <div
                   className={cn(
-                    'w-px bg-border/50 transition-opacity duration-200',
+                    'w-px bg-(--md-sys-color-outline-variant)/50 transition-opacity duration-200',
                     isOpen ? 'opacity-100' : 'opacity-0'
                   )}
                   style={{
@@ -166,9 +166,9 @@ export function SearchSection({
               )}
             {isError ? (
               <Section>
-                <div className="bg-card rounded-lg">
+                <div className="bg-(--md-sys-color-surface-container-low) rounded-lg">
                   <div className="flex items-center gap-2 w-full">
-                    <span className="text-sm text-destructive block flex-1 min-w-0">
+                    <span className="text-sm text-(--md-sys-color-error) block flex-1 min-w-0">
                       {errorMessage}
                     </span>
                   </div>

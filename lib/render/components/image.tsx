@@ -55,7 +55,7 @@ export const Image: ComponentFn<CatalogType, 'Image'> = ({ props }) => {
         <button
           type="button"
           className={cn(
-            'w-full cursor-pointer overflow-hidden rounded-lg bg-muted',
+            'w-full cursor-pointer overflow-hidden rounded-lg bg-(--md-sys-color-surface-container)',
             aspectRatioClass[aspectRatio]
           )}
         >

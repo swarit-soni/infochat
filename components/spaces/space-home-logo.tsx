@@ -384,7 +384,7 @@ function SpaceSwitcher() {
       </SpaceBadge>
       <SpaceBadge
         visible={peek && !badgeLabel}
-        className="text-muted-foreground duration-[450ms]"
+        className="text-(--md-sys-color-on-surface-variant) duration-[450ms]"
       >
         Make it yours
       </SpaceBadge>
@@ -405,7 +405,7 @@ function SpaceBadge({
     <span
       aria-hidden
       className={cn(
-        'pointer-events-none absolute bottom-full left-1/2 mb-2.5 -translate-x-1/2 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-foreground transition-[opacity,translate] duration-150 ease-out',
+        'pointer-events-none absolute bottom-full left-1/2 mb-2.5 -translate-x-1/2 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-(--md-sys-color-surface-container) px-2.5 py-1 text-xs font-medium text-(--md-sys-color-on-surface) transition-[opacity,translate] duration-150 ease-out',
         visible ? 'opacity-100' : 'opacity-0 translate-y-1',
         className
       )}

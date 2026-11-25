@@ -35,7 +35,7 @@ import { useIsVisibleSurface } from './space-surface'
 import { useSpaces } from './spaces-provider'
 
 const fieldClass =
-  'w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring/30'
+  'w-full rounded-lg border bg-(--md-sys-color-surface) px-3 py-2 text-sm outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-(--md-sys-color-primary)/30'
 
 /** Space settings, shown over the home in place of the input. */
 export function SpaceSettings() {
@@ -48,7 +48,7 @@ export function SpaceSettings() {
     <>
       <div
         aria-hidden
-        className="space-settings-backdrop absolute inset-0 z-20 bg-background"
+        className="space-settings-backdrop absolute inset-0 z-20 bg-(--md-sys-color-surface)"
       />
       <ViewTransition>
         <SpaceSettingsView />
@@ -92,10 +92,10 @@ function SpaceSettingsView() {
         variant="ghost"
         size="sm"
         onClick={closeEditor}
-        className="absolute top-3 right-3 text-muted-foreground"
+        className="absolute top-3 right-3 text-(--md-sys-color-on-surface-variant)"
       >
         Close
-        <kbd className="ml-1 hidden font-sans text-[10px] text-muted-foreground md:inline">
+        <kbd className="ml-1 hidden font-sans text-[10px] text-(--md-sys-color-on-surface-variant) md:inline">
           Esc
         </kbd>
       </Button>
@@ -124,7 +124,7 @@ function SpaceSettingsView() {
         {folded ? (
           <div className="flex w-full flex-col gap-3">
             <h2 className="text-2xl font-semibold">Default</h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-(--md-sys-color-on-surface-variant)">
               Sera&apos;s standard behavior. Add instructions only if you want
               them in every chat.
             </p>
@@ -194,7 +194,7 @@ function SpaceSettingsView() {
                 className={cn(fieldClass, 'resize-none')}
               />
             </label>
-            <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+            <div className="flex flex-col gap-1 text-xs text-(--md-sys-color-on-surface-variant)">
               {isDefault ? (
                 <p>
                   Applies to all chats in Default, including existing ones from
@@ -212,7 +212,7 @@ function SpaceSettingsView() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setConfirmDelete(true)}
-                className="self-start text-destructive hover:text-destructive"
+                className="self-start text-(--md-sys-color-error) hover:text-(--md-sys-color-error)"
               >
                 Delete space
               </Button>
@@ -271,7 +271,7 @@ function ColorOption({
       className={cn(
         'size-8 rounded-full transition-[scale] duration-150 ease-out hover:scale-110',
         selected &&
-          'ring-2 ring-foreground/40 ring-offset-2 ring-offset-background'
+          'ring-2 ring-(--md-sys-color-on-surface)/40 ring-offset-2 ring-offset-(--md-sys-color-surface)'
       )}
       style={{ background: spaceColorValue(color) }}
     />
@@ -286,7 +286,7 @@ function ColorOption({
       className={cn(
         'grid size-8 place-items-center rounded-full border-2 border-dashed text-sm leading-none transition-opacity duration-150',
         selected
-          ? 'opacity-100 ring-2 ring-foreground/40 ring-offset-2 ring-offset-background'
+          ? 'opacity-100 ring-2 ring-(--md-sys-color-on-surface)/40 ring-offset-2 ring-offset-(--md-sys-color-surface)'
           : 'opacity-55 hover:opacity-100'
       )}
       style={{

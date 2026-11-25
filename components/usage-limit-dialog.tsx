@@ -64,12 +64,12 @@ export function UsageLimitDialog({
           <DialogDescription>{resetCopy}</DialogDescription>
         </DialogHeader>
 
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-(--md-sys-color-on-surface-variant)">
           {"Additional usage isn't available yet."}
         </p>
 
         {error && (
-          <p className="text-sm text-destructive" role="alert">
+          <p className="text-sm text-(--md-sys-color-error)" role="alert">
             {"Couldn't record your request. Please try again."}
           </p>
         )}

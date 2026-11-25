@@ -144,7 +144,7 @@ export function SearchModeSelector({
                     <span className="text-sm font-medium">{config.label}</span>
                   </div>
                   <div className="flex flex-col gap-0.5 ml-6">
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-(--md-sys-color-on-surface-variant)">
                       {config.description}
                     </span>
                   </div>
@@ -157,10 +157,10 @@ export function SearchModeSelector({
 
       {/* Desktop Toggle */}
       <div className="hidden sm:block">
-        <div className="relative inline-flex items-center rounded-full bg-background border p-1">
+        <div className="relative inline-flex items-center rounded-full bg-(--md-sys-color-surface) border p-1">
           {/* Animated background indicator */}
           <div
-            className="absolute inset-1 rounded-full bg-muted transition-[transform,width] duration-[180ms] ease-[var(--motion-ease-in-out)]"
+            className="absolute inset-1 rounded-full bg-(--md-sys-color-surface-container) transition-[transform,width] duration-[180ms] ease-[var(--motion-ease-in-out)]"
             style={{
               width: `calc(${100 / modeCount}% - 4px)`,
               transform: `translateX(${selectedIndex * 100}%)`
@@ -192,8 +192,8 @@ export function SearchModeSelector({
                       className={cn(
                         'relative z-10 flex-1 items-center justify-center rounded-full px-3 py-2 transition-colors duration-[140ms] ease-[var(--motion-ease-out)]',
                         isSelected
-                          ? 'text-foreground'
-                          : 'text-muted-foreground hover:text-foreground/80'
+                          ? 'text-(--md-sys-color-on-surface)'
+                          : 'text-(--md-sys-color-on-surface-variant) hover:text-(--md-sys-color-on-surface)/80'
                       )}
                       aria-label={`${config.label} mode`}
                       aria-pressed={isSelected}
@@ -219,7 +219,7 @@ export function SearchModeSelector({
                           {config.label}
                         </h4>
                       </div>
-                      <p className="text-xs text-muted-foreground leading-tight">
+                      <p className="text-xs text-(--md-sys-color-on-surface-variant) leading-tight">
                         {config.description}
                       </p>
                     </div>

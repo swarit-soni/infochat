@@ -127,7 +127,7 @@ export function ChatMenuItem({ chat }: ChatMenuItemProps) {
           <div className="text-xs font-medium truncate select-none w-full">
             {chat.title}
           </div>
-          <div className="text-xs text-muted-foreground w-full">
+          <div className="text-xs text-(--md-sys-color-on-surface-variant) w-full">
             {formatDateWithTime(chat.createdAt)}
           </div>
         </Link>
@@ -142,7 +142,7 @@ export function ChatMenuItem({ chat }: ChatMenuItemProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent side="right" align="start">
           <DropdownMenuItem
-            className="gap-2 text-destructive focus:text-destructive"
+            className="gap-2 text-(--md-sys-color-error) focus:text-(--md-sys-color-error)"
             onSelect={event => {
               event.preventDefault()
               setIsMenuOpen(false)
@@ -172,7 +172,7 @@ export function ChatMenuItem({ chat }: ChatMenuItemProps) {
                 event.preventDefault()
                 handleDeleteChat()
               }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-(--md-sys-color-error) text-(--md-sys-color-on-error) hover:bg-(--md-sys-color-error)/90"
             >
               {isPending ? (
                 <div className="flex items-center justify-center">

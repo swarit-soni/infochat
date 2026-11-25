@@ -43,7 +43,7 @@ export const CitationLink = memo(function CitationLink({
 
   const linkClasses = cn(
     isCitation
-      ? 'text-[10px] bg-muted/50 text-muted-foreground/60 rounded-full h-4 px-1.5 inline-flex items-center justify-center hover:bg-primary hover:text-primary-foreground duration-200 no-underline -translate-y-0.5 whitespace-nowrap'
+      ? 'text-[10px] bg-(--md-sys-color-surface-container)/50 text-(--md-sys-color-on-surface-variant)/60 rounded-full h-4 px-1.5 inline-flex items-center justify-center hover:bg-(--md-sys-color-primary) hover:text-(--md-sys-color-on-primary) duration-200 no-underline -translate-y-0.5 whitespace-nowrap'
       : 'hover:underline inline-flex items-center gap-1.5',
     className
   )
@@ -90,7 +90,7 @@ export const CitationLink = memo(function CitationLink({
               href={citationData.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="block p-3 hover:bg-accent/50 transition-colors"
+              className="block p-3 hover:bg-(--md-sys-color-surface-container-high)/50 transition-colors"
             >
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
@@ -103,14 +103,14 @@ export const CitationLink = memo(function CitationLink({
                       {getHostname(citationData.url)[0]?.toUpperCase() || '?'}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-xs text-muted-foreground truncate">
+                  <span className="text-xs text-(--md-sys-color-on-surface-variant) truncate">
                     {getHostname(citationData.url)}
                   </span>
                 </div>
                 <p className="text-sm font-medium line-clamp-1">
                   {citationData.title}
                 </p>
-                <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                <p className="text-xs text-(--md-sys-color-on-surface-variant) line-clamp-2 leading-relaxed">
                   {citationData.content}
                 </p>
               </div>

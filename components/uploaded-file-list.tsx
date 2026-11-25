@@ -69,7 +69,7 @@ const UploadedFileListItem = React.memo(function UploadedFileListItem({
 
   return (
     <div className="relative w-20 shrink-0 flex flex-col items-center">
-      <div className="relative w-20 aspect-7/5 rounded-lg overflow-hidden shadow-sm border bg-muted/20 dark:bg-muted/10">
+      <div className="relative w-20 aspect-7/5 rounded-lg overflow-hidden shadow-sm border bg-(--md-sys-color-surface-container)/20 dark:bg-(--md-sys-color-surface-container)/10">
         {isImage && imageSrc ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -78,7 +78,7 @@ const UploadedFileListItem = React.memo(function UploadedFileListItem({
             className="size-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-sm font-semibold bg-gray-300 dark:bg-gray-700">
+          <div className="w-full h-full flex items-center justify-center text-sm font-semibold bg-(--md-sys-color-surface-container-highest) text-(--md-sys-color-on-surface-variant)">
             {filename.split('.').pop()?.toUpperCase()}
           </div>
         )}
@@ -93,13 +93,13 @@ const UploadedFileListItem = React.memo(function UploadedFileListItem({
         <button
           type="button"
           onClick={() => onRemove(index)}
-          className="absolute top-1 right-1 bg-black/40 hover:bg-red-600 text-white rounded-full p-1 z-20"
+          className="absolute top-1 right-1 bg-black/40 hover:bg-(--md-sys-color-error) text-white hover:text-(--md-sys-color-on-error) rounded-full p-1 z-20"
         >
           <X size={12} />
         </button>
       </div>
 
-      <div className="mt-2 text-xs text-center text-foreground truncate w-full">
+      <div className="mt-2 text-xs text-center text-(--md-sys-color-on-surface) truncate w-full">
         {filename}
       </div>
     </div>

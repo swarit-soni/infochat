@@ -41,7 +41,11 @@ export function VideoSearchResults({
   const query = results.searchParameters?.q || ''
 
   if (!videos || videos.length === 0) {
-    return <div className="text-muted-foreground">No videos found</div>
+    return (
+      <div className="text-(--md-sys-color-on-surface-variant)">
+        No videos found
+      </div>
+    )
   }
 
   return (

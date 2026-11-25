@@ -64,7 +64,7 @@ export default async function CollegeMentorPortalPage(props: {
               <h1 className="text-2xl font-semibold">Mentor Data Portal</h1>
               <Badge variant="secondary">{collegeConfig.shortName}</Badge>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-(--md-sys-color-on-surface-variant)">
               Signed in as {user.email}. Curate {collegeConfig.shortName}{' '}
               circulars, approve urgent updates, manage events, and review
               knowledge gaps.

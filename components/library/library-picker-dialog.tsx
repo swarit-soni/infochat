@@ -292,7 +292,7 @@ export function LibraryPickerDialog({
       />
       <CommandList className="h-[420px] max-h-[calc(100vh-14rem)]">
         {isLoading && (
-          <div className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 px-4 py-3 text-sm text-(--md-sys-color-on-surface-variant)">
             <Spinner /> Loading library
           </div>
         )}
@@ -307,16 +307,16 @@ export function LibraryPickerDialog({
                 value={`note-${note.id}-${stripMarkdownText(note.title)}`}
                 onSelect={() => handleAttachNote(note)}
               >
-                <FileText className="size-4 text-muted-foreground" />
+                <FileText className="size-4 text-(--md-sys-color-on-surface-variant)" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">
                     {stripMarkdownText(note.title) || 'Untitled note'}
                   </p>
-                  <p className="line-clamp-1 text-xs text-muted-foreground">
+                  <p className="line-clamp-1 text-xs text-(--md-sys-color-on-surface-variant)">
                     {stripMarkdownText(note.content)}
                   </p>
                 </div>
-                <span className="shrink-0 text-[11px] text-muted-foreground">
+                <span className="shrink-0 text-[11px] text-(--md-sys-color-on-surface-variant)">
                   Note
                 </span>
               </CommandItem>
@@ -329,16 +329,16 @@ export function LibraryPickerDialog({
                   value={`file-${file.id}-${file.filename}`}
                   onSelect={() => handleAttachFile(file)}
                 >
-                  <Icon className="size-4 text-muted-foreground" />
+                  <Icon className="size-4 text-(--md-sys-color-on-surface-variant)" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">
                       {file.filename}
                     </p>
-                    <p className="truncate text-xs text-muted-foreground">
+                    <p className="truncate text-xs text-(--md-sys-color-on-surface-variant)">
                       {file.mediaType}
                     </p>
                   </div>
-                  <span className="shrink-0 text-[11px] text-muted-foreground">
+                  <span className="shrink-0 text-[11px] text-(--md-sys-color-on-surface-variant)">
                     File
                   </span>
                 </CommandItem>

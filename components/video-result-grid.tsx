@@ -51,7 +51,7 @@ export function VideoResultGrid({
                   {' '}
                   {/* Adjusted padding */}
                   {baseUrl && (
-                    <div className="relative w-full aspect-video bg-muted">
+                    <div className="relative w-full aspect-video bg-(--md-sys-color-surface-container)">
                       <Image
                         src={baseUrl}
                         alt={`Thumbnail for ${video.title}`}
@@ -86,7 +86,7 @@ export function VideoResultGrid({
                           {new URL(video.link).hostname[0]}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="text-xs text-muted-foreground opacity-60 truncate">
+                      <div className="text-xs text-(--md-sys-color-on-surface-variant) opacity-60 truncate">
                         {/* Display channel or source if available */}
                         {video.channel ||
                           video.source ||

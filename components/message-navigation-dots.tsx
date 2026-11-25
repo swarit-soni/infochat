@@ -52,7 +52,7 @@ export function MessageNavigationDots({
                   onClick={() => handleClick(section.id)}
                   aria-label={preview || 'Go to message'}
                 >
-                  <span className="size-1.5 rounded-full bg-foreground/30 transition-colors group-hover:bg-foreground/60" />
+                  <span className="size-1.5 rounded-full bg-(--md-sys-color-on-surface)/30 transition-colors group-hover:bg-(--md-sys-color-on-surface)/60" />
                 </button>
               </TooltipTrigger>
               {preview && (

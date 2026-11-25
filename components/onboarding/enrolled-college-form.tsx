@@ -42,8 +42,9 @@ function OptionList({
         <label
           key={option.value}
           className={cn(
-            'flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm transition-colors hover:bg-accent',
-            value === option.value && 'border-primary bg-accent'
+            'flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm transition-colors hover:bg-(--md-sys-color-surface-container-high)',
+            value === option.value &&
+              'border-(--md-sys-color-primary) bg-(--md-sys-color-surface-container-high)'
           )}
         >
           <input
@@ -57,7 +58,7 @@ function OptionList({
           <span>
             <span className="block font-medium">{option.label}</span>
             {option.description && (
-              <span className="block text-xs text-muted-foreground">
+              <span className="block text-xs text-(--md-sys-color-on-surface-variant)">
                 {option.description}
               </span>
             )}
@@ -154,7 +155,7 @@ export function EnrolledCollegeForm({
       {error && (
         <p
           role="alert"
-          className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+          className="rounded-md border border-(--md-sys-color-error)/30 bg-(--md-sys-color-error)/10 p-3 text-sm text-(--md-sys-color-error)"
         >
           {error}
         </p>

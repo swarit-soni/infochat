@@ -109,7 +109,7 @@ export function DraftPanel() {
     return (
       <>
         <DraftHeader title="Draft" onClose={close} />
-        <p className="p-4 text-sm text-muted-foreground">
+        <p className="p-4 text-sm text-(--md-sys-color-on-surface-variant)">
           No draft in this chat yet.
         </p>
       </>
@@ -312,7 +312,7 @@ function DraftHeader({
         <div className="flex min-w-0 flex-1 flex-col gap-0.5 py-1.5">
           <h3 className="truncate text-sm font-medium">{title}</h3>
           {children && (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-(--md-sys-color-on-surface-variant)">
               {children}
             </div>
           )}
@@ -327,7 +327,7 @@ function DraftHeader({
           <X className="size-4" />
         </TooltipButton>
       </div>
-      <Separator className="my-1 bg-border/50" />
+      <Separator className="my-1 bg-(--md-sys-color-outline-variant)/50" />
     </TooltipProvider>
   )
 }

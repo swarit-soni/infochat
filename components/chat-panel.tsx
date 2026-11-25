@@ -446,7 +446,7 @@ export function ChatPanel({
     <div
       ref={panelRef}
       className={cn(
-        'w-full bg-background group/form-container shrink-0',
+        'w-full bg-(--md-sys-color-surface) group/form-container shrink-0',
         messages.length > 0
           ? 'sticky bottom-0 px-2 pb-2 md:pb-4'
           : 'px-4 md:px-6'
@@ -458,7 +458,7 @@ export function ChatPanel({
           {...hiddenBySettings}
         >
           <SpaceHomeLogo />
-          <h1 className="text-xl md:text-2xl font-medium text-foreground">
+          <h1 className="text-xl md:text-2xl font-medium text-(--md-sys-color-on-surface)">
             Curious? Let&apos;s get into it.
           </h1>
         </div>
@@ -622,9 +622,9 @@ export function ChatPanel({
 
         <div
           className={cn(
-            'relative flex w-full flex-col gap-2 rounded-3xl border border-input bg-muted transition-[box-shadow] duration-[140ms] ease-[var(--motion-ease-out)]',
+            'relative flex w-full flex-col gap-2 rounded-3xl border border-(--md-sys-color-outline) bg-(--md-sys-color-surface-container) transition-[box-shadow] duration-[140ms] ease-[var(--motion-ease-out)]',
             isInputFocused &&
-              'ring-1 ring-ring/20 ring-offset-1 ring-offset-background/50'
+              'ring-1 ring-(--md-sys-color-primary)/20 ring-offset-1 ring-offset-(--md-sys-color-surface)/50'
           )}
         >
           {contentCards.length > 0 && (
@@ -632,10 +632,10 @@ export function ChatPanel({
               {contentCards.map((card, i) => (
                 <div
                   key={i}
-                  className="relative rounded-xl border border-input bg-background px-3 py-2"
+                  className="relative rounded-xl border border-(--md-sys-color-outline) bg-(--md-sys-color-surface) px-3 py-2"
                 >
                   <div className="mb-1 flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-(--md-sys-color-on-surface-variant)">
                       <FileText className="size-3.5 shrink-0" />
                       Pasted content · {card.length.toLocaleString()} chars
                     </span>
@@ -645,7 +645,7 @@ export function ChatPanel({
                           <button
                             type="button"
                             aria-label="Expand to text"
-                            className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            className="shrink-0 rounded p-1 text-(--md-sys-color-on-surface-variant) hover:bg-(--md-sys-color-surface-container) hover:text-(--md-sys-color-on-surface)"
                             onClick={() => {
                               captureClient('content_card_expanded', {
                                 chars: card.length
@@ -670,7 +670,7 @@ export function ChatPanel({
                       </Tooltip>
                     </TooltipProvider>
                   </div>
-                  <p className="line-clamp-2 whitespace-pre-wrap break-words text-xs text-muted-foreground/80">
+                  <p className="line-clamp-2 whitespace-pre-wrap break-words text-xs text-(--md-sys-color-on-surface-variant)/80">
                     {card}
                   </p>
                 </div>
@@ -682,17 +682,17 @@ export function ChatPanel({
               {quotedContexts.map((card, i) => (
                 <div
                   key={i}
-                  className="relative rounded-xl border border-input bg-background px-3 py-2"
+                  className="relative rounded-xl border border-(--md-sys-color-outline) bg-(--md-sys-color-surface) px-3 py-2"
                 >
                   <div className="mb-1 flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-(--md-sys-color-on-surface-variant)">
                       <FileText className="size-3.5 shrink-0" />
                       Quoted context · {card.length.toLocaleString()} chars
                     </span>
                     <button
                       type="button"
                       aria-label="Remove quoted context"
-                      className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      className="shrink-0 rounded p-1 text-(--md-sys-color-on-surface-variant) hover:bg-(--md-sys-color-surface-container) hover:text-(--md-sys-color-on-surface)"
                       onClick={() => {
                         setQuotedContexts(prev =>
                           prev.filter((_, j) => j !== i)
@@ -702,7 +702,7 @@ export function ChatPanel({
                       <X className="size-3.5" />
                     </button>
                   </div>
-                  <p className="line-clamp-2 whitespace-pre-wrap break-words text-xs text-muted-foreground/80">
+                  <p className="line-clamp-2 whitespace-pre-wrap break-words text-xs text-(--md-sys-color-on-surface-variant)/80">
                     {card}
                   </p>
                 </div>
@@ -714,10 +714,10 @@ export function ChatPanel({
               {noteContexts.map((note, i) => (
                 <div
                   key={note.id}
-                  className="relative rounded-xl border border-input bg-background px-3 py-2"
+                  className="relative rounded-xl border border-(--md-sys-color-outline) bg-(--md-sys-color-surface) px-3 py-2"
                 >
                   <div className="mb-1 flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-1.5 truncate text-xs font-medium text-muted-foreground">
+                    <span className="flex items-center gap-1.5 truncate text-xs font-medium text-(--md-sys-color-on-surface-variant)">
                       <FileText className="size-3.5 shrink-0" />
                       <span className="truncate">
                         Note: {stripMarkdownText(note.title) || 'Untitled note'}
@@ -726,7 +726,7 @@ export function ChatPanel({
                     <button
                       type="button"
                       aria-label="Remove note"
-                      className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      className="shrink-0 rounded p-1 text-(--md-sys-color-on-surface-variant) hover:bg-(--md-sys-color-surface-container) hover:text-(--md-sys-color-on-surface)"
                       onClick={() => {
                         setNoteContexts(prev => prev.filter((_, j) => j !== i))
                       }}
@@ -734,7 +734,7 @@ export function ChatPanel({
                       <X className="size-3.5" />
                     </button>
                   </div>
-                  <p className="line-clamp-2 whitespace-pre-wrap break-words text-xs text-muted-foreground/80">
+                  <p className="line-clamp-2 whitespace-pre-wrap break-words text-xs text-(--md-sys-color-on-surface-variant)/80">
                     {stripMarkdownText(note.content)}
                   </p>
                 </div>
@@ -752,7 +752,7 @@ export function ChatPanel({
                 return (
                   <span
                     key={i}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-input bg-background py-1 pl-2 pr-1 text-xs text-muted-foreground"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-(--md-sys-color-outline) bg-(--md-sys-color-surface) py-1 pl-2 pr-1 text-xs text-(--md-sys-color-on-surface-variant)"
                   >
                     {favicon && (
                       /* eslint-disable-next-line @next/next/no-img-element */
@@ -768,7 +768,7 @@ export function ChatPanel({
                     <button
                       type="button"
                       aria-label="Remove URL"
-                      className="shrink-0 rounded p-0.5 hover:bg-muted hover:text-foreground"
+                      className="shrink-0 rounded p-0.5 hover:bg-(--md-sys-color-surface-container) hover:text-(--md-sys-color-on-surface)"
                       onClick={() => {
                         captureClient('url_card_removed')
                         setUrlCards(prev => prev.filter((_, j) => j !== i))
@@ -795,7 +795,7 @@ export function ChatPanel({
             spellCheck={false}
             value={input}
             disabled={disabled}
-            className="resize-none w-full min-h-12 bg-transparent border-0 p-3 md:p-4 text-sm placeholder:text-muted-foreground focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
+            className="resize-none w-full min-h-12 bg-transparent border-0 p-3 md:p-4 text-sm placeholder:text-(--md-sys-color-on-surface-variant) focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
             onChange={handleInputChange}
             onPaste={e => {
               const text = e.clipboardData.getData('text')

@@ -31,13 +31,13 @@ export function SaveNoteAuthDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
-            <Bookmark className="size-6 text-muted-foreground" />
+          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-(--md-sys-color-surface-container)">
+            <Bookmark className="size-6 text-(--md-sys-color-on-surface-variant)" />
           </div>
           <DialogTitle className="text-center text-xl font-semibold">
             Save notes to your library
           </DialogTitle>
-          <DialogDescription className="text-center text-muted-foreground">
+          <DialogDescription className="text-center text-(--md-sys-color-on-surface-variant)">
             Sign in with your Google account to save answers and selected text
             to your Library.
           </DialogDescription>

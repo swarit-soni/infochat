@@ -23,7 +23,7 @@ const shortcutList: ShortcutDefinition[] = Object.values(SHORTCUTS).filter(
 
 function ShortcutKey({ children }: { children: string }) {
   return (
-    <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded border border-border bg-muted px-1 font-mono text-[11px] text-muted-foreground">
+    <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded border border-(--md-sys-color-outline-variant) bg-(--md-sys-color-surface-container) px-1 font-mono text-[11px] text-(--md-sys-color-on-surface-variant)">
       {children}
     </kbd>
   )
@@ -54,7 +54,7 @@ export function KeyboardShortcutDialog() {
               key={shortcut.id}
               className="flex items-center justify-between rounded-md px-2 py-1.5"
             >
-              <span className="text-sm text-foreground">
+              <span className="text-sm text-(--md-sys-color-on-surface)">
                 {shortcut.description}
               </span>
               <div className="flex items-center gap-1">
@@ -66,7 +66,7 @@ export function KeyboardShortcutDialog() {
           ))}
           <div className="border-t pt-1">
             <div className="flex items-center justify-between rounded-md px-2 py-1.5">
-              <span className="text-sm text-foreground">
+              <span className="text-sm text-(--md-sys-color-on-surface)">
                 {SHORTCUTS.showShortcuts.description}
               </span>
               <div className="flex items-center gap-1">

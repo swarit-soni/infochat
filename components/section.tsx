@@ -37,7 +37,7 @@ export const Section: React.FC<SectionProps> = ({
   separator = false
 }) => {
   const iconSize = 16
-  const iconClassName = 'mr-1.5 text-muted-foreground'
+  const iconClassName = 'mr-1.5 text-(--md-sys-color-on-surface-variant)'
   let icon: React.ReactNode
   let type: 'text' | 'badge' = 'text'
   switch (title) {
@@ -72,7 +72,9 @@ export const Section: React.FC<SectionProps> = ({
 
   return (
     <>
-      {separator && <Separator className="my-2 bg-primary/10" />}
+      {separator && (
+        <Separator className="my-2 bg-(--md-sys-color-primary)/10" />
+      )}
       <section
         className={cn(
           ` ${size === 'sm' ? 'py-1' : size === 'lg' ? 'py-4' : 'py-2'}`,

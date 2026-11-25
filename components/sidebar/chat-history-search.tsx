@@ -50,10 +50,13 @@ function HighlightedSnippet({ highlight }: { highlight: string }) {
     new RegExp(`(${HL_START}[\\s\\S]*?${HL_STOP})`, 'g')
   )
   return (
-    <p className="text-muted-foreground text-xs leading-snug break-words line-clamp-2 w-full">
+    <p className="text-(--md-sys-color-on-surface-variant) text-xs leading-snug break-words line-clamp-2 w-full">
       {segments.map((segment, index) =>
         segment.startsWith(HL_START) && segment.endsWith(HL_STOP) ? (
-          <b key={index} className="font-semibold text-foreground">
+          <b
+            key={index}
+            className="font-semibold text-(--md-sys-color-on-surface)"
+          >
             {segment.slice(HL_START.length, -HL_STOP.length)}
           </b>
         ) : (
@@ -329,7 +332,7 @@ export function ChatHistorySearch({
         {showThinkingSection && (
           <CommandGroup heading="In thinking">
             {results!.thinking!.length === 0 ? (
-              <div className="text-muted-foreground px-2 py-1.5 text-xs">
+              <div className="text-(--md-sys-color-on-surface-variant) px-2 py-1.5 text-xs">
                 No thinking matches
               </div>
             ) : (
@@ -363,7 +366,7 @@ export function ChatHistorySearch({
             if (event.key === 'Enter') event.stopPropagation()
           }}
           disabled={isSearchingThinking}
-          className="text-muted-foreground hover:text-foreground hover:bg-accent flex items-center gap-2 rounded-sm px-2 py-1.5 text-xs transition-colors disabled:opacity-60"
+          className="text-(--md-sys-color-on-surface-variant) hover:text-(--md-sys-color-on-surface) hover:bg-(--md-sys-color-surface-container-high) flex items-center gap-2 rounded-sm px-2 py-1.5 text-xs transition-colors disabled:opacity-60"
         >
           {isSearchingThinking ? (
             <Loader2 size={14} className="animate-spin" />

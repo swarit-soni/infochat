@@ -327,7 +327,7 @@ export function ChatHistoryClient() {
               size={14}
               role="status"
               aria-label="Searching"
-              className="text-muted-foreground absolute right-7 top-1/2 -translate-y-1/2 animate-spin"
+              className="text-(--md-sys-color-on-surface-variant) absolute right-7 top-1/2 -translate-y-1/2 animate-spin"
             />
           )}
           {query && (
@@ -335,7 +335,7 @@ export function ChatHistoryClient() {
               type="button"
               onClick={() => setQuery('')}
               aria-label="Clear search"
-              className="text-muted-foreground hover:text-foreground absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5"
+              className="text-(--md-sys-color-on-surface-variant) hover:text-(--md-sys-color-on-surface) absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5"
             >
               <X size={14} />
             </button>
@@ -353,13 +353,13 @@ export function ChatHistoryClient() {
         ) : staleHiddenRefresh ? (
           listRetryFailed ? (
             <div className="px-2 py-4 text-center">
-              <p className="text-muted-foreground text-sm">
+              <p className="text-(--md-sys-color-on-surface-variant) text-sm">
                 Failed to load chat history.
               </p>
               <button
                 type="button"
                 onClick={retryStaleList}
-                className="text-muted-foreground hover:text-foreground hover:bg-accent mt-1 rounded-sm px-2 py-1 text-xs transition-colors"
+                className="text-(--md-sys-color-on-surface-variant) hover:text-(--md-sys-color-on-surface) hover:bg-(--md-sys-color-surface-container-high) mt-1 rounded-sm px-2 py-1 text-xs transition-colors"
               >
                 Retry
               </button>
@@ -370,7 +370,7 @@ export function ChatHistoryClient() {
             </div>
           )
         ) : isHistoryEmpty && !isPending ? (
-          <div className="px-2 text-foreground/30 text-sm text-center py-4">
+          <div className="px-2 text-(--md-sys-color-on-surface)/30 text-sm text-center py-4">
             No chats yet
           </div>
         ) : (

@@ -32,7 +32,7 @@ export function InviteRequired() {
           </div>
         </CardContent>
       </Card>
-      <div className="text-center text-xs text-muted-foreground">
+      <div className="text-center text-xs text-(--md-sys-color-on-surface-variant)">
         <Link href="/" className="hover:underline">
           &larr; Back to Home
         </Link>

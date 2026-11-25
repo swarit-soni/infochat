@@ -22,7 +22,7 @@ const SheetOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Overlay
     className={cn(
-      'fixed inset-0 z-50 bg-black/30 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:duration-[120ms] data-[state=closed]:duration-[90ms] data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+      'fixed inset-0 z-50 bg-(--md-sys-color-scrim)/32 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:duration-[120ms] data-[state=closed]:duration-[90ms] data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
       className
     )}
     {...props}
@@ -32,7 +32,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName
 
 const sheetVariants = cva(
-  'fixed z-50 gap-4 bg-background p-4 shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:duration-[160ms] data-[state=closed]:duration-[110ms] data-[state=open]:ease-[var(--motion-ease-drawer)] data-[state=closed]:ease-[var(--motion-ease-out)]',
+  'fixed z-50 gap-4 bg-(--md-sys-color-surface) p-4 shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:duration-[160ms] data-[state=closed]:duration-[110ms] data-[state=open]:ease-[var(--motion-ease-drawer)] data-[state=closed]:ease-[var(--motion-ease-out)]',
   {
     variants: {
       side: {
@@ -66,7 +66,7 @@ const SheetContent = React.forwardRef<
       {...props}
     >
       {children}
-      <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
+      <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-(--md-sys-color-surface) transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-(--md-sys-color-primary) focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-(--md-sys-color-secondary-container)">
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>
       </SheetPrimitive.Close>
@@ -109,7 +109,10 @@ const SheetTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Title
     ref={ref}
-    className={cn('text-lg font-semibold text-foreground', className)}
+    className={cn(
+      'text-lg font-semibold text-(--md-sys-color-on-surface)',
+      className
+    )}
     {...props}
   />
 ))
@@ -121,7 +124,10 @@ const SheetDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Description
     ref={ref}
-    className={cn('text-sm text-muted-foreground', className)}
+    className={cn(
+      'text-sm text-(--md-sys-color-on-surface-variant)',
+      className
+    )}
     {...props}
   />
 ))

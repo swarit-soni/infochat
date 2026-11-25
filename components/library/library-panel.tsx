@@ -149,7 +149,7 @@ function LibraryItemActionsMenu({
           type="button"
           variant="ghost"
           size="icon"
-          className="size-7 shrink-0 text-muted-foreground"
+          className="size-7 shrink-0 text-(--md-sys-color-on-surface-variant)"
           onClick={event => event.stopPropagation()}
           aria-label="Note actions"
         >
@@ -158,7 +158,7 @@ function LibraryItemActionsMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent side="left" align="start">
         <DropdownMenuItem
-          className="gap-2 text-destructive focus:text-destructive"
+          className="gap-2 text-(--md-sys-color-error) focus:text-(--md-sys-color-error)"
           onSelect={event => {
             event.preventDefault()
             setIsMenuOpen(false)
@@ -229,33 +229,37 @@ function KnowledgeDocumentDetail({
         <dl className="grid grid-cols-2 gap-3 text-xs">
           {details.map(detail => (
             <div key={detail.label}>
-              <dt className="text-muted-foreground">{detail.label}</dt>
+              <dt className="text-(--md-sys-color-on-surface-variant)">
+                {detail.label}
+              </dt>
               <dd className="mt-0.5 break-words">{detail.value}</dd>
             </div>
           ))}
         </dl>
         {document.actionRequired && (
-          <div className="mt-4 flex gap-2 rounded-md border bg-muted/40 p-3 text-sm">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+          <div className="mt-4 flex gap-2 rounded-md border bg-(--md-sys-color-surface-container)/40 p-3 text-sm">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-(--md-sys-color-on-surface-variant)" />
             <div>
-              <p className="text-xs text-muted-foreground">Action required</p>
+              <p className="text-xs text-(--md-sys-color-on-surface-variant)">
+                Action required
+              </p>
               <p className="mt-0.5">{document.actionRequired}</p>
             </div>
           </div>
         )}
-        <Separator className="my-4 bg-border/50" />
+        <Separator className="my-4 bg-(--md-sys-color-outline-variant)/50" />
         <article>
           <MarkdownMessage message={document.content} />
         </article>
       </div>
-      <footer className="flex shrink-0 items-center justify-between gap-2 border-t px-4 py-2 text-xs text-muted-foreground">
+      <footer className="flex shrink-0 items-center justify-between gap-2 border-t px-4 py-2 text-xs text-(--md-sys-color-on-surface-variant)">
         <span>Updated {formatNoteDate(document.updatedAt)}</span>
         {isSafeHttpUrl(document.sourceUrl) && (
           <a
             href={document.sourceUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 hover:text-foreground"
+            className="inline-flex items-center gap-1 hover:text-(--md-sys-color-on-surface)"
           >
             View source
             <ExternalLink className="size-3" />
@@ -849,8 +853,8 @@ export function LibraryPanel() {
 
   return (
     <TooltipProvider>
-      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-muted md:px-4 md:pt-14 md:pb-4">
-        <div className="flex h-full flex-col overflow-hidden bg-background md:rounded-xl md:border">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-(--md-sys-color-surface-container) md:px-4 md:pt-14 md:pb-4">
+        <div className="flex h-full flex-col overflow-hidden bg-(--md-sys-color-surface) md:rounded-xl md:border">
           <div className="flex items-center justify-between px-4 py-2">
             {hasSelectedItem ? (
               <>
@@ -924,7 +928,7 @@ export function LibraryPanel() {
               </>
             )}
           </div>
-          <Separator className="my-1 bg-border/50" />
+          <Separator className="my-1 bg-(--md-sys-color-outline-variant)/50" />
 
           {selectedDocument ? (
             <KnowledgeDocumentDetail document={selectedDocument} />
@@ -936,7 +940,7 @@ export function LibraryPanel() {
               >
                 <MarkdownMessage message={selectedNote.content} />
               </article>
-              <footer className="shrink-0 border-t px-4 py-2 text-xs text-muted-foreground">
+              <footer className="shrink-0 border-t px-4 py-2 text-xs text-(--md-sys-color-on-surface-variant)">
                 Saved {formatNoteDate(selectedNote.createdAt)}
               </footer>
             </div>
@@ -954,32 +958,38 @@ export function LibraryPanel() {
                     className="max-h-[48vh] w-full rounded-md border object-contain"
                   />
                 ) : (
-                  <div className="flex aspect-video items-center justify-center rounded-md border bg-muted/40">
-                    <FileIcon className="size-10 text-muted-foreground" />
+                  <div className="flex aspect-video items-center justify-center rounded-md border bg-(--md-sys-color-surface-container)/40">
+                    <FileIcon className="size-10 text-(--md-sys-color-on-surface-variant)" />
                   </div>
                 )}
                 <div className="mt-4 space-y-3 text-sm">
                   <div>
-                    <p className="text-xs text-muted-foreground">Filename</p>
+                    <p className="text-xs text-(--md-sys-color-on-surface-variant)">
+                      Filename
+                    </p>
                     <p className="break-words font-medium">
                       {selectedFile.filename}
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-3 text-xs">
                     <div>
-                      <p className="text-muted-foreground">Type</p>
+                      <p className="text-(--md-sys-color-on-surface-variant)">
+                        Type
+                      </p>
                       <p className="mt-0.5 break-words">
                         {selectedFile.mediaType}
                       </p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Size</p>
+                      <p className="text-(--md-sys-color-on-surface-variant)">
+                        Size
+                      </p>
                       <p className="mt-0.5">{formatBytes(selectedFile.size)}</p>
                     </div>
                   </div>
                 </div>
               </div>
-              <footer className="shrink-0 border-t px-4 py-2 text-xs text-muted-foreground">
+              <footer className="shrink-0 border-t px-4 py-2 text-xs text-(--md-sys-color-on-surface-variant)">
                 Added {formatNoteDate(selectedFile.createdAt)}
               </footer>
             </div>
@@ -1011,23 +1021,23 @@ export function LibraryPanel() {
                 <LibraryLoadingSkeleton />
               ) : activeTab === 'knowledge' ? (
                 visibleDocuments.length === 0 ? (
-                  <div className="px-4 py-8 text-sm text-muted-foreground">
+                  <div className="px-4 py-8 text-sm text-(--md-sys-color-on-surface-variant)">
                     {emptyMessage}
                   </div>
                 ) : (
                   <div className="space-y-1">
-                    <p className="px-3 pb-1 text-xs text-muted-foreground">
+                    <p className="px-3 pb-1 text-xs text-(--md-sys-color-on-surface-variant)">
                       The official notices and guides Sera answers from.
                     </p>
                     {visibleDocuments.map(document => (
                       <button
                         key={`knowledge-${document.id}`}
                         type="button"
-                        className="w-full rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
+                        className="w-full rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-(--md-sys-color-surface-container-high)"
                         onClick={() => handleOpenDocument(document)}
                       >
                         <div className="flex items-center gap-2">
-                          <KnowledgeIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                          <KnowledgeIcon className="size-3.5 shrink-0 text-(--md-sys-color-on-surface-variant)" />
                           <span className="truncate font-medium">
                             {document.title}
                           </span>
@@ -1040,10 +1050,10 @@ export function LibraryPanel() {
                             </Badge>
                           )}
                         </div>
-                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                        <p className="mt-1 line-clamp-2 text-xs text-(--md-sys-color-on-surface-variant)">
                           {getExcerpt(document.content)}
                         </p>
-                        <p className="mt-1 truncate text-[11px] text-muted-foreground/75">
+                        <p className="mt-1 truncate text-[11px] text-(--md-sys-color-on-surface-variant)/75">
                           {formatDomain(document.domain)} ·{' '}
                           {document.authorityLabel} ·{' '}
                           {formatDay(
@@ -1055,7 +1065,7 @@ export function LibraryPanel() {
                     {hasMoreVisibleItems && (
                       <div
                         ref={loadMoreRef}
-                        className="flex h-10 items-center justify-center text-muted-foreground"
+                        className="flex h-10 items-center justify-center text-(--md-sys-color-on-surface-variant)"
                       >
                         {isLoadingMore && <Spinner />}
                       </div>
@@ -1063,7 +1073,7 @@ export function LibraryPanel() {
                   </div>
                 )
               ) : visibleLibraryItems.length === 0 ? (
-                <div className="px-4 py-8 text-sm text-muted-foreground">
+                <div className="px-4 py-8 text-sm text-(--md-sys-color-on-surface-variant)">
                   {emptyMessage}
                 </div>
               ) : (
@@ -1075,7 +1085,7 @@ export function LibraryPanel() {
                       return (
                         <div
                           key={`file-${file.id}`}
-                          className="group/note relative rounded-md hover:bg-accent"
+                          className="group/note relative rounded-md hover:bg-(--md-sys-color-surface-container-high)"
                         >
                           <button
                             type="button"
@@ -1083,15 +1093,15 @@ export function LibraryPanel() {
                             onClick={() => handleOpenFile(file)}
                           >
                             <div className="flex items-center gap-2">
-                              <Icon className="size-3.5 shrink-0 text-muted-foreground" />
+                              <Icon className="size-3.5 shrink-0 text-(--md-sys-color-on-surface-variant)" />
                               <span className="truncate font-medium">
                                 {file.filename}
                               </span>
                             </div>
-                            <p className="mt-1 truncate text-xs text-muted-foreground">
+                            <p className="mt-1 truncate text-xs text-(--md-sys-color-on-surface-variant)">
                               {file.mediaType} · {formatBytes(file.size)}
                             </p>
-                            <p className="mt-1 text-[11px] text-muted-foreground/75">
+                            <p className="mt-1 text-[11px] text-(--md-sys-color-on-surface-variant)/75">
                               {formatNoteDate(file.updatedAt)}
                             </p>
                           </button>
@@ -1113,7 +1123,7 @@ export function LibraryPanel() {
                     return (
                       <div
                         key={`note-${note.id}`}
-                        className="group/note relative rounded-md hover:bg-accent"
+                        className="group/note relative rounded-md hover:bg-(--md-sys-color-surface-container-high)"
                       >
                         <button
                           type="button"
@@ -1121,15 +1131,15 @@ export function LibraryPanel() {
                           onClick={() => handleOpenNote(note)}
                         >
                           <div className="flex items-center gap-2">
-                            <FileText className="size-3.5 shrink-0 text-muted-foreground" />
+                            <FileText className="size-3.5 shrink-0 text-(--md-sys-color-on-surface-variant)" />
                             <span className="truncate font-medium">
                               {title}
                             </span>
                           </div>
-                          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                          <p className="mt-1 line-clamp-2 text-xs text-(--md-sys-color-on-surface-variant)">
                             {getExcerpt(note.content)}
                           </p>
-                          <p className="mt-1 text-[11px] text-muted-foreground/75">
+                          <p className="mt-1 text-[11px] text-(--md-sys-color-on-surface-variant)/75">
                             {formatNoteDate(note.updatedAt)}
                           </p>
                         </button>
@@ -1147,7 +1157,7 @@ export function LibraryPanel() {
                   {hasMoreVisibleItems && (
                     <div
                       ref={loadMoreRef}
-                      className="flex h-10 items-center justify-center text-muted-foreground"
+                      className="flex h-10 items-center justify-center text-(--md-sys-color-on-surface-variant)"
                     >
                       {isLoadingMore && <Spinner />}
                     </div>
@@ -1188,7 +1198,7 @@ export function LibraryPanel() {
                 event.preventDefault()
                 handleDeleteItem()
               }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-(--md-sys-color-error) text-(--md-sys-color-on-error) hover:bg-(--md-sys-color-error)/90"
             >
               {isDeleting ? (
                 <div className="flex items-center justify-center">

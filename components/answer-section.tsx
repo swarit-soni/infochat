@@ -293,7 +293,7 @@ export function AnswerSection({
             (showSelectionSaveButton || showSelectionDeepDiveButton) && (
               <div
                 data-selection-actions
-                className="fixed z-40 flex items-center gap-1 rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+                className="fixed z-40 flex items-center gap-1 rounded-md border bg-(--md-sys-color-surface-container) p-1 text-(--md-sys-color-on-surface) shadow-md"
                 style={{ top: selection.top, left: selection.left }}
                 onMouseDown={event => event.preventDefault()}
               >
@@ -344,13 +344,13 @@ export function AnswerSection({
       <Dialog open={authPromptOpen} onOpenChange={setAuthPromptOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
-              <Bookmark className="size-6 text-muted-foreground" />
+            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-(--md-sys-color-surface-container)">
+              <Bookmark className="size-6 text-(--md-sys-color-on-surface-variant)" />
             </div>
             <DialogTitle className="text-center text-xl font-semibold">
               Save notes to your library
             </DialogTitle>
-            <DialogDescription className="text-center text-muted-foreground">
+            <DialogDescription className="text-center text-(--md-sys-color-on-surface-variant)">
               Sign in with your Google account to save selected text to your
               Library.
             </DialogDescription>

@@ -14,10 +14,10 @@ export function ChatError({ error }: ChatErrorProps) {
   const errorMessage = toPublicErrorPayload(error).error
 
   return (
-    <Card className="border-destructive bg-destructive/10 p-4">
+    <Card className="border-(--md-sys-color-error) bg-(--md-sys-color-error)/10 p-4">
       <div className="flex items-center gap-3">
-        <AlertCircle className="size-5 text-destructive shrink-0" />
-        <p className="text-sm text-destructive">{errorMessage}</p>
+        <AlertCircle className="size-5 text-(--md-sys-color-error) shrink-0" />
+        <p className="text-sm text-(--md-sys-color-error)">{errorMessage}</p>
       </div>
     </Card>
   )

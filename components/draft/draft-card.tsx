@@ -34,20 +34,22 @@ function CardShell({
     <button
       type="button"
       onClick={onOpen}
-      className="not-prose my-3 flex w-full items-center gap-3 rounded-lg border bg-card p-3 text-left transition-colors hover:bg-muted/50"
+      className="not-prose my-3 flex w-full items-center gap-3 rounded-lg border bg-(--md-sys-color-surface-container-low) p-3 text-left transition-colors hover:bg-(--md-sys-color-surface-container)/50"
     >
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-(--md-sys-color-surface-container)">
         {busy ? (
-          <Loader className="size-4 animate-spin text-muted-foreground" />
+          <Loader className="size-4 animate-spin text-(--md-sys-color-on-surface-variant)" />
         ) : (
-          <FileText className="size-4 text-muted-foreground" />
+          <FileText className="size-4 text-(--md-sys-color-on-surface-variant)" />
         )}
       </span>
       <span className="flex min-w-0 flex-col">
         <span className="truncate text-sm font-medium">{title}</span>
-        <span className="text-xs text-muted-foreground">{detail}</span>
+        <span className="text-xs text-(--md-sys-color-on-surface-variant)">
+          {detail}
+        </span>
       </span>
-      <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+      <span className="ml-auto shrink-0 text-xs text-(--md-sys-color-on-surface-variant)">
         Open
       </span>
     </button>
