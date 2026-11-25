@@ -16,8 +16,8 @@ export default async function Page(props: {
   const initialError = getAuthErrorMessage(error)
 
   return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <div className="w-full max-w-sm">
+    <div className="h-full w-full overflow-y-auto">
+      <div className="mx-auto flex min-h-full w-full max-w-sm items-center justify-center p-6 md:p-10">
         <LoginForm
           next={next}
           initialError={initialError}

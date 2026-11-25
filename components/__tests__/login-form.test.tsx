@@ -63,7 +63,7 @@ describe('LoginForm', () => {
       screen.getByRole('button', { name: 'Sign In with Google' })
     ).toBeInTheDocument()
 
-    const mentorLink = screen.getByRole('link', { name: 'Mentor login' })
+    const mentorLink = screen.getByRole('link', { name: 'Staff login' })
     expect(mentorLink).toHaveAttribute('href', '/auth/mentor')
 
     expect(screen.queryByLabelText(/email/i)).not.toBeInTheDocument()
@@ -79,9 +79,9 @@ describe('LoginForm', () => {
   it('renders mentor sign-in card in mentor mode with link back to regular login and preserves next', () => {
     renderForm({}, '/kalvium/mentor', null, false, 'mentor')
 
-    expect(screen.getByText('Mentor sign in')).toBeInTheDocument()
+    expect(screen.getByText('Staff sign in')).toBeInTheDocument()
     expect(screen.getByText('@kalvium.com')).toBeInTheDocument()
-    expect(screen.getByText('Mentor')).toBeInTheDocument()
+    expect(screen.getByText('Staff')).toBeInTheDocument()
     expect(screen.queryByText('@kalvium.community')).not.toBeInTheDocument()
 
     const studentLink = screen.getByRole('link', { name: 'Regular login' })
@@ -91,7 +91,7 @@ describe('LoginForm', () => {
     )
     expect(screen.getByText('Kalvium')).toBeInTheDocument()
     expect(
-      screen.getByRole('link', { name: 'Mentor at a different college?' })
+      screen.getByRole('link', { name: 'Staff at a different college?' })
     ).toHaveAttribute('href', '/auth/mentor')
   })
 

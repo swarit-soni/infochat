@@ -163,7 +163,7 @@ export default function UserMenu({ user }: UserMenuProps) {
             <DropdownMenuItem asChild>
               <Link href={user.college ? `/${user.college}/mentor` : '/mentor'}>
                 <IconShield className="size-4" />
-                <span>Mentor Portal</span>
+                <span>Staff Portal</span>
               </Link>
             </DropdownMenuItem>
           )}

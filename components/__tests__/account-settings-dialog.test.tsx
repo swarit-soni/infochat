@@ -125,7 +125,7 @@ describe('AccountSettingsDialog', () => {
         <AccountSettingsDialog open onOpenChange={vi.fn()} user={mentorUser} />
       </AppUserProvider>
     )
-    expect(screen.getByText('Mentor')).toBeInTheDocument()
+    expect(screen.getByText('Staff')).toBeInTheDocument()
 
     const studentUser: AppUser = {
       ...user,

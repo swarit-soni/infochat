@@ -41,7 +41,7 @@ export async function signInWithGoogle(
     if (!isCollegeRoleEnabled(college, 'mentor')) {
       return {
         success: false,
-        error: `Mentor sign-in is not set up for ${college.shortName} yet.`
+        error: `Staff sign-in is not set up for ${college.shortName} yet.`
       }
     }
   }
