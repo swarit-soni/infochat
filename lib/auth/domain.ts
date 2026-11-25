@@ -13,7 +13,7 @@ export const USER_TYPES = ['mentor', 'student'] as const
 export type UserType = (typeof USER_TYPES)[number]
 
 export const USER_TYPE_LABELS: Readonly<Record<UserType, string>> = {
-  mentor: 'Mentor',
+  mentor: 'Staff',
   student: 'Student'
 }
 

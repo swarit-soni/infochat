@@ -696,7 +696,7 @@ export function LibraryPanel() {
           : isLoading || isFilesLoading
   const emptyMessage =
     activeTab === 'knowledge'
-      ? 'The knowledge base is empty. Mentors can add documents from the mentor portal.'
+      ? 'The knowledge base is empty. College staff can add documents from the staff portal.'
       : activeTab === 'notes'
         ? 'No notes yet.'
         : activeTab === 'files'

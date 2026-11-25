@@ -130,7 +130,7 @@ export function LoginForm({
           <CardTitle className="text-2xl flex flex-col items-center justify-center gap-4">
             <IconLogo className="size-12" />
             <span className="inline-flex items-center gap-2">
-              <span>{isMentor ? 'Mentor sign in' : 'Sign in to Sera'}</span>
+              <span>{isMentor ? 'Staff sign in' : 'Sign in to Sera'}</span>
               {isBeta && (
                 <Badge
                   variant="secondary"
@@ -143,7 +143,7 @@ export function LoginForm({
           </CardTitle>
           <CardDescription>
             {college
-              ? `Sign in with your ${college.shortName} mentor Google account to manage ${college.shortName} campus data.`
+              ? `Sign in with your ${college.shortName} staff Google account to manage ${college.shortName} campus data.`
               : 'Sign in with your Google account.'}
           </CardDescription>
         </CardHeader>
@@ -176,8 +176,8 @@ export function LoginForm({
 
             {!isEnabled ? (
               <p className="text-center text-sm text-(--md-sys-color-on-surface-variant)">
-                Mentor sign-in for {college?.shortName} is not set up yet.
-                Please contact your college administrator.
+                Staff sign-in for {college?.shortName} is not set up yet. Please
+                contact your college administrator.
               </p>
             ) : capabilities.oauth ? (
               <Button
@@ -200,17 +200,17 @@ export function LoginForm({
       </Card>
       <div className="flex flex-col items-center gap-2 text-center text-xs text-(--md-sys-color-on-surface-variant)">
         <p>
-          {isMentor ? 'Not a mentor? ' : 'Are you a mentor? '}
+          {isMentor ? 'Not staff? ' : 'College staff? '}
           <Link
             href={alternateHref}
             className="underline underline-offset-4 hover:text-(--md-sys-color-on-surface)"
           >
-            {isMentor ? 'Regular login' : 'Mentor login'}
+            {isMentor ? 'Regular login' : 'Staff login'}
           </Link>
         </p>
         {isMentor && (
           <Link href="/auth/mentor" className="hover:underline">
-            Mentor at a different college?
+            Staff at a different college?
           </Link>
         )}
         <Link href="/" className="hover:underline">

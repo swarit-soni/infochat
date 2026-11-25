@@ -35,13 +35,13 @@ export default async function MentorCollegePickerPage(props: {
   const { list: colleges } = await getCollegeDirectory()
 
   return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <div className="flex w-full max-w-2xl flex-col items-center gap-6">
+    <div className="h-full w-full overflow-y-auto">
+      <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col items-center justify-center gap-6 p-6 md:p-10">
         <div className="flex flex-col items-center gap-3 text-center">
           <IconLogo className="size-12" />
-          <h1 className="text-2xl font-semibold">Mentor sign in</h1>
+          <h1 className="text-2xl font-semibold">Staff sign in</h1>
           <p className="text-sm text-(--md-sys-color-on-surface-variant)">
-            Choose your college. Each college has its own mentor sign-in and
+            Choose your college. Each college has its own staff sign-in and
             dashboard.
           </p>
         </div>
@@ -71,12 +71,12 @@ export default async function MentorCollegePickerPage(props: {
                   {enabled ? (
                     <Button asChild size="sm" className="w-full">
                       <Link href={collegePath(slug, '/auth/mentor')}>
-                        Mentor login
+                        Staff login
                       </Link>
                     </Button>
                   ) : (
                     <p className="text-xs text-(--md-sys-color-on-surface-variant)">
-                      Mentor sign-in is not set up for this college yet.
+                      Staff sign-in is not set up for this college yet.
                     </p>
                   )}
                 </CardContent>
@@ -89,7 +89,7 @@ export default async function MentorCollegePickerPage(props: {
           href="/auth/login"
           className="text-xs text-(--md-sys-color-on-surface-variant) hover:underline"
         >
-          Not a mentor? Regular login
+          Not staff? Regular login
         </Link>
       </div>
     </div>

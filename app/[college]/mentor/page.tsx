@@ -61,7 +61,7 @@ export default async function CollegeMentorPortalPage(props: {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-semibold">Mentor Data Portal</h1>
+              <h1 className="text-2xl font-semibold">Staff Data Portal</h1>
               <Badge variant="secondary">{collegeConfig.shortName}</Badge>
             </div>
             <p className="text-sm text-(--md-sys-color-on-surface-variant)">

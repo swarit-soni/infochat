@@ -37,12 +37,12 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
             <Link href="/auth/login">Sign In with Google</Link>
           </Button>
           <p className="text-xs text-(--md-sys-color-on-surface-variant)">
-            Are you a mentor?{' '}
+            College staff?{' '}
             <Link
               href="/auth/mentor"
               className="underline underline-offset-4 hover:text-(--md-sys-color-on-surface)"
             >
-              Mentor login
+              Staff login
             </Link>
           </p>
         </div>

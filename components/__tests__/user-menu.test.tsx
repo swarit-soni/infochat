@@ -138,7 +138,7 @@ describe('UserMenu', () => {
         <UserMenu user={mentorUser} />
       </AppUserProvider>
     )
-    expect(screen.getByText('Mentor')).toBeInTheDocument()
+    expect(screen.getByText('Staff')).toBeInTheDocument()
 
     const studentUser: AppUser = {
       ...user,
@@ -166,7 +166,7 @@ describe('UserMenu', () => {
       </AppUserProvider>
     )
 
-    const mentorLink = screen.getByRole('link', { name: 'Mentor Portal' })
+    const mentorLink = screen.getByRole('link', { name: 'Staff Portal' })
     expect(mentorLink).toHaveAttribute('href', '/mentor')
     expect(screen.queryByText('Admin')).not.toBeInTheDocument()
 
@@ -182,7 +182,7 @@ describe('UserMenu', () => {
       </AppUserProvider>
     )
     expect(
-      screen.queryByRole('link', { name: 'Mentor Portal' })
+      screen.queryByRole('link', { name: 'Staff Portal' })
     ).not.toBeInTheDocument()
     expect(screen.queryByText('Admin')).not.toBeInTheDocument()
   })
