@@ -2,9 +2,19 @@ import { generateText, Output } from 'ai'
 import { createHash } from 'crypto'
 import { z } from 'zod'
 
-import { isKalviumDomainEmail, normalizeEmail } from '@/lib/auth/domain'
+import { getCollegeIdentityFromEmail } from '@/lib/auth/domain'
+import type { IdentityDirectory } from '@/lib/colleges/access'
+import { DEFAULT_COLLEGE_DIRECTORY } from '@/lib/colleges/defaults'
 import {
-  KNOWLEDGE_AUTHORITIES,
+  type College,
+  type CollegeDirectory,
+  type CollegeSlug,
+  getCollege,
+  getVisibleCollegesFor,
+  JOINT_AUTHORITY_LABEL
+} from '@/lib/colleges/registry'
+import {
+  JOINT_AUTHORITY,
   KNOWLEDGE_DOMAINS,
   type KnowledgeAuthority,
   type KnowledgeChannel,
@@ -34,6 +44,16 @@ export interface UrgentAttachmentInput {
 }
 
 export interface NormalizeUrgentUpdateInput {
+  /**
+   * College the update is posted to. Scopes the sender trust gate (only that
+   * college's mentors auto-publish) and authority inference.
+   */
+  college?: CollegeSlug
+  /**
+   * The college directory (names, aliases, mentor allowlists). Defaults to
+   * the built-in colleges.
+   */
+  directory?: CollegeDirectory & IdentityDirectory
   rawText: string
   channel: Extract<KnowledgeChannel, 'gchat' | 'whatsapp_forward'>
   senderRole: KnowledgeSenderRole
@@ -88,7 +108,7 @@ export const urgentExtractionSchema = z.object({
   title: z.string().min(1),
   normalizedMarkdown: z.string().min(1),
   domain: z.enum(KNOWLEDGE_DOMAINS),
-  authority: z.enum(KNOWLEDGE_AUTHORITIES),
+  authority: z.string().min(1).max(32),
   program: z.string().nullable(),
   semester: z.string().nullable(),
   squad: z.string().nullable(),
@@ -111,7 +131,7 @@ const PERSONAL_PII_PATTERNS: RegExp[] = [
 ]
 
 const URGENT_SIGNAL_PATTERN =
-  /\b(?:exam|test|quiz|fee|tuition|hostel|bus|timetable|schedule|class|session|cancel(?:led)?|rescheduled|postponed|room|lab|hall\s*ticket|admit\s*card|deadline|notice|circular|event|hackathon|workshop|registration|submit|submission|result|kalvium|jecrc|squad|semester)\b/i
+  /\b(?:exam|test|quiz|fee|tuition|hostel|bus|timetable|schedule|class|session|cancel(?:led)?|rescheduled|postponed|room|lab|hall\s*ticket|admit\s*card|deadline|notice|circular|event|hackathon|workshop|registration|submit|submission|result|squad|semester)\b/i
 
 /**
  * Compute a stable SHA-256 content hash for deduplicating announcements
@@ -134,12 +154,14 @@ export function computeContentHash(
  */
 export function resolveSenderTrustGate(
   senderRole: KnowledgeSenderRole,
-  senderEmail?: string
+  senderEmail?: string,
+  college?: CollegeSlug,
+  directory: IdentityDirectory = DEFAULT_COLLEGE_DIRECTORY
 ): SenderTrustGateDecision {
-  const normalized = normalizeEmail(senderEmail)
+  const identity = getCollegeIdentityFromEmail(senderEmail, directory)
   const isMentorEmail =
-    Boolean(normalized?.endsWith('@kalvium.com')) &&
-    isKalviumDomainEmail(normalized)
+    identity?.userType === 'mentor' &&
+    (college === undefined || identity.college === college)
 
   if (
     senderRole === 'mentor' ||
@@ -231,17 +253,64 @@ function inferDomainAndIntent(text: string): {
   return { domain: 'general', intent: 'urgent_notice' }
 }
 
-function inferAuthority(text: string): KnowledgeAuthority {
-  const lower = text.toLowerCase()
-  const mentionsJecrc =
-    /\b(?:jecrc|university|erp|e-?notice|registrar|exam\s*cell|hostel)\b/.test(
-      lower
-    )
-  const mentionsKalvium =
-    /\b(?:kalvium|squad|mentor|learning\s*unit|dashboard)\b/.test(lower)
-  if (mentionsJecrc && !mentionsKalvium) return 'jecrc'
-  if (mentionsKalvium && !mentionsJecrc) return 'kalvium'
-  return 'joint'
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * A pattern matching any way a message may name the college: its slug,
+ * name, short name and configured aliases (whole words, case-insensitive,
+ * flexible about spaces and dots, so "B. K. Birla" matches "BK Birla").
+ */
+export function collegeMentionPattern(college: College): RegExp {
+  const names = [
+    college.slug,
+    college.name,
+    college.shortName,
+    ...college.aliases
+  ]
+    .map(name => name.trim().toLowerCase())
+    .filter(name => name.length >= 2)
+  const alternatives = [...new Set(names)].map(name =>
+    name
+      .split(/[\s.]+/)
+      .filter(Boolean)
+      .map(escapeRegExp)
+      .join('[\\s.]*')
+  )
+  return new RegExp(
+    `(?<![a-z0-9])(?:${alternatives.join('|')})(?![a-z0-9])`,
+    'i'
+  )
+}
+
+/** Colleges whose records the posting college can attribute updates to. */
+function authorityCandidates(
+  directory: CollegeDirectory,
+  college?: CollegeSlug
+): CollegeSlug[] {
+  return college
+    ? getVisibleCollegesFor(directory, college)
+    : directory.list.map(c => c.slug)
+}
+
+/**
+ * Which college issued a message, judged from the colleges visible to the
+ * posting college: exactly one mentioned → that college; several →
+ * `joint`; none → the posting college (or `joint` when it is unknown).
+ */
+export function inferAuthority(
+  text: string,
+  college?: CollegeSlug,
+  directory: CollegeDirectory = DEFAULT_COLLEGE_DIRECTORY
+): KnowledgeAuthority {
+  const mentioned = authorityCandidates(directory, college).filter(slug => {
+    const entry = getCollege(directory, slug)
+    return entry ? collegeMentionPattern(entry).test(text) : false
+  })
+  if (mentioned.length === 1) return mentioned[0]
+  if (mentioned.length > 1) return JOINT_AUTHORITY
+  return college ?? JOINT_AUTHORITY
 }
 
 function extractCohortHints(text: string): {
@@ -315,7 +384,7 @@ export function heuristicNormalizeUrgentUpdate(
       title: 'Ignored casual message',
       normalizedMarkdown: combined || '(empty)',
       domain: 'general',
-      authority: 'joint',
+      authority: input.college ?? 'joint',
       program: null,
       semester: null,
       squad: null,
@@ -328,7 +397,11 @@ export function heuristicNormalizeUrgentUpdate(
   }
 
   const { domain, intent } = inferDomainAndIntent(combined)
-  const authority = inferAuthority(combined)
+  const authority = inferAuthority(
+    combined,
+    input.college,
+    input.directory ?? DEFAULT_COLLEGE_DIRECTORY
+  )
   const cohort = extractCohortHints(combined)
   const supersedesMatch = combined.match(
     /(?:updated|revised|replaces|instead\s+of|moved\s+from|shifted\s+from)\s+([^.\n]{4,80})/i
@@ -363,6 +436,7 @@ async function runLlmExtraction(
     return null
   }
 
+  const directory = input.directory ?? DEFAULT_COLLEGE_DIRECTORY
   try {
     const contentParts: Array<
       | { type: 'text'; text: string }
@@ -377,7 +451,13 @@ async function runLlmExtraction(
       {
         type: 'text',
         text: [
-          'You are SERA’s campus notice triage and multimodal extraction pipeline for Kalvium X JECRC University.',
+          `You are SERA’s campus notice triage and multimodal extraction pipeline for ${
+            input.college
+              ? authorityCandidates(directory, input.college)
+                  .map(slug => getCollege(directory, slug)?.name ?? slug)
+                  .join(' and ')
+              : 'the colleges on Sera'
+          }.`,
           `Captured timestamp (ISO): ${capturedAt.toISOString()}`,
           `Channel: ${input.channel}`,
           input.threadContext
@@ -390,7 +470,12 @@ async function runLlmExtraction(
           '   - Use "noise" for casual banter, greetings, thanks, or off-topic student chatter.',
           '2. Set containsPersonalStudentData=true if the message contains private per-student PII (individual marks, personal fee balance, personal attendance %, phone/OTP/Aadhaar).',
           '3. Transcribe any attached notice posters, screenshots, or PDFs into clean, table-preserving Markdown inside normalizedMarkdown.',
-          '4. Extract structured metadata (domain, authority: kalvium | jecrc | joint, cohort fields if specified, ISO effectiveDateIso/expiresAtIso when mentioned, actionRequired, and supersedesTopic if this notice updates/replaces an earlier notice).'
+          `4. Extract structured metadata (domain, authority: ${[
+            ...authorityCandidates(directory, input.college),
+            JOINT_AUTHORITY
+          ].join(
+            ' | '
+          )} (use ${JOINT_AUTHORITY} for a ${JOINT_AUTHORITY_LABEL.toLowerCase()} issued by several), cohort fields if specified, ISO effectiveDateIso/expiresAtIso when mentioned, actionRequired, and supersedesTopic if this notice updates/replaces an earlier notice).`
         ]
           .filter(Boolean)
           .join('\n')
@@ -465,7 +550,24 @@ export async function normalizeUrgentUpdateInput(
     (await runLlmExtraction(input, capturedAt)) ??
     heuristicNormalizeUrgentUpdate(input)
 
-  const trustGate = resolveSenderTrustGate(input.senderRole, input.senderEmail)
+  const directory = input.directory ?? DEFAULT_COLLEGE_DIRECTORY
+  // The model may name an authority the posting college can't attribute to.
+  if (
+    extracted.authority !== JOINT_AUTHORITY &&
+    !authorityCandidates(directory, input.college).includes(extracted.authority)
+  ) {
+    extracted.authority = inferAuthority(
+      extracted.normalizedMarkdown,
+      input.college,
+      directory
+    )
+  }
+  const trustGate = resolveSenderTrustGate(
+    input.senderRole,
+    input.senderEmail,
+    input.college,
+    directory
+  )
   const effectiveDate =
     parseOptionalDate(extracted.effectiveDateIso) ?? capturedAt
   const expiresAt =

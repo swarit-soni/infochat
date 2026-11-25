@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { normalizeEmail } from '@/lib/auth/domain'
+import { getCollegeIdentityFromEmail, normalizeEmail } from '@/lib/auth/domain'
+import {
+  type CollegeDirectory,
+  type CollegeSlug,
+  isCollegeSlug
+} from '@/lib/colleges/registry'
+import { getCollegeDirectory } from '@/lib/colleges/store'
 import type { KnowledgeSenderRole } from '@/lib/db/schema'
 import { ingestUrgentUpdate } from '@/lib/rag/ingestion'
 import type { UrgentAttachmentInput } from '@/lib/rag/normalizer'
@@ -90,6 +96,25 @@ function isBroadcastSpace(payload: GChatWebhookPayload): boolean {
   return false
 }
 
+/**
+ * The college whose knowledge base a Google Chat space feeds: the college
+ * that lists the space (`spaces/...`) in its `gchatSpaces`, else the
+ * deployment-wide `SERA_GCHAT_COLLEGE`. Null when neither applies.
+ */
+function getGchatCollege(
+  directory: CollegeDirectory,
+  spaceName: string | undefined
+): CollegeSlug | null {
+  if (spaceName) {
+    const owner = directory.list.find(college =>
+      college.gchatSpaces.includes(spaceName)
+    )
+    if (owner) return owner.slug
+  }
+  const configured = process.env.SERA_GCHAT_COLLEGE?.trim().toLowerCase()
+  return isCollegeSlug(directory, configured) ? configured : null
+}
+
 export async function POST(request: NextRequest) {
   let payload: GChatWebhookPayload
   try {
@@ -162,8 +187,23 @@ export async function POST(request: NextRequest) {
     payload.user?.displayName ??
     undefined
 
+  // Each space feeds exactly one college's knowledge base.
+  const directory = await getCollegeDirectory()
+  const college = getGchatCollege(directory, payload.space?.name)
+  if (!college) {
+    return NextResponse.json({
+      ok: true,
+      status: 'ignored',
+      reason: 'This Google Chat space is not linked to a college'
+    })
+  }
+  const senderIdentity = getCollegeIdentityFromEmail(senderEmail, directory)
+
   let senderRole: KnowledgeSenderRole = 'student_cr'
-  if (senderEmail?.endsWith('@kalvium.com')) {
+  if (
+    senderIdentity?.userType === 'mentor' &&
+    senderIdentity.college === college
+  ) {
     senderRole = 'mentor'
   } else if (announcementSpace) {
     senderRole = 'official_space'
@@ -174,6 +214,7 @@ export async function POST(request: NextRequest) {
     : new Date()
 
   const result = await ingestUrgentUpdate({
+    college,
     rawText: cleanedText,
     channel: 'gchat',
     senderRole,

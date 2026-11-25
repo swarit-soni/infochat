@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { after } from 'next/server'
 
+import type { SeraAudienceRole } from '@/lib/agents/prompts/search-mode-prompts'
 import {
   calculateConversationTurn,
   calculateConversationTurnFromIds,
@@ -10,6 +11,8 @@ import {
 import { getCurrentUser, getCurrentUserId } from '@/lib/auth/get-current-user'
 import { isAnonymousMode } from '@/lib/auth/provider'
 import { rejectIfBot } from '@/lib/bot-protection'
+import type { CampusScope } from '@/lib/colleges/registry'
+import { getCollegeDirectory, toPublicDirectory } from '@/lib/colleges/store'
 import { getUserMessageIds } from '@/lib/db/actions'
 import { generateId } from '@/lib/db/schema'
 import { checkAndEnforceAdaptiveLimit } from '@/lib/rate-limit/adaptive-limit'
@@ -122,6 +125,18 @@ export async function POST(req: Request) {
 
     const guestChatEnabled = process.env.ENABLE_GUEST_CHAT === 'true'
     const isGuest = !userId
+    // The user's college scopes campus knowledge. Null (guests, students
+    // not enrolled anywhere) means every college, for admission seekers.
+    const campusScope: CampusScope = {
+      directory: toPublicDirectory(await getCollegeDirectory()),
+      college: currentUser?.college ?? null,
+      campus: currentUser?.campus ?? null
+    }
+    const audienceRole: SeraAudienceRole = !currentUser
+      ? 'guest'
+      : currentUser.userType === 'mentor'
+        ? 'mentor'
+        : 'student'
 
     if (exceedsAttachmentLimit({ isGuest, trigger, message, messages })) {
       return new Response(
@@ -444,7 +459,9 @@ export async function POST(req: Request) {
         model: selectedModel,
         abortSignal,
         searchMode,
-        chatId
+        chatId,
+        campusScope,
+        audienceRole
       })
     } else {
       try {
@@ -459,6 +476,8 @@ export async function POST(req: Request) {
           isNewChat,
           searchMode,
           spaceColor,
+          campusScope,
+          audienceRole,
           onZeroPartError: refundUsageOnce
         })
       } catch (error) {

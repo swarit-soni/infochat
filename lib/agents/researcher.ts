@@ -8,6 +8,8 @@ import type {
 } from '@/lib/types/agent'
 import { type Model } from '@/lib/types/models'
 
+import { defaultCampusScope } from '../colleges/defaults'
+import type { CampusScope } from '../colleges/registry'
 import { createCampusRagTools } from '../tools/campus-rag'
 import { createDraftTools } from '../tools/draft'
 import { createFetchTool } from '../tools/fetch'
@@ -22,7 +24,8 @@ import { isTracingEnabled } from '../utils/telemetry'
 
 import {
   getAdaptiveModePrompt,
-  QUICK_MODE_PROMPT
+  getQuickModePrompt,
+  type SeraAudienceRole
 } from './prompts/search-mode-prompts'
 
 // Enhanced wrapper function with better type safety and streaming support
@@ -103,7 +106,10 @@ export function createResearcher({
   citationLabelSeed,
   currentDraft = null,
   alternativesOnly = false,
-  spaceInstructions = ''
+  spaceInstructions = '',
+  campusScope = defaultCampusScope(),
+  userId = null,
+  audienceRole = 'student'
 }: {
   model: string
   modelConfig?: Model
@@ -113,11 +119,27 @@ export function createResearcher({
   currentDraft?: DraftVersion | null
   alternativesOnly?: boolean
   spaceInstructions?: string
+  /**
+   * The asking user's college and campus: scopes campus tools and the
+   * system prompt. Defaults to every built-in college (admission seekers).
+   */
+  campusScope?: CampusScope
+  userId?: string | null
+  /** Who is asking: tailors the system prompt (mentor, student or guest). */
+  audienceRole?: SeraAudienceRole
 }) {
   try {
     // Date only: a second-precision timestamp sits at the head of the prompt
     // prefix and changes on every request, which alone voids the prompt cache.
-    const currentDate = new Date().toLocaleDateString()
+    // Written out in India Standard Time (e.g. "Wednesday, 25 November 2026")
+    // so it can't be misread as day/month vs month/day.
+    const currentDate = new Intl.DateTimeFormat('en-IN', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'Asia/Kolkata'
+    }).format(new Date())
 
     // Create model-specific tools with proper typing
     const labelAllocator = createCitationLabelAllocator(citationLabelSeed)
@@ -128,7 +150,13 @@ export function createResearcher({
     const askQuestionTool = createQuestionTool(model)
     const todoTools = createTodoTools()
     const draftTools = createDraftTools(currentDraft, alternativesOnly)
-    const campusRagTools = createCampusRagTools({ labelAllocator, model })
+    const campusRagTools = createCampusRagTools({
+      labelAllocator,
+      model,
+      campusScope,
+      userId,
+      chatId
+    })
 
     let systemPrompt: string
     let activeToolsList: (keyof ResearcherTools)[] = []
@@ -141,7 +169,7 @@ export function createResearcher({
         console.log(
           '[Researcher] Quick mode: maxSteps=20, tools=[searchCampusKnowledge, queryEvents, getOfficialPortalLinks, searchOfficialWeb, logUnansweredQuery, search, fetch, editDraft]'
         )
-        systemPrompt = QUICK_MODE_PROMPT
+        systemPrompt = getQuickModePrompt(campusScope, audienceRole)
         activeToolsList = [
           'searchCampusKnowledge',
           'queryEvents',
@@ -158,7 +186,7 @@ export function createResearcher({
 
       case 'adaptive':
       default:
-        systemPrompt = getAdaptiveModePrompt()
+        systemPrompt = getAdaptiveModePrompt(campusScope, audienceRole)
         activeToolsList = [
           'searchCampusKnowledge',
           'queryEvents',

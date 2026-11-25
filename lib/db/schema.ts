@@ -1,6 +1,8 @@
 import { createId } from '@paralleldrive/cuid2'
 import { InferSelectModel, sql } from 'drizzle-orm'
 import {
+  type AnyPgColumn,
+  boolean,
   check,
   customType,
   index,
@@ -10,6 +12,7 @@ import {
   pgEnum,
   pgPolicy,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -593,6 +596,16 @@ export const userProfiles = pgTable(
     id: varchar('id', { length: USER_ID_LENGTH }).primaryKey(),
     email: varchar('email', { length: 320 }).notNull().unique(),
     userType: userTypeEnum('user_type').notNull(),
+    // The college the account belongs to: verified from a college email
+    // domain, or self-reported by a student at onboarding. Null means not
+    // enrolled anywhere (e.g. exploring admissions). See lib/colleges.
+    college: varchar('college', { length: 32 }),
+    // Partner campus for colleges with several (a partner college's slug,
+    // 'none' for a campus not on Sera, null when not answered yet).
+    campus: varchar('campus', { length: 32 }),
+    // When the student answered the enrolled-college question (or the college
+    // was set from a verified college email). Null: not asked yet.
+    onboardedAt: timestamp('onboarded_at', { withTimezone: true }),
     name: text('name'),
     avatarUrl: text('avatar_url'),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -604,10 +617,7 @@ export const userProfiles = pgTable(
   },
   table => [
     index('user_profiles_user_type_idx').on(table.userType),
-    check(
-      'user_profiles_domain_matches_type',
-      sql`((user_type = 'mentor' AND split_part(lower(email), '@', 2) = 'kalvium.com') OR (user_type = 'student' AND split_part(lower(email), '@', 2) = 'kalvium.community'))`
-    ),
+    index('user_profiles_college_idx').on(table.college),
     pgPolicy('users_read_own_profile', {
       as: 'permissive',
       for: 'select',
@@ -640,6 +650,97 @@ export type UserProfile = InferSelectModel<typeof userProfiles>
 export type NewUserProfile = typeof userProfiles.$inferInsert
 
 // ---------------------------------------------------------------------------
+// Colleges (tenants), managed by platform admins at /admin/colleges
+// ---------------------------------------------------------------------------
+
+/** Writes come only from the platform-admin server actions. */
+const platformWriteCondition = sql`(select current_setting('app.platform_write', true)) = 'true'`
+
+const textArray = (name: string) =>
+  text(name)
+    .array()
+    .notNull()
+    .default(sql`'{}'::text[]`)
+
+export const colleges = pgTable(
+  'colleges',
+  {
+    slug: varchar('slug', { length: 32 }).primaryKey(),
+    name: text('name').notNull(),
+    shortName: text('short_name').notNull(),
+    location: text('location').notNull().default(''),
+    website: text('website').notNull().default(''),
+    officialWebDomains: textArray('official_web_domains'),
+    partnerColleges: textArray('partner_colleges'),
+    mentorDomains: textArray('mentor_domains'),
+    studentDomains: textArray('student_domains'),
+    mentorRequiresAllowlist: boolean('mentor_requires_allowlist')
+      .notNull()
+      .default(false),
+    aliases: textArray('aliases'),
+    squadLabel: text('squad_label'),
+    residencyLabel: text('residency_label'),
+    eventsLabel: text('events_label').notNull().default('Events'),
+    gchatSpaces: textArray('gchat_spaces'),
+    enabled: boolean('enabled').notNull().default(true),
+    sortOrder: integer('sort_order').notNull().default(0),
+    updatedBy: varchar('updated_by', { length: USER_ID_LENGTH }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+  },
+  () => [
+    pgPolicy('colleges_public_select', {
+      as: 'permissive',
+      for: 'select',
+      to: 'public',
+      using: sql`true`
+    }),
+    pgPolicy('colleges_platform_write', {
+      as: 'permissive',
+      for: 'all',
+      to: 'public',
+      using: platformWriteCondition,
+      withCheck: platformWriteCondition
+    })
+  ]
+).enableRLS()
+
+export type CollegeRow = InferSelectModel<typeof colleges>
+export type NewCollegeRow = typeof colleges.$inferInsert
+
+/**
+ * Mentors of colleges whose mentors and students share an email domain.
+ * Private: never readable through the public API.
+ */
+export const collegeMentorAllowlist = pgTable(
+  'college_mentor_allowlist',
+  {
+    college: varchar('college', { length: 32 })
+      .notNull()
+      .references(() => colleges.slug, { onDelete: 'cascade' }),
+    email: varchar('email', { length: 320 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+  },
+  table => [
+    primaryKey({ columns: [table.college, table.email] }),
+    index('college_mentor_allowlist_email_idx').on(table.email),
+    pgPolicy('college_mentor_allowlist_platform_access', {
+      as: 'permissive',
+      for: 'all',
+      to: 'public',
+      using: sql`(select current_setting('app.platform_write', true)) = 'true' OR (select current_setting('app.college_directory_read', true)) = 'true'`,
+      withCheck: platformWriteCondition
+    })
+  ]
+).enableRLS()
+
+// ---------------------------------------------------------------------------
 // SERA RAG & Campus Knowledge Base Tables
 // ---------------------------------------------------------------------------
 
@@ -654,20 +755,63 @@ export const KNOWLEDGE_DOMAINS = [
 ] as const
 export type KnowledgeDomain = (typeof KNOWLEDGE_DOMAINS)[number]
 
+/**
+ * Where a document came from. Generic across colleges: the issuing college is
+ * the document's `authority`, so labels read e.g. "JECRC notice".
+ */
 export const KNOWLEDGE_SOURCE_SYSTEMS = [
-  'jecrc_web',
-  'jecrc_enotice',
-  'jecrc_portal_guide',
-  'kalvium_web',
-  'kalvium_guide',
+  'official_notice',
+  'official_guide',
+  'portal_guide',
+  'official_website',
+  'official_document',
+  'campus_events',
   'whatsapp_forward',
-  'gchat_space',
-  'eventum'
+  'gchat_space'
 ] as const
 export type KnowledgeSourceSystem = (typeof KNOWLEDGE_SOURCE_SYSTEMS)[number]
 
-export const KNOWLEDGE_AUTHORITIES = ['kalvium', 'jecrc', 'joint'] as const
-export type KnowledgeAuthority = (typeof KNOWLEDGE_AUTHORITIES)[number]
+export const KNOWLEDGE_SOURCE_LABELS: Readonly<
+  Record<KnowledgeSourceSystem, string>
+> = {
+  official_notice: 'Official notice',
+  official_guide: 'Official guide',
+  portal_guide: 'Portal guide',
+  official_website: 'Official website',
+  official_document: 'Official document',
+  campus_events: 'Campus events',
+  whatsapp_forward: 'WhatsApp forward',
+  gchat_space: 'Google Chat space'
+}
+
+/**
+ * Source systems written before they became college-agnostic, mapped to their
+ * generic equivalent. Rows may still carry these until they are rewritten.
+ */
+export const LEGACY_SOURCE_SYSTEMS: Readonly<
+  Record<string, KnowledgeSourceSystem>
+> = {
+  jecrc_enotice: 'official_notice',
+  bkbirla_notice: 'official_notice',
+  kalvium_guide: 'official_guide',
+  jecrc_portal_guide: 'portal_guide',
+  jecrc_web: 'official_website',
+  kalvium_web: 'official_website',
+  bkbirla_web: 'official_website',
+  eventum: 'campus_events'
+}
+
+/** Normalise a stored source system (generic or legacy) to a generic one. */
+export function toSourceSystem(value: string): KnowledgeSourceSystem {
+  if ((KNOWLEDGE_SOURCE_SYSTEMS as readonly string[]).includes(value)) {
+    return value as KnowledgeSourceSystem
+  }
+  return LEGACY_SOURCE_SYSTEMS[value] ?? 'official_document'
+}
+
+/** Issuing authority of a document: a college slug, or `joint` for co-issued. */
+export type KnowledgeAuthority = string
+export const JOINT_AUTHORITY = 'joint'
 
 export const KNOWLEDGE_PRIORITIES = ['standard', 'urgent'] as const
 export type KnowledgePriority = (typeof KNOWLEDGE_PRIORITIES)[number]
@@ -722,6 +866,23 @@ const mentorOrSystemWriteCondition = sql`(select current_setting('app.rag_system
   AND ${userProfiles}.user_type = 'mentor'
 )`
 
+/**
+ * Mentors may only manage rows of their own college (tenant isolation);
+ * system writes (ingestion pipelines) may write any college.
+ */
+function collegeMentorOrSystemWriteCondition(collegeColumn: AnyPgColumn) {
+  return sql`(select current_setting('app.rag_system_write', true)) = 'true' OR EXISTS (
+  SELECT 1 FROM ${userProfiles}
+  WHERE ${userProfiles}.id = (select current_setting('app.current_user_id', true))
+  AND ${userProfiles}.user_type = 'mentor'
+  AND ${userProfiles}.college = ${collegeColumn}
+)`
+}
+
+// Every insert sets the college explicitly. (The database still has a
+// 'kalvium' default from 0024 until 0025's follow-up drops it.)
+const collegeColumn = () => varchar('college', { length: 32 }).notNull()
+
 // Knowledge documents (official notices, guides, web crawls, and urgent updates)
 export const knowledgeDocuments = pgTable(
   'knowledge_documents',
@@ -729,6 +890,9 @@ export const knowledgeDocuments = pgTable(
     id: varchar('id', { length: ID_LENGTH })
       .primaryKey()
       .$defaultFn(() => generateId()),
+    // Owning college (tenant). Users read their college's documents plus
+    // those of its partner colleges.
+    college: collegeColumn(),
     title: text('title').notNull(),
     domain: varchar('domain', {
       length: 64,
@@ -741,8 +905,7 @@ export const knowledgeDocuments = pgTable(
       enum: KNOWLEDGE_SOURCE_SYSTEMS
     }).notNull(),
     authority: varchar('authority', {
-      length: 32,
-      enum: KNOWLEDGE_AUTHORITIES
+      length: 32
     })
       .notNull()
       .default('joint'),
@@ -807,6 +970,10 @@ export const knowledgeDocuments = pgTable(
     index('knowledge_documents_content_hash_idx').on(table.contentHash),
     index('knowledge_documents_supersedes_id_idx').on(table.supersedesId),
     index('knowledge_documents_effective_date_idx').on(table.effectiveDate),
+    index('knowledge_documents_college_status_idx').on(
+      table.college,
+      table.status
+    ),
     pgPolicy('knowledge_documents_public_select', {
       as: 'permissive',
       for: 'select',
@@ -817,8 +984,8 @@ export const knowledgeDocuments = pgTable(
       as: 'permissive',
       for: 'all',
       to: 'public',
-      using: mentorOrSystemWriteCondition,
-      withCheck: mentorOrSystemWriteCondition
+      using: collegeMentorOrSystemWriteCondition(table.college),
+      withCheck: collegeMentorOrSystemWriteCondition(table.college)
     })
   ]
 ).enableRLS()
@@ -885,11 +1052,11 @@ export const campusEvents = pgTable(
     id: varchar('id', { length: ID_LENGTH })
       .primaryKey()
       .$defaultFn(() => generateId()),
+    college: collegeColumn(),
     title: text('title').notNull(),
     organizer: text('organizer').notNull(),
     authority: varchar('authority', {
-      length: 32,
-      enum: KNOWLEDGE_AUTHORITIES
+      length: 32
     })
       .notNull()
       .default('joint'),
@@ -927,6 +1094,7 @@ export const campusEvents = pgTable(
     index('campus_events_registration_deadline_idx').on(
       table.registrationDeadline
     ),
+    index('campus_events_college_start_idx').on(table.college, table.startAt),
     pgPolicy('campus_events_public_select', {
       as: 'permissive',
       for: 'select',
@@ -937,8 +1105,8 @@ export const campusEvents = pgTable(
       as: 'permissive',
       for: 'all',
       to: 'public',
-      using: mentorOrSystemWriteCondition,
-      withCheck: mentorOrSystemWriteCondition
+      using: collegeMentorOrSystemWriteCondition(table.college),
+      withCheck: collegeMentorOrSystemWriteCondition(table.college)
     })
   ]
 ).enableRLS()
@@ -953,11 +1121,11 @@ export const officialPortals = pgTable(
     id: varchar('id', { length: ID_LENGTH })
       .primaryKey()
       .$defaultFn(() => generateId()),
-    portalKey: varchar('portal_key', { length: 64 }).notNull().unique(),
+    college: collegeColumn(),
+    portalKey: varchar('portal_key', { length: 64 }).notNull(),
     name: text('name').notNull(),
     authority: varchar('authority', {
-      length: 32,
-      enum: KNOWLEDGE_AUTHORITIES
+      length: 32
     }).notNull(),
     url: text('url').notNull(),
     requiresLogin: integer('requires_login').notNull().default(1),
@@ -977,6 +1145,10 @@ export const officialPortals = pgTable(
   },
   table => [
     index('official_portals_authority_idx').on(table.authority),
+    uniqueIndex('official_portals_college_portal_key_idx').on(
+      table.college,
+      table.portalKey
+    ),
     pgPolicy('official_portals_public_select', {
       as: 'permissive',
       for: 'select',
@@ -987,8 +1159,8 @@ export const officialPortals = pgTable(
       as: 'permissive',
       for: 'all',
       to: 'public',
-      using: mentorOrSystemWriteCondition,
-      withCheck: mentorOrSystemWriteCondition
+      using: collegeMentorOrSystemWriteCondition(table.college),
+      withCheck: collegeMentorOrSystemWriteCondition(table.college)
     })
   ]
 ).enableRLS()
@@ -1003,6 +1175,7 @@ export const unansweredQueries = pgTable(
     id: varchar('id', { length: ID_LENGTH })
       .primaryKey()
       .$defaultFn(() => generateId()),
+    college: collegeColumn(),
     userId: varchar('user_id', { length: USER_ID_LENGTH }),
     chatId: varchar('chat_id', { length: ID_LENGTH }),
     query: text('query').notNull(),
@@ -1041,6 +1214,10 @@ export const unansweredQueries = pgTable(
       table.createdAt
     ),
     index('unanswered_queries_domain_idx').on(table.domain),
+    index('unanswered_queries_college_status_idx').on(
+      table.college,
+      table.status
+    ),
     index('unanswered_queries_flagged_document_idx').on(
       table.flaggedDocumentId
     ),
@@ -1060,14 +1237,14 @@ export const unansweredQueries = pgTable(
       as: 'permissive',
       for: 'update',
       to: 'public',
-      using: mentorOrSystemWriteCondition,
-      withCheck: mentorOrSystemWriteCondition
+      using: collegeMentorOrSystemWriteCondition(table.college),
+      withCheck: collegeMentorOrSystemWriteCondition(table.college)
     }),
     pgPolicy('unanswered_queries_mentor_delete', {
       as: 'permissive',
       for: 'delete',
       to: 'public',
-      using: mentorOrSystemWriteCondition
+      using: collegeMentorOrSystemWriteCondition(table.college)
     })
   ]
 ).enableRLS()

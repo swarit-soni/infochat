@@ -1,11 +1,15 @@
 import { type JSONValue, tool } from 'ai'
 import { z } from 'zod'
 
+import { defaultCampusScope } from '@/lib/colleges/defaults'
 import {
-  CAMPUS_EVENT_STATUSES,
-  KNOWLEDGE_AUTHORITIES,
-  KNOWLEDGE_DOMAINS
-} from '@/lib/db/schema'
+  type CampusScope,
+  collegeShortName,
+  getCollege,
+  getOfficialWebDomains,
+  getVisibleCollegesFor
+} from '@/lib/colleges/registry'
+import { CAMPUS_EVENT_STATUSES, KNOWLEDGE_DOMAINS } from '@/lib/db/schema'
 import { recordUnansweredQuery } from '@/lib/rag/ingestion'
 import {
   formatAuthorityLabel,
@@ -22,11 +26,6 @@ import {
 } from '@/lib/utils/citation'
 
 import { createSearchTool } from './search'
-
-export const OFFICIAL_WEB_DOMAINS = [
-  'jecrcuniversity.edu.in',
-  'kalvium.com'
-] as const
 
 export const RAG_MODEL_CONTENT_MAX_CHARACTERS = 1800
 
@@ -80,10 +79,11 @@ function toJsonValue(value: unknown): JSONValue {
 }
 
 export function filterOfficialDomains(
-  requestedDomains?: string[] | null
+  requestedDomains: string[] | null | undefined,
+  officialDomains: readonly string[]
 ): string[] {
   if (!requestedDomains || requestedDomains.length === 0) {
-    return [...OFFICIAL_WEB_DOMAINS]
+    return [...officialDomains]
   }
 
   const allowed = requestedDomains
@@ -94,19 +94,39 @@ export function filterOfficialDomains(
         .replace(/^www\./, '')
     )
     .filter(domain =>
-      OFFICIAL_WEB_DOMAINS.some(
+      officialDomains.some(
         official => domain === official || domain.endsWith(`.${official}`)
       )
     )
 
-  return allowed.length > 0 ? allowed : [...OFFICIAL_WEB_DOMAINS]
+  return allowed.length > 0 ? allowed : [...officialDomains]
 }
 
 export function createCampusRagTools(options?: {
   labelAllocator?: CitationLabelAllocator
   labelSeed?: number
   model?: string
+  /**
+   * The asking user's college and campus. Tools only read the records of
+   * the colleges visible to them, and only search their official domains.
+   * Defaults to every built-in college (admission seekers).
+   */
+  campusScope?: CampusScope
+  /** Attributed on logged knowledge gaps. */
+  userId?: string | null
+  chatId?: string | null
 }) {
+  // A null college (admission seekers, guests) sees every college.
+  const { directory, college, campus } =
+    options?.campusScope ?? defaultCampusScope()
+  const visibleColleges = getVisibleCollegesFor(directory, college, campus)
+  const collegeNames = visibleColleges
+    .map(slug => collegeShortName(directory, slug))
+    .join(' & ')
+  const officialDomains = getOfficialWebDomains(directory, college, campus)
+  const authorityOptions: [string, ...string[]] = ['joint', ...visibleColleges]
+  const authoritySchema = z.enum(authorityOptions)
+  const eventsLabel = getCollege(directory, college)?.eventsLabel || 'campus'
   const labelAllocator =
     options?.labelAllocator ??
     createCitationLabelAllocator(options?.labelSeed ?? 1)
@@ -116,8 +136,7 @@ export function createCampusRagTools(options?: {
   )
 
   const searchCampusKnowledge = tool({
-    description:
-      'ALWAYS call this FIRST for Kalvium X JECRC campus questions (admissions, fees, examinations, timetables, curriculum, assessments, mentorship guides, E-Notices, and urgent WhatsApp/GChat updates). Uses hybrid semantic + full-text Postgres retrieval with source precedence and expiry filtering.',
+    description: `ALWAYS call this FIRST for ${collegeNames} campus questions (admissions, fees, examinations, timetables, curriculum, assessments, mentorship guides, notices, and urgent WhatsApp/GChat updates). Uses hybrid semantic + full-text Postgres retrieval with source precedence and expiry filtering.`,
     inputSchema: z.object({
       query: z
         .string()
@@ -128,10 +147,11 @@ export function createCampusRagTools(options?: {
         .enum(KNOWLEDGE_DOMAINS)
         .optional()
         .describe('Optional domain filter'),
-      authority: z
-        .enum(KNOWLEDGE_AUTHORITIES)
+      authority: authoritySchema
         .optional()
-        .describe('Optional entity filter: kalvium, jecrc, or joint'),
+        .describe(
+          `Optional issuing-authority filter: ${[...visibleColleges, 'joint'].join(', ')}`
+        ),
       program: z
         .string()
         .optional()
@@ -140,7 +160,10 @@ export function createCampusRagTools(options?: {
         .string()
         .optional()
         .describe('Optional semester filter (e.g. 3)'),
-      squad: z.string().optional().describe('Optional Kalvium squad filter'),
+      squad: z
+        .string()
+        .optional()
+        .describe('Optional squad / batch / section filter'),
       residency: z
         .string()
         .optional()
@@ -175,6 +198,8 @@ export function createCampusRagTools(options?: {
       }
 
       const hits = await retrieveCampusKnowledge({
+        colleges: visibleColleges,
+        directory,
         query,
         domain,
         authority,
@@ -204,8 +229,7 @@ export function createCampusRagTools(options?: {
   })
 
   const queryEvents = tool({
-    description:
-      'Query structured Eventum campus events (upcoming hackathons, cultural/tech activities, schedules, venues, eligibility, guidelines, registration deadlines, and published results). Automatically hides expired registration links.',
+    description: `Query structured ${eventsLabel} events (upcoming hackathons, cultural/tech activities, schedules, venues, eligibility, guidelines, registration deadlines, and published results). Automatically hides expired registration links.`,
     inputSchema: z.object({
       query: z
         .string()
@@ -235,6 +259,7 @@ export function createCampusRagTools(options?: {
       }
 
       const events = await retrieveCampusEvents({
+        colleges: visibleColleges,
         query: query.trim() || undefined,
         status,
         includeCompleted: status === 'all' || status === 'completed',
@@ -243,7 +268,7 @@ export function createCampusRagTools(options?: {
 
       const rawResults: SearchResultItem[] = events.map(event => {
         const lines = [
-          `Organizer: ${event.organizer} (${formatAuthorityLabel(event.authority)})`,
+          `Organizer: ${event.organizer} (${formatAuthorityLabel(event.authority, directory)})`,
           `Status: ${event.status}`,
           `Starts: ${event.startAt.toISOString()}`
         ]
@@ -268,7 +293,7 @@ export function createCampusRagTools(options?: {
         if (event.resultsUrl) lines.push(`Results URL: ${event.resultsUrl}`)
 
         return {
-          title: `${event.title} (Eventum · ${event.status})`,
+          title: `${event.title} (Event · ${event.status})`,
           url: event.citationUrl,
           content: lines.join('\n')
         }
@@ -291,25 +316,25 @@ export function createCampusRagTools(options?: {
   })
 
   const getOfficialPortalLinks = tool({
-    description:
-      'Deterministic lookup from the verified official_portals registry for JECRC ERP, E-Notice, Result, Student Support, Parent Portal, and Kalvium Student Dashboard. Use whenever a student asks for personal records (attendance, grades, fee balance, dashboard progress) or official portal navigation steps.',
+    description: `Deterministic lookup from the verified official_portals registry of ${collegeNames} (ERP/student logins, results, notices, support desks, dashboards). Use whenever a student asks for personal records (attendance, grades, fee balance, dashboard progress) or official portal navigation steps.`,
     inputSchema: z.object({
       query: z
         .string()
         .optional()
         .describe(
-          'Student task or portal topic (e.g. "personal attendance", "exam results", "kalvium dashboard")'
+          'Student task or portal topic (e.g. "personal attendance", "exam results", "fee payment")'
         ),
       portalKey: z
         .string()
         .optional()
         .describe(
-          'Optional exact portal key (jecrc_erp, jecrc_enotice, jecrc_result, jecrc_support, jecrc_parent, kalvium_dashboard)'
+          'Optional exact portal key from a previous lookup (e.g. <college>_erp, <college>_results)'
         ),
-      authority: z
-        .enum(KNOWLEDGE_AUTHORITIES)
+      authority: authoritySchema
         .optional()
-        .describe('Optional authority filter (kalvium, jecrc, or joint)')
+        .describe(
+          `Optional authority filter (${[...visibleColleges, 'joint'].join(', ')})`
+        )
     }),
     async *execute({ query = '', portalKey, authority }, context) {
       const displayQuery =
@@ -320,17 +345,18 @@ export function createCampusRagTools(options?: {
       }
 
       const portals = await retrieveOfficialPortals({
+        colleges: visibleColleges,
         query: query.trim() || undefined,
         portalKey,
         authority
       })
 
       const rawResults: SearchResultItem[] = portals.map(portal => ({
-        title: `${portal.name} (${formatAuthorityLabel(portal.authority)})`,
+        title: `${portal.name} (${formatAuthorityLabel(portal.authority, directory)})`,
         url: portal.url,
         content: [
           `Portal Key: ${portal.portalKey}`,
-          `Authority: ${formatAuthorityLabel(portal.authority)}`,
+          `Authority: ${formatAuthorityLabel(portal.authority, directory)}`,
           `Verified URL: ${portal.url}`,
           `Login Required: ${portal.requiresLogin ? 'Yes (sign in directly on the official portal; never share credentials in chat)' : 'No'}`,
           `Capabilities: ${portal.capabilities}`,
@@ -360,8 +386,7 @@ export function createCampusRagTools(options?: {
   })
 
   const searchOfficialWeb = tool({
-    description:
-      'Controlled live web fallback restricted strictly to official domains (jecrcuniversity.edu.in and kalvium.com). Only call AFTER searchCampusKnowledge if no verified campus document covered the query.',
+    description: `Controlled live web fallback restricted strictly to official domains (${officialDomains.join(', ')}). Only call AFTER searchCampusKnowledge if no verified campus document covered the query.`,
     inputSchema: z.object({
       query: z.string().describe('Official web fallback query'),
       max_results: z.number().int().min(1).max(15).optional().default(8),
@@ -373,7 +398,10 @@ export function createCampusRagTools(options?: {
         )
     }),
     async *execute({ query, max_results = 8, include_domains }, context) {
-      const allowlistedDomains = filterOfficialDomains(include_domains)
+      const allowlistedDomains = filterOfficialDomains(
+        include_domains,
+        officialDomains
+      )
       const executeFn = officialSearchTool.execute
       if (!executeFn) {
         yield {
@@ -456,9 +484,14 @@ export function createCampusRagTools(options?: {
   })
 
   const logUnansweredQuery = tool({
-    description:
-      'Log a campus query gap when verified campus knowledge is missing, expired, or contradictory so Kalvium mentors can curate an authoritative answer. Always call before abstaining.',
+    description: `Log a campus query gap when verified campus knowledge is missing, expired, or contradictory so ${college ? collegeShortName(directory, college) : "that college's"} mentors can curate an authoritative answer. Always call before abstaining.`,
     inputSchema: z.object({
+      college: z
+        .enum(visibleColleges as [string, ...string[]])
+        .optional()
+        .describe(
+          `Which college the question is about (${visibleColleges.join(', ')}). Defaults to the user's own college.`
+        ),
       query: z
         .string()
         .describe('The unanswered or ambiguous student question'),
@@ -469,15 +502,29 @@ export function createCampusRagTools(options?: {
       cohort: z
         .string()
         .optional()
-        .describe('Optional cohort string (e.g. B.Tech CSE Sem 3 Squad 42)'),
+        .describe('Optional cohort string (e.g. B.Tech CSE Sem 3)'),
       reason: z
         .string()
         .describe(
           'Why SERA abstained (e.g. missing circular, expired notice, conflicting source)'
         )
     }),
-    async execute({ query, domain = 'general', cohort, reason }) {
+    async execute({
+      college: questionCollege,
+      query,
+      domain = 'general',
+      cohort,
+      reason
+    }) {
+      const gapCollege = questionCollege ?? college
+      if (!gapCollege) {
+        // Without a college no mentor team owns the gap.
+        return { logged: false, id: null, query, domain, reason }
+      }
       const inserted = await recordUnansweredQuery({
+        college: gapCollege,
+        userId: options?.userId ?? null,
+        chatId: options?.chatId ?? null,
         query,
         domain,
         cohort: cohort ?? null,

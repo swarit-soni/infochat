@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 import {
@@ -113,8 +114,8 @@ export function AccountSettingsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-6">
-          <section className="grid gap-3">
+        <div className="grid min-w-0 grid-cols-1 gap-6">
+          <section className="grid min-w-0 grid-cols-1 gap-3">
             <div className="grid gap-1">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-sm font-medium">Profile</h3>
@@ -129,11 +130,44 @@ export function AccountSettingsDialog({
                 <p className="truncate">{user.email}</p>
               </div>
             </div>
+            {user.collegeOnboarded !== undefined && (
+              <div className="flex min-w-0 items-center justify-between gap-2 text-sm">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">College</p>
+                  <p
+                    className="truncate text-(--md-sys-color-on-surface-variant)"
+                    title={user.collegeName ?? undefined}
+                  >
+                    {user.college
+                      ? (user.collegeName ?? user.college)
+                      : 'Not enrolled'}
+                    {user.campusName ? ` · ${user.campusName} campus` : ''}
+                  </p>
+                </div>
+                {/* A verified college can't change, but its students can
+                    still change their partner campus. */}
+                {user.userType !== 'mentor' && (
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                  >
+                    <Link
+                      href="/onboarding/college?change=1"
+                      onClick={() => onOpenChange(false)}
+                    >
+                      Change
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            )}
           </section>
 
           <Separator />
 
-          <section className="grid gap-3">
+          <section className="grid min-w-0 grid-cols-1 gap-3">
             <div className="grid gap-1">
               <h3 className="text-sm font-medium">Theme</h3>
               <p className="text-sm text-(--md-sys-color-on-surface-variant)">
@@ -166,7 +200,7 @@ export function AccountSettingsDialog({
             <>
               <Separator />
 
-              <section className="grid gap-3">
+              <section className="grid min-w-0 grid-cols-1 gap-3">
                 <div className="grid gap-1">
                   <h3 className="text-sm font-medium text-(--md-sys-color-error)">
                     Delete account

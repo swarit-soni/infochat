@@ -6,15 +6,24 @@ import {
   eq,
   gt,
   ilike,
+  inArray,
   isNull,
   or,
   sql
 } from 'drizzle-orm'
 
+import { DEFAULT_COLLEGE_DIRECTORY } from '@/lib/colleges/defaults'
+import {
+  type CollegeDirectory,
+  type CollegeSlug,
+  getCollege,
+  JOINT_AUTHORITY_LABEL
+} from '@/lib/colleges/registry'
 import { db } from '@/lib/db'
 import {
   campusEvents,
   type CampusEventStatus,
+  KNOWLEDGE_SOURCE_LABELS,
   type KnowledgeAuthority,
   type KnowledgeChannel,
   knowledgeChunks,
@@ -23,7 +32,8 @@ import {
   type KnowledgePriority,
   type KnowledgeSourceSystem,
   type KnowledgeStatus,
-  officialPortals
+  officialPortals,
+  toSourceSystem
 } from '@/lib/db/schema'
 
 import { generateQueryEmbedding } from './embeddings'
@@ -80,6 +90,13 @@ export interface RankedKnowledgeHit extends RetrievalCandidate {
 
 export interface RetrieveCampusKnowledgeParams {
   query: string
+  /**
+   * Colleges whose documents are visible to the asker (their college plus
+   * its partners). Omit only in tests; production callers always scope.
+   */
+  colleges?: CollegeSlug[]
+  /** Resolves college names and websites in results. */
+  directory?: CollegeDirectory
   domain?: KnowledgeDomain
   authority?: KnowledgeAuthority
   cohort?: CohortFilter
@@ -89,6 +106,7 @@ export interface RetrieveCampusKnowledgeParams {
 
 export interface RetrieveCampusEventsParams {
   query?: string
+  colleges?: CollegeSlug[]
   status?: CampusEventStatus | 'all'
   includeCompleted?: boolean
   limit?: number
@@ -122,12 +140,12 @@ export const SOURCE_PRECEDENCE_WEIGHTS: Record<KnowledgeSourceSystem, number> =
   {
     gchat_space: 0.35,
     whatsapp_forward: 0.35,
-    jecrc_enotice: 0.25,
-    jecrc_portal_guide: 0.25,
-    kalvium_guide: 0.18,
-    eventum: 0.1,
-    jecrc_web: 0.05,
-    kalvium_web: 0.05
+    official_notice: 0.25,
+    portal_guide: 0.25,
+    official_document: 0.2,
+    official_guide: 0.18,
+    campus_events: 0.1,
+    official_website: 0.05
   }
 
 const RRF_K = 60
@@ -145,27 +163,27 @@ function isValidHttpUrl(url: string | null | undefined): url is string {
 export function buildCanonicalKnowledgeUrl(
   documentId: string,
   authority: KnowledgeAuthority,
-  sourceUrl?: string | null
+  sourceUrl?: string | null,
+  college: CollegeSlug | null = null,
+  directory: CollegeDirectory = DEFAULT_COLLEGE_DIRECTORY
 ): string {
   if (isValidHttpUrl(sourceUrl)) {
     return sourceUrl
   }
-  if (authority === 'jecrc') {
-    return `https://jecrcuniversity.edu.in/#sera-kb-${encodeURIComponent(documentId)}`
-  }
-  return `https://kalvium.com/#sera-kb-${encodeURIComponent(documentId)}`
+  const website =
+    getCollege(directory, authority)?.website ??
+    getCollege(directory, college)?.website ??
+    'https://sera.invalid'
+  return `${website.replace(/\/+$/, '')}/#sera-kb-${encodeURIComponent(documentId)}`
 }
 
-export function formatAuthorityLabel(authority: KnowledgeAuthority): string {
-  switch (authority) {
-    case 'kalvium':
-      return 'Kalvium'
-    case 'jecrc':
-      return 'JECRC University'
-    case 'joint':
-    default:
-      return 'Kalvium X JECRC'
-  }
+/** A document's issuing authority for display: a college's name, or joint. */
+export function formatAuthorityLabel(
+  authority: KnowledgeAuthority,
+  directory: CollegeDirectory = DEFAULT_COLLEGE_DIRECTORY
+): string {
+  if (authority === 'joint') return JOINT_AUTHORITY_LABEL
+  return getCollege(directory, authority)?.shortName ?? authority
 }
 
 export function formatProvenanceBadge(candidate: {
@@ -192,18 +210,12 @@ export function formatProvenanceBadge(candidate: {
     return `Urgent Update · ${channelLabel} · ${dateText}`
   }
 
-  const sourceLabels: Record<KnowledgeSourceSystem, string> = {
-    jecrc_enotice: 'JECRC E-Notice',
-    jecrc_portal_guide: 'JECRC Portal Guide',
-    kalvium_guide: 'Kalvium Guide',
-    gchat_space: 'GChat Announcement',
-    whatsapp_forward: 'WhatsApp Forward',
-    eventum: 'Eventum',
-    jecrc_web: 'JECRC Official Website',
-    kalvium_web: 'Kalvium Official Website'
-  }
+  const sourceLabel =
+    candidate.sourceSystem === 'gchat_space'
+      ? 'GChat Announcement'
+      : KNOWLEDGE_SOURCE_LABELS[candidate.sourceSystem]
 
-  return `${sourceLabels[candidate.sourceSystem]} · ${dateText}`
+  return `${sourceLabel} · ${dateText}`
 }
 
 function computeCohortBoost(
@@ -228,8 +240,11 @@ function computeCohortBoost(
   return boost
 }
 
-function formatSnippetContent(candidate: RetrievalCandidate): string {
-  const authorityLabel = formatAuthorityLabel(candidate.authority)
+function formatSnippetContent(
+  candidate: RetrievalCandidate,
+  directory: CollegeDirectory
+): string {
+  const authorityLabel = formatAuthorityLabel(candidate.authority, directory)
   const provenanceBadge = formatProvenanceBadge(candidate)
   const metaParts = [
     `Authority: ${authorityLabel}`,
@@ -258,9 +273,12 @@ export function fuseAndRankChunks(
     cohort?: CohortFilter
     limit?: number
     now?: Date
+    /** Resolves college names and websites; defaults to built-in colleges. */
+    directory?: CollegeDirectory
   } = {}
 ): RankedKnowledgeHit[] {
   const now = options.now ?? new Date()
+  const directory = options.directory ?? DEFAULT_COLLEGE_DIRECTORY
   const limit = Math.max(1, options.limit ?? 6)
 
   const valid = candidates.filter(candidate => {
@@ -291,12 +309,14 @@ export function fuseAndRankChunks(
     const score = Number(
       (relevanceScore + precedenceBoost + urgentBoost + cohortBoost).toFixed(6)
     )
-    const authorityLabel = formatAuthorityLabel(candidate.authority)
+    const authorityLabel = formatAuthorityLabel(candidate.authority, directory)
     const provenanceBadge = formatProvenanceBadge(candidate)
     const citationUrl = buildCanonicalKnowledgeUrl(
       candidate.documentId,
       candidate.authority,
-      candidate.sourceUrl
+      candidate.sourceUrl,
+      null,
+      directory
     )
 
     return {
@@ -306,7 +326,7 @@ export function fuseAndRankChunks(
       authorityLabel,
       citationUrl,
       formattedTitle: `${candidate.title} (${authorityLabel} · ${provenanceBadge})`,
-      formattedContent: formatSnippetContent(candidate)
+      formattedContent: formatSnippetContent(candidate, directory)
     }
   })
 
@@ -341,6 +361,14 @@ function buildDocumentFilters(
       gt(knowledgeDocuments.expiresAt, now)
     )
   ]
+
+  if (params.colleges) {
+    conditions.push(
+      params.colleges.length > 0
+        ? inArray(knowledgeDocuments.college, params.colleges)
+        : sql`false`
+    )
+  }
 
   if (params.domain) {
     conditions.push(eq(knowledgeDocuments.domain, params.domain))
@@ -425,6 +453,8 @@ function mapJoinedRow(
 ): RetrievalCandidate {
   return {
     ...row,
+    // Rows written before source systems became generic may hold legacy values.
+    sourceSystem: toSourceSystem(row.sourceSystem),
     ...ranks
   }
 }
@@ -567,7 +597,8 @@ export async function retrieveCampusKnowledge(
     return fuseAndRankChunks(Array.from(candidateMap.values()), {
       cohort: params.cohort,
       limit,
-      now
+      now,
+      directory: params.directory
     })
   } catch (error) {
     console.warn(
@@ -643,6 +674,13 @@ export async function retrieveCampusEvents(
 
   try {
     const conditions = []
+    if (params.colleges) {
+      conditions.push(
+        params.colleges.length > 0
+          ? inArray(campusEvents.college, params.colleges)
+          : sql`false`
+      )
+    }
     if (params.status && params.status !== 'all') {
       conditions.push(eq(campusEvents.status, params.status))
     } else if (!params.includeCompleted) {
@@ -693,12 +731,15 @@ export async function retrieveOfficialPortals(
     query?: string
     authority?: KnowledgeAuthority
     portalKey?: string
+    colleges?: CollegeSlug[]
   } = {}
 ): Promise<OfficialPortalRecord[]> {
+  const colleges = options.colleges
   try {
     const rows = await db
       .select({
         id: officialPortals.id,
+        college: officialPortals.college,
         portalKey: officialPortals.portalKey,
         name: officialPortals.name,
         authority: officialPortals.authority,
@@ -710,6 +751,13 @@ export async function retrieveOfficialPortals(
         lastVerifiedAt: officialPortals.lastVerifiedAt
       })
       .from(officialPortals)
+      .where(
+        colleges
+          ? colleges.length > 0
+            ? inArray(officialPortals.college, colleges)
+            : sql`false`
+          : undefined
+      )
       .orderBy(asc(officialPortals.portalKey))
 
     if (rows.length > 0) {
@@ -722,5 +770,10 @@ export async function retrieveOfficialPortals(
     )
   }
 
-  return matchPortalsFromList(DEFAULT_OFFICIAL_PORTALS, options)
+  return matchPortalsFromList(
+    colleges
+      ? DEFAULT_OFFICIAL_PORTALS.filter(p => colleges.includes(p.college))
+      : DEFAULT_OFFICIAL_PORTALS,
+    options
+  )
 }

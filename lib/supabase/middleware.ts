@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { type CookieOptions, createServerClient } from '@supabase/ssr'
 
 import { isAllowedEmail, isGoogleAuthUser } from '@/lib/auth/domain'
+import { collegePath, getCollegeSegment } from '@/lib/colleges/registry'
 
 import { getSupabasePublishableKey } from './keys'
 
@@ -15,6 +16,12 @@ function isPublicPath(pathname: string): boolean {
     matchesPathPrefix(pathname, '/auth') ||
     matchesPathPrefix(pathname, '/api')
   ) {
+    return true
+  }
+
+  // Each college's mentor login, `/<college>/auth/mentor`.
+  const college = getCollegeSegment(pathname)
+  if (college && matchesPathPrefix(pathname, `/${college}/auth`)) {
     return true
   }
 
@@ -95,9 +102,15 @@ export async function updateSession(request: NextRequest) {
   // Redirect to login if the user is not authenticated and the path is not public.
   if (!user && !isPublicPath(pathname)) {
     const loginUrl = request.nextUrl.clone()
-    loginUrl.pathname = matchesPathPrefix(pathname, '/mentor')
-      ? '/auth/mentor'
-      : '/auth/login'
+    // `/<college>/mentor` goes to that college's own mentor login.
+    const college = getCollegeSegment(pathname)
+    const collegeMentorArea =
+      college !== null && matchesPathPrefix(pathname, `/${college}/mentor`)
+    loginUrl.pathname = collegeMentorArea
+      ? collegePath(college, '/auth/mentor')
+      : matchesPathPrefix(pathname, '/mentor')
+        ? '/auth/mentor'
+        : '/auth/login'
     loginUrl.search = ''
     if (pathname !== '/') {
       loginUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`)

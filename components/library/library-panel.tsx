@@ -30,7 +30,8 @@ import type { KnowledgeLibraryItem } from '@/lib/actions/knowledge'
 import { listKnowledgeDocuments } from '@/lib/actions/knowledge'
 import { deleteNote, listNotes } from '@/lib/actions/notes'
 import { captureClient } from '@/lib/analytics/posthog-client'
-import type { Note } from '@/lib/db/schema'
+import { useCollege } from '@/lib/colleges/use-college'
+import { KNOWLEDGE_SOURCE_LABELS, type Note } from '@/lib/db/schema'
 import { stripMarkdownText } from '@/lib/utils/markdown'
 
 import {
@@ -72,29 +73,6 @@ const LIBRARY_TABS: { value: LibraryTab; label: string }[] = [
   { value: 'notes', label: 'Notes' },
   { value: 'files', label: 'Files' }
 ]
-
-const KNOWLEDGE_AUTHORITY_LABELS: Record<
-  KnowledgeLibraryItem['authority'],
-  string
-> = {
-  kalvium: 'Kalvium',
-  jecrc: 'JECRC',
-  joint: 'Kalvium & JECRC'
-}
-
-const KNOWLEDGE_SOURCE_LABELS: Record<
-  KnowledgeLibraryItem['sourceSystem'],
-  string
-> = {
-  jecrc_web: 'JECRC website',
-  jecrc_enotice: 'JECRC e-notice',
-  jecrc_portal_guide: 'JECRC portal guide',
-  kalvium_web: 'Kalvium website',
-  kalvium_guide: 'Kalvium guide',
-  whatsapp_forward: 'WhatsApp forward',
-  gchat_space: 'Google Chat space',
-  eventum: 'Eventum'
-}
 
 function formatDomain(domain: KnowledgeLibraryItem['domain']) {
   return domain.charAt(0).toUpperCase() + domain.slice(1)
@@ -222,7 +200,7 @@ function KnowledgeDocumentDetail({
     { label: 'Topic', value: formatDomain(document.domain) },
     {
       label: 'Authority',
-      value: KNOWLEDGE_AUTHORITY_LABELS[document.authority]
+      value: document.authorityLabel
     },
     { label: 'Source', value: KNOWLEDGE_SOURCE_LABELS[document.sourceSystem] },
     {
@@ -309,6 +287,7 @@ export function LibraryPanel() {
     removeCachedNote,
     removeCachedFile
   } = useLibrary()
+  const college = useCollege()
   const [activeTab, setActiveTab] = useState<LibraryTab>('knowledge')
   const [selectedNote, setSelectedNote] = useState<Note | null>(null)
   const [selectedFile, setSelectedFile] = useState<LibraryFileItem | null>(null)
@@ -464,46 +443,48 @@ export function LibraryPanel() {
 
     const loadReason = !hasCache ? 'cold' : isRefreshStale ? 'refresh' : 'ttl'
     let cancelled = false
-    listKnowledgeDocuments({ limit: LIBRARY_PAGE_SIZE }).then(result => {
-      if (cancelled) return
+    listKnowledgeDocuments({ limit: LIBRARY_PAGE_SIZE, college }).then(
+      result => {
+        if (cancelled) return
 
-      setHasKnowledgeLoadAttempted(true)
+        setHasKnowledgeLoadAttempted(true)
 
-      if (!result.success) {
-        captureClient('library_knowledge_load_failed', {
+        if (!result.success) {
+          captureClient('library_knowledge_load_failed', {
+            source: 'network',
+            reason: loadReason,
+            error: result.error ?? 'unknown'
+          })
+          toast.error(result.error ?? 'Failed to load the knowledge base')
+          return
+        }
+
+        const nextDocuments = result.documents ?? []
+        replaceKnowledgeCache({
+          documents: nextDocuments,
+          nextCursor: result.nextCursor ?? null,
+          hasMore: Boolean(result.hasMore)
+        })
+        lastFetchedKnowledgeRefreshKeyRef.current = refreshKey
+        setSelectedDocument(current => {
+          if (!current) return current
+
+          return nextDocuments.find(doc => doc.id === current.id) ?? current
+        })
+        captureClient('library_knowledge_loaded', {
           source: 'network',
           reason: loadReason,
-          error: result.error ?? 'unknown'
+          documentCount: nextDocuments.length,
+          hasMore: Boolean(result.hasMore),
+          isEmpty: nextDocuments.length === 0
         })
-        toast.error(result.error ?? 'Failed to load the knowledge base')
-        return
       }
-
-      const nextDocuments = result.documents ?? []
-      replaceKnowledgeCache({
-        documents: nextDocuments,
-        nextCursor: result.nextCursor ?? null,
-        hasMore: Boolean(result.hasMore)
-      })
-      lastFetchedKnowledgeRefreshKeyRef.current = refreshKey
-      setSelectedDocument(current => {
-        if (!current) return current
-
-        return nextDocuments.find(doc => doc.id === current.id) ?? current
-      })
-      captureClient('library_knowledge_loaded', {
-        source: 'network',
-        reason: loadReason,
-        documentCount: nextDocuments.length,
-        hasMore: Boolean(result.hasMore),
-        isEmpty: nextDocuments.length === 0
-      })
-    })
+    )
 
     return () => {
       cancelled = true
     }
-  }, [isOpen, knowledgeCache, refreshKey, replaceKnowledgeCache])
+  }, [college, isOpen, knowledgeCache, refreshKey, replaceKnowledgeCache])
 
   const handleLoadMore = useCallback(async () => {
     if (isLoadingMore) return
@@ -515,7 +496,8 @@ export function LibraryPanel() {
       try {
         const result = await listKnowledgeDocuments({
           limit: LIBRARY_PAGE_SIZE,
-          cursor: knowledgeCache.nextCursor
+          cursor: knowledgeCache.nextCursor,
+          college
         })
         if (!result.success) {
           captureClient('library_knowledge_load_failed', {
@@ -629,6 +611,7 @@ export function LibraryPanel() {
     appendFilesCache,
     appendKnowledgeCache,
     appendNotesCache,
+    college,
     filesCache,
     isLoadingMore,
     knowledgeCache,
@@ -1072,7 +1055,7 @@ export function LibraryPanel() {
                         </p>
                         <p className="mt-1 truncate text-[11px] text-(--md-sys-color-on-surface-variant)/75">
                           {formatDomain(document.domain)} ·{' '}
-                          {KNOWLEDGE_AUTHORITY_LABELS[document.authority]} ·{' '}
+                          {document.authorityLabel} ·{' '}
                           {formatDay(
                             document.effectiveDate ?? document.updatedAt
                           )}

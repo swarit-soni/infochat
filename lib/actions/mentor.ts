@@ -1,17 +1,19 @@
 'use server'
 
-import { asc, desc, eq } from 'drizzle-orm'
+import { and, asc, desc, eq } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { getCurrentUser } from '@/lib/auth/get-current-user'
 import type { AppUser } from '@/lib/auth/types'
+import { type CollegeSlug, getPartnerCampuses } from '@/lib/colleges/registry'
+import { getCollegeDirectory } from '@/lib/colleges/store'
 import { db } from '@/lib/db'
 import {
   CAMPUS_EVENT_STATUSES,
   type CampusEvent,
   campusEvents,
   type CampusEventStatus,
-  KNOWLEDGE_AUTHORITIES,
+  JOINT_AUTHORITY,
   KNOWLEDGE_DOMAINS,
   KNOWLEDGE_PRIORITIES,
   KNOWLEDGE_SOURCE_SYSTEMS,
@@ -50,12 +52,18 @@ export interface MentorPortalOverview {
   unansweredQueries: UnansweredQuery[]
 }
 
-async function requireMentorUser(): Promise<AppUser | null> {
+type MentorUser = AppUser & { college: CollegeSlug }
+
+/**
+ * The signed-in mentor, with the college they manage. Every mentor action
+ * reads and writes only that college's rows (tenant isolation).
+ */
+async function requireMentorUser(): Promise<MentorUser | null> {
   const user = await getCurrentUser()
-  if (!user || user.userType !== 'mentor') {
+  if (!user || user.userType !== 'mentor' || !user.college) {
     return null
   }
-  return user
+  return { ...user, college: user.college }
 }
 
 function parseOptionalDate(value?: string | null): Date | null {
@@ -64,12 +72,33 @@ function parseOptionalDate(value?: string | null): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
+const authoritySchema = z.string().trim().min(1).max(32)
+
+/**
+ * A mentor may attribute records to their own college, one of its partner
+ * campuses, or `joint`; never to an unrelated college.
+ */
+async function isAllowedAuthority(
+  college: CollegeSlug,
+  authority: string
+): Promise<boolean> {
+  if (authority === college || authority === JOINT_AUTHORITY) return true
+  const partners = getPartnerCampuses(await getCollegeDirectory(), college)
+  return partners.some(partner => partner.slug === authority)
+}
+
+const INVALID_AUTHORITY = {
+  success: false as const,
+  error:
+    'Choose your college, a partner campus or a joint notice as the authority.'
+}
+
 const uploadDocumentSchema = z.object({
   title: z.string().trim().min(2, 'Title is required'),
   content: z.string().trim().min(10, 'Document content is required'),
   domain: z.enum(KNOWLEDGE_DOMAINS),
   sourceSystem: z.enum(KNOWLEDGE_SOURCE_SYSTEMS),
-  authority: z.enum(KNOWLEDGE_AUTHORITIES),
+  authority: authoritySchema,
   priority: z.enum(KNOWLEDGE_PRIORITIES).default('standard'),
   program: z.string().optional().nullable(),
   semester: z.string().optional().nullable(),
@@ -96,7 +125,7 @@ const campusEventSchema = z.object({
   id: z.string().optional(),
   title: z.string().trim().min(2, 'Event title is required'),
   organizer: z.string().trim().min(2, 'Organizer is required'),
-  authority: z.enum(KNOWLEDGE_AUTHORITIES).default('joint'),
+  authority: authoritySchema.default(JOINT_AUTHORITY),
   category: z.string().optional().nullable(),
   startAt: z.string().trim().min(1, 'Start date/time is required'),
   endAt: z.string().optional().nullable(),
@@ -116,7 +145,7 @@ const campusEventSchema = z.object({
 const officialPortalSchema = z.object({
   portalKey: z.string().trim().min(2, 'Portal key is required'),
   name: z.string().trim().min(2, 'Portal name is required'),
-  authority: z.enum(KNOWLEDGE_AUTHORITIES),
+  authority: authoritySchema,
   url: z.string().url('Valid portal URL is required'),
   requiresLogin: z.boolean().default(true),
   capabilities: z.string().trim().min(4, 'Capabilities summary is required'),
@@ -144,17 +173,24 @@ export async function getMentorPortalOverview(): Promise<MentorPortalOverview> {
       db
         .select()
         .from(knowledgeDocuments)
+        .where(eq(knowledgeDocuments.college, mentor.college))
         .orderBy(desc(knowledgeDocuments.createdAt))
         .limit(100),
       db
         .select()
         .from(campusEvents)
+        .where(eq(campusEvents.college, mentor.college))
         .orderBy(desc(campusEvents.startAt))
         .limit(50),
-      db.select().from(officialPortals).orderBy(asc(officialPortals.portalKey)),
+      db
+        .select()
+        .from(officialPortals)
+        .where(eq(officialPortals.college, mentor.college))
+        .orderBy(asc(officialPortals.portalKey)),
       db
         .select()
         .from(unansweredQueries)
+        .where(eq(unansweredQueries.college, mentor.college))
         .orderBy(desc(unansweredQueries.createdAt))
         .limit(100)
     ])
@@ -178,7 +214,9 @@ export async function getMentorPortalOverview(): Promise<MentorPortalOverview> {
       documents: [],
       pendingDocuments: [],
       events: [],
-      portals: DEFAULT_OFFICIAL_PORTALS.map(p => ({
+      portals: DEFAULT_OFFICIAL_PORTALS.filter(
+        p => p.college === mentor.college
+      ).map(p => ({
         ...p,
         updatedBy: null,
         createdAt: p.lastVerifiedAt,
@@ -204,11 +242,15 @@ export async function uploadKnowledgeDocumentAction(
       error: parsed.error.issues[0]?.message ?? 'Invalid document fields.'
     }
   }
+  if (!(await isAllowedAuthority(mentor.college, parsed.data.authority))) {
+    return INVALID_AUTHORITY
+  }
 
   try {
     const data = parsed.data
     const result = await ingestKnowledgeDocument(
       {
+        college: mentor.college,
         title: data.title,
         content: data.content,
         domain: data.domain,
@@ -269,6 +311,7 @@ export async function submitUrgentUpdateAction(
     const data = parsed.data
     const result = await ingestUrgentUpdate(
       {
+        college: mentor.college,
         rawText: data.rawText,
         channel: data.channel,
         senderRole: data.senderRole,
@@ -313,7 +356,11 @@ export async function reviewUrgentUpdateAction(input: {
 
   try {
     if (input.decision === 'approve') {
-      const result = await approvePendingDocument(input.documentId, mentor.id)
+      const result = await approvePendingDocument(
+        input.documentId,
+        mentor.id,
+        mentor.college
+      )
       if (!result.document) {
         return { success: false, error: 'Document not found.' }
       }
@@ -329,7 +376,8 @@ export async function reviewUrgentUpdateAction(input: {
     const updated = await updateDocumentStatus(
       input.documentId,
       nextStatus,
-      mentor.id
+      mentor.id,
+      mentor.college
     )
     if (!updated) {
       return { success: false, error: 'Document not found.' }
@@ -361,6 +409,9 @@ export async function saveCampusEventAction(
       error: parsed.error.issues[0]?.message ?? 'Invalid campus event fields.'
     }
   }
+  if (!(await isAllowedAuthority(mentor.college, parsed.data.authority))) {
+    return INVALID_AUTHORITY
+  }
 
   const startAt = parseOptionalDate(parsed.data.startAt)
   if (!startAt) {
@@ -371,6 +422,7 @@ export async function saveCampusEventAction(
     const event = await upsertCampusEvent(
       {
         ...parsed.data,
+        college: mentor.college,
         startAt,
         endAt: parseOptionalDate(parsed.data.endAt),
         registrationDeadline: parseOptionalDate(
@@ -406,7 +458,8 @@ export async function updateCampusEventStatusAction(input: {
     const event = await updateCampusEventStatus(
       input.eventId,
       input.status,
-      mentor.id
+      mentor.id,
+      mentor.college
     )
     if (!event) {
       return { success: false, error: 'Event not found.' }
@@ -438,10 +491,14 @@ export async function saveOfficialPortalAction(
       error: parsed.error.issues[0]?.message ?? 'Invalid portal fields.'
     }
   }
+  if (!(await isAllowedAuthority(mentor.college, parsed.data.authority))) {
+    return INVALID_AUTHORITY
+  }
 
   try {
     const portal = await upsertOfficialPortal(
       {
+        college: mentor.college,
         portalKey: parsed.data.portalKey,
         name: parsed.data.name,
         authority: parsed.data.authority,
@@ -472,7 +529,7 @@ export async function seedOfficialPortalsAction() {
   }
 
   try {
-    const portals = await seedDefaultOfficialPortals(mentor.id)
+    const portals = await seedDefaultOfficialPortals(mentor.college, mentor.id)
     return { success: true, portals }
   } catch (error) {
     return {
@@ -502,7 +559,10 @@ export async function crawlOfficialUrlAction(
   }
 
   try {
-    const result = await crawlAndIngestOfficialUrl(parsed.data, mentor.id)
+    const result = await crawlAndIngestOfficialUrl(
+      { ...parsed.data, college: mentor.college },
+      mentor.id
+    )
     return {
       success: true,
       deduplicated: result.deduplicated,
@@ -532,16 +592,25 @@ export async function flagDocumentCitationAction(input: {
     const [doc] = await db
       .select()
       .from(knowledgeDocuments)
-      .where(eq(knowledgeDocuments.id, input.documentId))
+      .where(
+        and(
+          eq(knowledgeDocuments.id, input.documentId),
+          eq(knowledgeDocuments.college, mentor.college)
+        )
+      )
       .limit(1)
+    if (!doc) {
+      return { success: false, error: 'Document not found.' }
+    }
 
     const flagged = await recordUnansweredQuery({
+      college: mentor.college,
       userId: mentor.id,
       query:
         input.query?.trim() || doc?.title || `Document ${input.documentId}`,
       domain: doc?.domain ?? 'general',
       reason: input.reason.trim() || 'Flagged as outdated / inaccurate',
-      flaggedDocumentId: doc?.id ?? input.documentId,
+      flaggedDocumentId: doc.id,
       kind: 'citation_flag'
     })
 
@@ -574,7 +643,8 @@ export async function resolveUnansweredQueryAction(input: {
     const updated = await resolveUnansweredQuery(
       input.id,
       input.status,
-      mentor.id
+      mentor.id,
+      mentor.college
     )
     if (!updated) {
       return { success: false, error: 'Query log entry not found.' }
